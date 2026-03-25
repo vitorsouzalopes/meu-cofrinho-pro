@@ -10,6 +10,7 @@ import Challenges from "./pages/Challenges.tsx";
 import Progress from "./pages/Progress.tsx";
 import Ranking from "./pages/Ranking.tsx";
 import Premium from "./pages/Premium.tsx";
+import Expenses from "./pages/Expenses.tsx";
 import Download from "./pages/Download.tsx";
 import Auth from "./pages/Auth.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -44,6 +45,7 @@ const AppRoutes = () => (
     <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
     <Route path="/ranking" element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
     <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
+    <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
     <Route path="/download" element={<Download />} />
     <Route path="*" element={<NotFound />} />
   </Routes>
