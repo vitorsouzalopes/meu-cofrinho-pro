@@ -116,10 +116,10 @@ export interface UserProgress {
 
 export const mockProgress: UserProgress = {
   challengeId: "daily-5",
-  completedDays: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15],
-  totalSaved: 70,
-  streak: 5,
-  startDate: "2026-03-10",
+  completedDays: [],
+  totalSaved: 0,
+  streak: 0,
+  startDate: new Date().toISOString().split("T")[0],
 };
 
 export interface UserStats {
@@ -134,12 +134,12 @@ export interface UserStats {
 }
 
 export const mockStats: UserStats = {
-  totalSaved: 847.5,
-  currentStreak: 5,
-  longestStreak: 14,
-  challengesCompleted: 3,
-  level: 7,
-  xp: 680,
-  xpToNextLevel: 1000,
-  medals: ["🥇", "🔥", "💪", "⭐"],
+  totalSaved: 0,
+  currentStreak: 0,
+  longestStreak: 0,
+  challengesCompleted: 0,
+  level: 1,
+  xp: 0,
+  xpToNextLevel: 100,
+  medals: [],
 };
