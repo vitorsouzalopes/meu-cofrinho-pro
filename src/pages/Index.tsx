@@ -1,15 +1,42 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ProgressRing from "@/components/ProgressRing";
 import StreakBadge from "@/components/StreakBadge";
 import LevelBar from "@/components/LevelBar";
 import { Button } from "@/components/ui/button";
 import { mockStats, mockProgress, challenges } from "@/data/challenges";
-import { ArrowRight, TrendingUp, Wallet } from "lucide-react";
+import { ArrowRight, TrendingUp, Wallet, Download } from "lucide-react";
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
 
 const Index = () => {
   const navigate = useNavigate();
   const currentChallenge = challenges.find((c) => c.id === mockProgress.challengeId)!;
   const progress = Math.round((mockProgress.completedDays.length / 30) * 100);
+
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installed, setInstalled] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", () => setInstalled(true));
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    await deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") setInstalled(true);
+    setDeferredPrompt(null);
+  };
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-6 max-w-lg mx-auto">
@@ -100,6 +127,22 @@ const Index = () => {
           Explorar Desafios <ArrowRight className="w-4 h-4" />
         </Button>
       </div>
+
+      {/* PWA Install */}
+      {deferredPrompt && !installed && (
+        <div className="mt-3 animate-slide-up" style={{ animationDelay: "0.6s" }}>
+          <Button variant="outline" className="w-full" onClick={handleInstall}>
+            <Download className="w-4 h-4 mr-2" /> Instalar o App no Dispositivo
+          </Button>
+        </div>
+      )}
+      {!deferredPrompt && !installed && (
+        <div className="mt-3 animate-slide-up" style={{ animationDelay: "0.6s" }}>
+          <Button variant="outline" className="w-full" onClick={() => navigate("/download")}>
+            <Download className="w-4 h-4 mr-2" /> Como instalar o App
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
