@@ -1,0 +1,12 @@
+/*
+  Cache-Control: public, max-age=3600
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+  Content-Type: text/html; charset=utf-8
+
+/manifest.json
+  Cache-Control: public, max-age=0, must-revalidate
+  Content-Type: application/json
