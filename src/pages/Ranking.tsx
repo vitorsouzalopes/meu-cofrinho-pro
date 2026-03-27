@@ -1,6 +1,15 @@
 import { Trophy, Medal, TrendingUp } from "lucide-react";
 
-const rankingData = [
+interface RankingItem {
+  name: string;
+  saved: number;
+  streak: number;
+  level: number;
+  avatar: string;
+  isUser?: boolean;
+}
+
+const rankingData: RankingItem[] = [
   { name: "Ana Silva", saved: 2340, streak: 45, level: 12, avatar: "🦊" },
   { name: "Carlos M.", saved: 1890, streak: 32, level: 10, avatar: "🦁" },
   { name: "Julia R.", saved: 1560, streak: 28, level: 9, avatar: "🐼" },
@@ -49,14 +58,14 @@ const Ranking = () => {
           <div
             key={i}
             className={`glass-card p-3 flex items-center gap-3 animate-slide-up ${
-              (user as any).isUser ? "border-primary/30 glow-gold" : ""
+              user.isUser ? "border-primary/30 glow-gold" : ""
             }`}
             style={{ animationDelay: `${i * 0.05}s` }}
           >
             <span className="text-sm font-heading font-bold text-muted-foreground w-6 text-center">{i + 1}</span>
             <span className="text-2xl">{user.avatar}</span>
             <div className="flex-1">
-              <p className={`text-sm font-semibold ${(user as any).isUser ? "text-gold" : "text-foreground"}`}>
+              <p className={`text-sm font-semibold ${user.isUser ? "text-gold" : "text-foreground"}`}>
                 {user.name}
               </p>
               <div className="flex items-center gap-2 text-[10px] text-muted-foreground">

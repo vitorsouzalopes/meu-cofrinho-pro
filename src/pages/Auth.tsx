@@ -37,10 +37,11 @@ const Auth = () => {
         });
         navigate("/");
       }
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       toast({
         title: "Erro",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

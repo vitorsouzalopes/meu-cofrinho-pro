@@ -63,13 +63,14 @@ const Expenses = () => {
 
       if (error) {
         toast({ title: "Erro ao carregar gastos", description: error.message, variant: "destructive" });
-      } else {
-        setExpenses(data.map((e: any) => ({ ...e, amount: Number(e.amount) })));
+      } else if (data) {
+        const fetchedExpenses = (data as Expense[]).map((e) => ({ ...e, amount: Number(e.amount) }));
+        setExpenses(fetchedExpenses);
       }
       setLoading(false);
     };
     fetchExpenses();
-  }, [user]);
+  }, [user, toast]);
 
   const addExpense = async () => {
     if (!desc.trim() || !amount || !user) return;
@@ -88,8 +89,9 @@ const Expenses = () => {
 
     if (error) {
       toast({ title: "Erro ao salvar gasto", description: error.message, variant: "destructive" });
-    } else {
-      setExpenses((prev) => [{ ...data, amount: Number(data.amount) }, ...prev]);
+    } else if (data) {
+      const savedExpense = { ...data, amount: Number((data as Expense).amount) } as Expense;
+      setExpenses((prev) => [savedExpense, ...prev]);
       setDesc("");
       setAmount("");
       setCategory("casa");
