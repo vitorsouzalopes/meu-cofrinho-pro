@@ -1,19 +1,14 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Home, User, ShoppingCart, Zap, Car, Heart, UtensilsCrossed, MoreHorizontal, Loader2 } from "lucide-react";
+import { Plus, Trash2, Home, User, ShoppingCart, Zap, Car, Heart, UtensilsCrossed, MoreHorizontal, Loader2, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import type { Expense } from "@/integrations/supabase/types";
 
-interface Expense {
-  id: string;
-  description: string;
-  amount: number;
-  category: string;
-  date: string;
-}
 
 const categories = [
   { id: "casa", label: "Casa", icon: Home, color: "text-gold" },
@@ -37,6 +32,7 @@ const Expenses = () => {
   const now = new Date();
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
   const [selectedYear] = useState(now.getFullYear());
@@ -49,6 +45,9 @@ const Expenses = () => {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("casa");
   const [date, setDate] = useState(now.toISOString().split("T")[0]);
+  const [type, setType] = useState<"unique" | "recurring">("unique");
+  const [frequency, setFrequency] = useState<"monthly" | "weekly" | "daily">("monthly");
+  const [dueDate, setDueDate] = useState<string>("1");
 
   // Fetch expenses from database
   useEffect(() => {
@@ -57,7 +56,7 @@ const Expenses = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("expenses")
-        .select("id, description, amount, category, date")
+        .select("*")
         .eq("user_id", user.id)
         .order("date", { ascending: false });
 
@@ -75,6 +74,15 @@ const Expenses = () => {
   const addExpense = async () => {
     if (!desc.trim() || !amount || !user) return;
     setSaving(true);
+    
+    // Calculate next due date for recurring expenses
+    let nextDueDate = null;
+    if (type === "recurring" && frequency === "monthly") {
+      const currentDate = new Date();
+      const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, parseInt(dueDate));
+      nextDueDate = nextMonth.toISOString().split("T")[0];
+    }
+    
     const { data, error } = await supabase
       .from("expenses")
       .insert({
@@ -83,8 +91,12 @@ const Expenses = () => {
         amount: parseFloat(amount),
         category,
         date,
+        type,
+        frequency: type === "recurring" ? frequency : null,
+        due_date: type === "recurring" ? parseInt(dueDate) : null,
+        next_due_date: nextDueDate,
       })
-      .select("id, description, amount, category, date")
+      .select("*")
       .single();
 
     if (error) {
@@ -96,6 +108,9 @@ const Expenses = () => {
       setAmount("");
       setCategory("casa");
       setDate(now.toISOString().split("T")[0]);
+      setType("unique");
+      setFrequency("monthly");
+      setDueDate("1");
       setDialogOpen(false);
       toast({ title: "Gasto adicionado! ✅" });
     }
@@ -143,13 +158,22 @@ const Expenses = () => {
           <h1 className="font-heading text-xl font-bold text-foreground">Minhas Contas</h1>
           <p className="text-xs text-muted-foreground">Controle seus gastos diários</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="gold" size="sm" className="rounded-full w-10 h-10 p-0">
-              <Plus className="w-5 h-5" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)]">
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full w-10 h-10 p-0"
+            onClick={() => navigate("/telegram")}
+          >
+            <Settings className="w-5 h-5" />
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="gold" size="sm" className="rounded-full w-10 h-10 p-0">
+                <Plus className="w-5 h-5" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)]">
             <DialogHeader>
               <DialogTitle className="font-heading text-foreground">Novo Gasto</DialogTitle>
             </DialogHeader>
@@ -207,12 +231,53 @@ const Expenses = () => {
                   })}
                 </div>
               </div>
+              {/* Expense Type Toggle */}
+              <div>
+                <label className="text-xs text-muted-foreground mb-2 block">Tipo de Gasto</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setType("unique")}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      type === "unique"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Único
+                  </button>
+                  <button
+                    onClick={() => setType("recurring")}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      type === "recurring"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Mensal
+                  </button>
+                </div>
+              </div>
+              {/* Due Date for Recurring */}
+              {type === "recurring" && (
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Dia do vencimento</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className="bg-muted border-border"
+                  />
+                </div>
+              )}
               <Button variant="gold" className="w-full" onClick={addExpense} disabled={!desc.trim() || !amount || saving}>
                 {saving ? "Salvando..." : "Adicionar Gasto"}
               </Button>
             </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Today summary */}

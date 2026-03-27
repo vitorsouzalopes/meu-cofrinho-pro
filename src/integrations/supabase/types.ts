@@ -6,6 +6,54 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+export interface Expense {
+  id: string
+  user_id: string
+  description: string
+  amount: number
+  category: string
+  date: string
+  type: 'unique' | 'recurring'
+  frequency?: 'monthly' | 'weekly' | 'daily'
+  due_date?: number
+  next_due_date?: string
+  created_at: string
+}
+
+export interface TelegramConfig {
+  id: string
+  user_id: string
+  telegram_user_id: number
+  telegram_chat_id: number
+  telegram_username?: string
+  bot_token: string
+  reminder_days_before: number
+  enabled: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ExpenseChecklist {
+  id: string
+  user_id: string
+  expense_id: string
+  month_year: string
+  paid: boolean
+  proof_url?: string
+  paid_at?: string
+  created_at: string
+}
+
+export interface ReminderLog {
+  id: string
+  user_id: string
+  expense_id: string
+  month_year: string
+  reminder_sent_at?: string
+  reminder_type: 'two_days' | 'one_day' | 'due_date'
+  created_at: string
+}
+
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
@@ -23,6 +71,10 @@ export type Database = {
           description: string
           id: string
           user_id: string
+          type: "unique" | "recurring"
+          frequency?: "monthly" | "weekly" | "daily"
+          due_date?: number
+          next_due_date?: string
         }
         Insert: {
           amount: number
@@ -32,6 +84,10 @@ export type Database = {
           description: string
           id?: string
           user_id: string
+          type?: "unique" | "recurring"
+          frequency?: "monthly" | "weekly" | "daily"
+          due_date?: number
+          next_due_date?: string
         }
         Update: {
           amount?: number
@@ -41,6 +97,79 @@ export type Database = {
           description?: string
           id?: string
           user_id?: string
+          type?: "unique" | "recurring"
+          frequency?: "monthly" | "weekly" | "daily"
+          due_date?: number
+          next_due_date?: string
+        }
+        Relationships: []
+      }
+      accounts: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          bank: string
+          account_type: string
+          amount: number
+          start_date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          bank: string
+          account_type: string
+          amount: number
+          start_date: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          bank?: string
+          account_type?: string
+          amount?: number
+          start_date?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      investments: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          bank: string
+          investment_type: string
+          amount: number
+          current_amount: number | null
+          start_date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          bank: string
+          investment_type: string
+          amount: number
+          current_amount?: number | null
+          start_date: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          bank?: string
+          investment_type?: string
+          amount?: number
+          current_amount?: number | null
+          start_date?: string
+          created_at?: string
         }
         Relationships: []
       }

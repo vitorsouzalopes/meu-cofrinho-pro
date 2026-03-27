@@ -1,12 +1,12 @@
-import { Home, Target, BarChart3, Trophy, Wallet } from "lucide-react";
+import { Home, Wallet, BarChart3, Target, TrendingUp } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const navItems = [
-  { path: "/", icon: Home, label: "Início" },
-  { path: "/challenges", icon: Target, label: "Desafios" },
-  { path: "/expenses", icon: Wallet, label: "Contas" },
-  { path: "/progress", icon: BarChart3, label: "Progresso" },
-  { path: "/ranking", icon: Trophy, label: "Ranking" },
+  { path: "/", icon: Home, label: "Hoje" },
+  { path: "/accounts", icon: Wallet, label: "Contas" },
+  { path: "/investments", icon: BarChart3, label: "Invest." },
+  { path: "/allocation", icon: Target, label: "Distrib." },
+  { path: "/progress", icon: TrendingUp, label: "Progresso" },
 ];
 
 const BottomNav = () => {

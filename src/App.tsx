@@ -5,12 +5,16 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import BottomNav from "@/components/BottomNav";
-import Index from "./pages/Index.tsx";
+import Today from "./pages/Today.tsx";
+import Accounts from "./pages/Accounts.tsx";
+import Investments from "./pages/Investments.tsx";
+import Allocation from "./pages/Allocation.tsx";
 import Challenges from "./pages/Challenges.tsx";
 import Progress from "./pages/Progress.tsx";
 import Ranking from "./pages/Ranking.tsx";
 import Premium from "./pages/Premium.tsx";
 import Expenses from "./pages/Expenses.tsx";
+import TelegramSettings from "./pages/TelegramSettings.tsx";
 import Download from "./pages/Download.tsx";
 import Auth from "./pages/Auth.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -40,12 +44,16 @@ const AuthRoute = ({ children }: { children: React.ReactNode }) => {
 const AppRoutes = () => (
   <Routes>
     <Route path="/auth" element={<AuthRoute><Auth /></AuthRoute>} />
-    <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+    <Route path="/" element={<ProtectedRoute><Today /></ProtectedRoute>} />
+    <Route path="/accounts" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
+    <Route path="/investments" element={<ProtectedRoute><Investments /></ProtectedRoute>} />
+    <Route path="/allocation" element={<ProtectedRoute><Allocation /></ProtectedRoute>} />
     <Route path="/challenges" element={<ProtectedRoute><Challenges /></ProtectedRoute>} />
     <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
     <Route path="/ranking" element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
     <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
     <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
+    <Route path="/telegram" element={<ProtectedRoute><TelegramSettings /></ProtectedRoute>} />
     <Route path="/download" element={<Download />} />
     <Route path="*" element={<NotFound />} />
   </Routes>

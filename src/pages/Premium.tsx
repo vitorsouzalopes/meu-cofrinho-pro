@@ -1,5 +1,6 @@
 import { Crown, Bell, Target, Users, Sparkles, ShieldCheck, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 const features = [
   { icon: Bell, title: "Lembrete Diário", desc: "Nunca esqueça de poupar com alertas personalizados" },
@@ -10,6 +11,16 @@ const features = [
 ];
 
 const Premium = () => {
+  const { toast } = useToast();
+
+  const handleSubscribe = () => {
+    toast({
+      title: "Funcionalidade em desenvolvimento",
+      description: "Em breve você poderá assinar o Premium diretamente no app!",
+      variant: "default",
+    });
+  };
+
   return (
     <div className="min-h-screen pb-24 px-4 pt-6 max-w-lg mx-auto">
       {/* Hero */}
@@ -55,7 +66,7 @@ const Premium = () => {
       </div>
 
       {/* CTA */}
-      <Button variant="gold" className="w-full h-12 text-base font-heading font-bold">
+      <Button variant="gold" className="w-full h-12 text-base font-heading font-bold" onClick={handleSubscribe}>
         Assinar Premium <Crown className="w-5 h-5" />
       </Button>
       <p className="text-center text-[10px] text-muted-foreground mt-3">

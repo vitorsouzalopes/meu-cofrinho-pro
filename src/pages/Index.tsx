@@ -25,9 +25,15 @@ const Index = () => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
+    const appInstalledHandler = () => setInstalled(true);
+    
     window.addEventListener("beforeinstallprompt", handler);
-    window.addEventListener("appinstalled", () => setInstalled(true));
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", appInstalledHandler);
+    
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", appInstalledHandler);
+    };
   }, []);
 
   const handleInstall = async () => {
