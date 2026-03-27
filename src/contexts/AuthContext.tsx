@@ -27,8 +27,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
+    // Fetch initial session — always resolves loading even if Supabase is unavailable
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (!isMounted) return;
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .eq("role", "admin")
+            .maybeSingle()
+            .then(({ data }) => {
+              if (isMounted) setIsAdmin(!!data);
+            });
+        }
+      })
+      .catch((err) => {
+        console.error("Auth getSession error:", err);
+      })
+      .finally(() => {
+        // Always stop loading, even on network failure
+        if (isMounted) setLoading(false);
+      });
+
+    // Listen for future auth changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!isMounted) return;
         setSession(session);
         setUser(session?.user ?? null);
 
@@ -39,30 +70,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .eq("user_id", session.user.id)
             .eq("role", "admin")
             .maybeSingle();
-          setIsAdmin(!!data);
+          if (isMounted) setIsAdmin(!!data);
         } else {
           setIsAdmin(false);
         }
-        setLoading(false);
+
+        // Ensure loading ends after any auth state change
+        if (isMounted) setLoading(false);
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .eq("role", "admin")
-          .maybeSingle()
-          .then(({ data }) => setIsAdmin(!!data));
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
