@@ -1,8 +1,11 @@
-import { useState } from "react";
-import { Plus, Trash2, Home, User, ShoppingCart, Zap, Car, Heart, UtensilsCrossed, MoreHorizontal } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Trash2, Home, User, ShoppingCart, Zap, Car, Heart, UtensilsCrossed, MoreHorizontal, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface Expense {
   id: string;
@@ -32,10 +35,14 @@ const months = [
 
 const Expenses = () => {
   const now = new Date();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
   const [selectedYear] = useState(now.getFullYear());
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   // Form state
   const [desc, setDesc] = useState("");
@@ -43,29 +50,67 @@ const Expenses = () => {
   const [category, setCategory] = useState("casa");
   const [date, setDate] = useState(now.toISOString().split("T")[0]);
 
-  const addExpense = () => {
-    if (!desc.trim() || !amount) return;
-    const newExpense: Expense = {
-      id: crypto.randomUUID(),
-      description: desc.trim(),
-      amount: parseFloat(amount),
-      category,
-      date,
+  // Fetch expenses from database
+  useEffect(() => {
+    if (!user) return;
+    const fetchExpenses = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("expenses")
+        .select("id, description, amount, category, date")
+        .eq("user_id", user.id)
+        .order("date", { ascending: false });
+
+      if (error) {
+        toast({ title: "Erro ao carregar gastos", description: error.message, variant: "destructive" });
+      } else {
+        setExpenses(data.map((e: any) => ({ ...e, amount: Number(e.amount) })));
+      }
+      setLoading(false);
     };
-    setExpenses((prev) => [newExpense, ...prev]);
-    setDesc("");
-    setAmount("");
-    setCategory("casa");
-    setDate(now.toISOString().split("T")[0]);
-    setDialogOpen(false);
+    fetchExpenses();
+  }, [user]);
+
+  const addExpense = async () => {
+    if (!desc.trim() || !amount || !user) return;
+    setSaving(true);
+    const { data, error } = await supabase
+      .from("expenses")
+      .insert({
+        user_id: user.id,
+        description: desc.trim(),
+        amount: parseFloat(amount),
+        category,
+        date,
+      })
+      .select("id, description, amount, category, date")
+      .single();
+
+    if (error) {
+      toast({ title: "Erro ao salvar gasto", description: error.message, variant: "destructive" });
+    } else {
+      setExpenses((prev) => [{ ...data, amount: Number(data.amount) }, ...prev]);
+      setDesc("");
+      setAmount("");
+      setCategory("casa");
+      setDate(now.toISOString().split("T")[0]);
+      setDialogOpen(false);
+      toast({ title: "Gasto adicionado! ✅" });
+    }
+    setSaving(false);
   };
 
-  const removeExpense = (id: string) => {
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
+  const removeExpense = async (id: string) => {
+    const { error } = await supabase.from("expenses").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao remover", description: error.message, variant: "destructive" });
+    } else {
+      setExpenses((prev) => prev.filter((e) => e.id !== id));
+    }
   };
 
   const monthExpenses = expenses.filter((e) => {
-    const d = new Date(e.date);
+    const d = new Date(e.date + "T00:00:00");
     return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
   });
 
@@ -75,11 +120,18 @@ const Expenses = () => {
   const todayExpenses = expenses.filter((e) => e.date === todayStr);
   const totalToday = todayExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-  // Group by category for summary
   const categoryTotals = monthExpenses.reduce<Record<string, number>>((acc, e) => {
     acc[e.category] = (acc[e.category] || 0) + e.amount;
     return acc;
   }, {});
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-gold" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-6 max-w-lg mx-auto">
@@ -153,8 +205,8 @@ const Expenses = () => {
                   })}
                 </div>
               </div>
-              <Button variant="gold" className="w-full" onClick={addExpense} disabled={!desc.trim() || !amount}>
-                Adicionar Gasto
+              <Button variant="gold" className="w-full" onClick={addExpense} disabled={!desc.trim() || !amount || saving}>
+                {saving ? "Salvando..." : "Adicionar Gasto"}
               </Button>
             </div>
           </DialogContent>
@@ -256,7 +308,7 @@ const Expenses = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{exp.description}</p>
                     <p className="text-[10px] text-muted-foreground">
-                      {new Date(exp.date).toLocaleDateString("pt-BR")} · {cat.label}
+                      {new Date(exp.date + "T00:00:00").toLocaleDateString("pt-BR")} · {cat.label}
                     </p>
                   </div>
                   <span className="text-sm font-semibold text-streak whitespace-nowrap">
