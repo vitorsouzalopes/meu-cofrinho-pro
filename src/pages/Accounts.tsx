@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Plus, Trash2, Banknote, Check, Edit3, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +44,7 @@ const Accounts = () => {
   const [dueDay, setDueDay] = useState("5");
   const [startDate, setStartDate] = useState(today.toISOString().split("T")[0]);
 
-  const loadAccounts = async () => {
+    const loadAccounts = useCallback(async () => {
     if (!user) return;
     setLoading(true);
 
@@ -72,11 +72,11 @@ const Accounts = () => {
       setAccounts((data ?? []) as Account[]);
     }
     setLoading(false);
-  };
+  }, [currentMonthYear, toast, user]);
 
   useEffect(() => {
     loadAccounts();
-  }, [user]);
+  }, [loadAccounts]);
 
   const resetForm = () => {
     setEditingAccount(null);
