@@ -57,6 +57,23 @@ In Android Studio:
 
 This builds and installs the debug app automatically.
 
+## 7. Release signing setup
+
+The Android project is configured to use a `keystore.properties` file for release signing.
+
+Create a file named `android/keystore.properties` with these values:
+
+```properties
+storeFile=release.keystore
+storePassword=YOUR_STORE_PASSWORD
+keyAlias=YOUR_KEY_ALIAS
+keyPassword=YOUR_KEY_PASSWORD
+```
+
+Place your keystore file in the `android/` folder or update `storeFile` with the correct relative path.
+
+The file `android/.gitignore` already ignores `keystore.properties`.
+
 ## 7. Generate an installable APK
 
 ### Debug APK
