@@ -9,10 +9,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import type { Account } from "@/integrations/supabase/types";
 
-const accountTypes = ["CDB", "Poupança", "Selic", "Cofrinho", "Digital", "Outros"];
+const bankAccountTypes = ["CDB", "Poupança", "Selic", "Cofrinho", "Digital", "Outros"];
+const expenseTypes = ["Internet", "Carro", "Aluguel", "Supermercado", "Outros"];
 const billingTypes = [
   { value: "monthly", label: "Mensal" },
   { value: "single", label: "Apenas este mês" },
+];
+const accountCategories = [
+  { value: "expense", label: "Conta de despesa" },
+  { value: "bank", label: "Conta de banco" },
 ];
 
 const formatCurrency = (value: number) =>
@@ -37,8 +42,9 @@ const Accounts = () => {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
   const [name, setName] = useState("");
-  const [bank, setBank] = useState("Itaú");
-  const [accountType, setAccountType] = useState("CDB");
+  const [accountCategory, setAccountCategory] = useState<"bank" | "expense">("expense");
+  const [bank, setBank] = useState("Despesa");
+  const [accountType, setAccountType] = useState("Internet");
   const [billingType, setBillingType] = useState<"monthly" | "single">("monthly");
   const [amount, setAmount] = useState("");
   const [dueDay, setDueDay] = useState("5");
@@ -81,8 +87,9 @@ const Accounts = () => {
   const resetForm = () => {
     setEditingAccount(null);
     setName("");
-    setBank("Itaú");
-    setAccountType("CDB");
+    setAccountCategory("expense");
+    setBank("Despesa");
+    setAccountType("Internet");
     setBillingType("monthly");
     setAmount("");
     setDueDay("5");
@@ -97,9 +104,10 @@ const Accounts = () => {
   const openEditAccountDialog = (account: Account) => {
     setEditingAccount(account);
     setName(account.name);
-    setBank(account.bank);
+    setAccountCategory(account.account_category ?? "expense");
+    setBank(account.account_category === "bank" ? account.bank : account.bank);
     setAccountType(account.account_type);
-    setBillingType(account.billing_type);
+    setBillingType(account.billing_type ?? "single");
     setAmount(String(account.amount));
     setDueDay(String(account.due_day ?? 1));
     setStartDate(account.start_date);
@@ -112,11 +120,12 @@ const Accounts = () => {
     const record = {
       user_id: user.id,
       name: name.trim(),
-      bank: bank.trim(),
+      account_category: accountCategory,
+      bank: accountCategory === "bank" ? bank.trim() : "Despesa",
       account_type: accountType,
-      billing_type: billingType,
+      billing_type: accountCategory === "expense" ? billingType : "single",
       amount: parseFloat(amount),
-      due_day: parseInt(dueDay, 10),
+      due_day: accountCategory === "expense" ? parseInt(dueDay, 10) : 1,
       month_year: currentMonthYear,
       paid: false,
       start_date: startDate,
@@ -177,16 +186,22 @@ const Accounts = () => {
     toast({ title: "Conta marcada como paga" });
   };
 
-  const currentMonthAccounts = accounts.filter((account) => account.month_year === currentMonthYear);
-  const monthlyAccounts = currentMonthAccounts.filter((account) => account.billing_type === "monthly" && !account.paid);
-  const singleAccounts = currentMonthAccounts.filter((account) => account.billing_type === "single" && !account.paid);
-  const overdueAccounts = currentMonthAccounts.filter((account) => !account.paid && account.due_day < todayDay);
-  const dueTodayAccounts = currentMonthAccounts.filter((account) => !account.paid && account.due_day === todayDay);
-  const weekAccounts = currentMonthAccounts.filter((account) => {
+  const bankAccounts = accounts.filter((account) => account.account_category === "bank");
+  const currentMonthExpenseAccounts = accounts.filter(
+    (account) => account.month_year === currentMonthYear && account.account_category === "expense"
+  );
+  const monthlyAccounts = currentMonthExpenseAccounts.filter((account) => account.billing_type === "monthly" && !account.paid);
+  const singleAccounts = currentMonthExpenseAccounts.filter((account) => account.billing_type === "single" && !account.paid);
+  const overdueAccounts = currentMonthExpenseAccounts.filter((account) => !account.paid && account.due_day < todayDay);
+  const dueTodayAccounts = currentMonthExpenseAccounts.filter((account) => !account.paid && account.due_day === todayDay);
+  const weekAccounts = currentMonthExpenseAccounts.filter((account) => {
     if (account.paid) return false;
     const diff = account.due_day - todayDay;
     return diff >= 0 && diff <= 7;
   });
+
+  const totalExpense = currentMonthExpenseAccounts.reduce((sum, account) => sum + Number(account.amount), 0);
+  const totalBank = bankAccounts.reduce((sum, account) => sum + Number(account.amount), 0);
 
   const paidHistory = accounts.filter((account) => account.paid).sort((a, b) => (a.month_year > b.month_year ? -1 : 1));
   const historyByMonth = paidHistory.reduce<Record<string, Account[]>>((acc, account) => {
@@ -220,17 +235,17 @@ const Accounts = () => {
           <div className="flex items-center gap-3">
             <Banknote className="w-5 h-5 text-gold" />
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Total de contas</p>
-              <p className="font-semibold text-lg">{formatCurrency(currentMonthAccounts.reduce((sum, account) => sum + Number(account.amount), 0))}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Total de despesas</p>
+              <p className="font-semibold text-lg">{formatCurrency(totalExpense)}</p>
             </div>
           </div>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-destructive" />
+            <Banknote className="w-5 h-5 text-emerald-accent" />
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Atrasadas</p>
-              <p className="font-semibold text-lg">{overdueAccounts.length}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Investimentos</p>
+              <p className="font-semibold text-lg">{formatCurrency(totalBank)}</p>
             </div>
           </div>
         </Card>
@@ -239,21 +254,21 @@ const Accounts = () => {
       <div className="glass-card p-4 mb-4">
         <div className="mb-3 flex items-center justify-between">
           <div>
-            <h2 className="font-semibold text-foreground">Contas Mensais</h2>
-            <p className="text-xs text-muted-foreground">Reaparecem todo mês com vencimento e valor ajustável.</p>
+            <h2 className="font-semibold text-foreground">Contas de banco</h2>
+            <p className="text-xs text-muted-foreground">Investimentos e contas bancárias apenas para visualização.</p>
           </div>
-          <p className="text-xs text-muted-foreground">{formatMonthYear(currentMonthYear)}</p>
+          <p className="text-xs text-muted-foreground">{formatCurrency(totalBank)}</p>
         </div>
-        {monthlyAccounts.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma conta mensal pendente.</p>
+        {bankAccounts.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma conta de banco cadastrada.</p>
         ) : (
           <div className="space-y-3">
-            {monthlyAccounts.map((account) => (
+            {bankAccounts.map((account) => (
               <div key={account.id} className="rounded-2xl border border-border p-4">
                 <div className="flex items-center justify-between gap-3 mb-2">
                   <div>
                     <p className="font-semibold text-foreground">{account.name}</p>
-                    <p className="text-xs text-muted-foreground">Vence dia {account.due_day}</p>
+                    <p className="text-xs text-muted-foreground">{account.bank} • {account.account_type}</p>
                   </div>
                   <p className="text-sm font-semibold">{formatCurrency(Number(account.amount))}</p>
                 </div>
@@ -263,9 +278,6 @@ const Accounts = () => {
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => deleteAccount(account.id)}>
                     <Trash2 className="w-3.5 h-3.5" /> Excluir
-                  </Button>
-                  <Button variant="emerald" size="sm" onClick={() => markAsPaid(account)}>
-                    <Check className="w-3.5 h-3.5" /> Pago
                   </Button>
                 </div>
               </div>
@@ -359,17 +371,40 @@ const Accounts = () => {
           </DialogHeader>
           <div className="space-y-4 mt-3">
             <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Categoria da conta</label>
+              <select
+                value={accountCategory}
+                onChange={(e) => {
+                  const nextCategory = e.target.value as "bank" | "expense";
+                  setAccountCategory(nextCategory);
+                  setAccountType(nextCategory === "bank" ? bankAccountTypes[0] : expenseTypes[0]);
+                  setBank(nextCategory === "bank" ? "Itaú" : "Despesa");
+                }}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
+              >
+                {accountCategories.map((category) => (
+                  <option key={category.value} value={category.value}>{category.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="text-xs text-muted-foreground mb-1 block">Nome da conta</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Internet" className="bg-muted border-border" />
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={accountCategory === "bank" ? "Itaú CDB" : "Internet"} className="bg-muted border-border" />
             </div>
+            {accountCategory === "bank" ? (
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Banco</label>
+                <Input value={bank} onChange={(e) => setBank(e.target.value)} placeholder="Itaú" className="bg-muted border-border" />
+              </div>
+            ) : null}
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Banco</label>
-              <Input value={bank} onChange={(e) => setBank(e.target.value)} placeholder="Itaú" className="bg-muted border-border" />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Categoria</label>
-              <select value={accountType} onChange={(e) => setAccountType(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
-                {accountTypes.map((type) => (
+              <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
+              <select
+                value={accountType}
+                onChange={(e) => setAccountType(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
+              >
+                {(accountCategory === "bank" ? bankAccountTypes : expenseTypes).map((type) => (
                   <option key={type} value={type}>{type}</option>
                 ))}
               </select>
@@ -379,19 +414,23 @@ const Accounts = () => {
                 <label className="text-xs text-muted-foreground mb-1 block">Valor</label>
                 <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="120" className="bg-muted border-border" step="0.01" min="0" />
               </div>
+              {accountCategory === "expense" ? (
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Vencimento (dia)</label>
+                  <Input type="number" value={dueDay} onChange={(e) => setDueDay(e.target.value)} placeholder="5" className="bg-muted border-border" min="1" max="31" />
+                </div>
+              ) : null}
+            </div>
+            {accountCategory === "expense" ? (
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Vencimento (dia)</label>
-                <Input type="number" value={dueDay} onChange={(e) => setDueDay(e.target.value)} placeholder="5" className="bg-muted border-border" min="1" max="31" />
+                <label className="text-xs text-muted-foreground mb-1 block">Tipo de cobrança</label>
+                <select value={billingType} onChange={(e) => setBillingType(e.target.value as "monthly" | "single")} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
+                  {billingTypes.map((type) => (
+                    <option key={type.value} value={type.value}>{type.label}</option>
+                  ))}
+                </select>
               </div>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
-              <select value={billingType} onChange={(e) => setBillingType(e.target.value as "monthly" | "single") } className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
-                {billingTypes.map((type) => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
-                ))}
-              </select>
-            </div>
+            ) : null}
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Data de início</label>
               <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-muted border-border" />

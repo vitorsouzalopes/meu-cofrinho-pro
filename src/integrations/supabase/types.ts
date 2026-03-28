@@ -115,6 +115,7 @@ export type Database = {
           name: string
           bank: string
           account_type: string
+          account_category: "bank" | "expense"
           billing_type: "monthly" | "single"
           amount: number
           due_day: number
@@ -130,6 +131,7 @@ export type Database = {
           name: string
           bank: string
           account_type: string
+          account_category?: "bank" | "expense"
           billing_type?: "monthly" | "single"
           amount: number
           due_day?: number
@@ -145,6 +147,7 @@ export type Database = {
           name?: string
           bank?: string
           account_type?: string
+          account_category?: "bank" | "expense"
           billing_type?: "monthly" | "single"
           amount?: number
           due_day?: number
