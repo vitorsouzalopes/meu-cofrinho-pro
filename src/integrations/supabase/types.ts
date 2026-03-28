@@ -44,21 +44,9 @@ export interface ExpenseChecklist {
   created_at: string
 }
 
-export interface Account {
-  id: string
-  user_id: string
-  name: string
-  bank: string
-  account_type: string
-  billing_type: "monthly" | "single"
-  amount: number
-  due_day: number
-  month_year: string
-  paid: boolean
-  paid_at: string | null
-  start_date: string
-  created_at: string
-}
+export type Account = Database["public"]["Tables"]["accounts"]["Row"]
+
+export type Investment = Database["public"]["Tables"]["investments"]["Row"]
 
 export interface ReminderLog {
   id: string
