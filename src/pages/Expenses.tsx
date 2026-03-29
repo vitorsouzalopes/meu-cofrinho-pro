@@ -401,7 +401,7 @@ const Expenses = () => {
                   <span className="text-sm font-semibold text-streak whitespace-nowrap">
                     -R$ {exp.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </span>
-                  <button onClick={() => removeExpense(exp.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1">
+                  <button onClick={() => removeExpense(exp.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1" title="Remover gasto">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>

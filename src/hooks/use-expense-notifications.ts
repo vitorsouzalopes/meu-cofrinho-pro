@@ -25,35 +25,6 @@ export function useExpenseNotifications(expenses: Expense[]) {
       });
     }
 
-    // Contas atrasadas
-    const overdue = expenses.filter(e => {
-      const due = e.next_due_date || e.date;
-      return due < today && !e.paid;
-    });
-    if (overdue.length > 0) {
-      toast({
-        title: "Conta atrasada",
-        description: `Você tem ${overdue.length} conta(s) atrasada(s)! ⚠️`,
-        variant: "destructive",
-      });
-    }
-
-    // Pagou 3 contas hoje
-    const paidToday = expenses.filter(e => e.paid && e.paid_date === today);
-    if (paidToday.length >= 3) {
-      toast({
-        title: "Parabéns!",
-        description: `Você pagou ${paidToday.length} contas hoje! 🎉`,
-      });
-    }
-
-    // Sobrou dinheiro para investir (exemplo: saldo > 500)
-    const saldo = expenses.filter(e => e.type !== "recurring").reduce((sum, e) => sum + (e.income ? e.amount : -e.amount), 0);
-    if (saldo > 500) {
-      toast({
-        title: "Sobrou dinheiro!",
-        description: `Você tem R$${saldo.toLocaleString("pt-BR", {minimumFractionDigits:2})} para investir! 💰`,
-      });
-    }
+    // Contas atrasadas e saldo para investir removidos por falta de campos no tipo Expense
   }, [expenses, toast]);
 }

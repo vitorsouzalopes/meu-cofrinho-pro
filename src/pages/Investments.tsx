@@ -220,6 +220,7 @@ const Investments = () => {
                   value={bank}
                   onChange={(e) => setBank(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
+                  title="Selecionar banco"
                 >
                   <option value="">Ou escolha um banco:</option>
                   {popularBanks.map((b) => (
@@ -245,6 +246,7 @@ const Investments = () => {
                   value={investmentType}
                   onChange={(e) => setInvestmentType(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
+                  title="Selecionar tipo de investimento"
                 >
                   {investmentTypes.map((type) => (
                     <option key={type} value={type}>
