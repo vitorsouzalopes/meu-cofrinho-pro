@@ -44,7 +44,11 @@ const Investments = () => {
         .order("created_at", { ascending: false });
 
       if (error) {
-        toast({ title: "Erro ao carregar investimentos", description: error.message, variant: "destructive" });
+        let description = "Não foi possível carregar seus investimentos. Verifique sua conexão ou tente novamente mais tarde.";
+        if (import.meta.env.DEV && error.message) {
+          description += `\n[Detalhe: ${error.message}]`;
+        }
+        toast({ title: "Erro ao carregar investimentos", description, variant: "destructive" });
         setInvestments([]);
       } else {
         setInvestments((data ?? []) as Investment[]);

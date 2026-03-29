@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import BottomNav from "@/components/BottomNav";
+import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
+import { useGestureBack } from "@/hooks/use-gesture-back";
 import Today from "./pages/Today.tsx";
 import Accounts from "./pages/Accounts.tsx";
 import Investments from "./pages/Investments.tsx";
@@ -63,6 +65,8 @@ const AppRoutes = () => (
 
 const AppContent = () => {
   const { session } = useAuth();
+  useScrollRestoration();
+  useGestureBack();
   return (
     <>
       <AppRoutes />
