@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useInvestmentIntelligence } from "@/hooks/use-investment-intelligence";
 import { Plus, TrendingUp, ArrowUpRight, AlertCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,8 @@ const Investments = () => {
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // Inteligência financeira: alertas e previsões
+  useInvestmentIntelligence(investments);
   const [name, setName] = useState("");
   const [bank, setBank] = useState("Itaú");
   const [investmentType, setInvestmentType] = useState("CDB");

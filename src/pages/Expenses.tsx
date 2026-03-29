@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { exportToCSV, exportToPDF } from "@/lib/export";
+import { useExpenseNotifications } from "@/hooks/use-expense-notifications";
 import { Plus, Trash2, Home, User, ShoppingCart, Zap, Car, Heart, UtensilsCrossed, MoreHorizontal, Loader2, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +42,17 @@ const Expenses = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Exportação
+  const handleExportCSV = () => {
+    exportToCSV(`gastos-${selectedYear}-${selectedMonth + 1}.csv`, monthExpenses);
+    toast({ title: "Exportado CSV", description: "Arquivo CSV gerado!" });
+  };
+  const handleExportPDF = () => {
+    const html = `<h2>Gastos ${months[selectedMonth]}/${selectedYear}</h2><table border='1' cellpadding='4'><tr><th>Descrição</th><th>Valor</th><th>Categoria</th><th>Data</th></tr>${monthExpenses.map(e => `<tr><td>${e.description}</td><td>R$${e.amount.toFixed(2)}</td><td>${getCategoryInfo(e.category).label}</td><td>${e.date}</td></tr>`).join('')}</table>`;
+    exportToPDF(`gastos-${selectedYear}-${selectedMonth + 1}.pdf`, html);
+    toast({ title: "Exportado PDF", description: "Arquivo PDF gerado!" });
+  };
+
   // Form state
   const [desc, setDesc] = useState("");
   const [amount, setAmount] = useState("");
@@ -49,6 +62,8 @@ const Expenses = () => {
   const [frequency, setFrequency] = useState<"monthly" | "weekly" | "daily">("monthly");
   const [dueDate, setDueDate] = useState<string>("1");
 
+  // Notificações automáticas
+  useExpenseNotifications(expenses);
   // Fetch expenses from database
   useEffect(() => {
     if (!user) return;
@@ -152,6 +167,11 @@ const Expenses = () => {
 
   return (
     <div className="min-h-screen pb-24 px-4 pt-6 max-w-lg mx-auto">
+      {/* Exportação */}
+      <div className="flex gap-2 mb-4 animate-slide-up" style={{ animationDelay: "0.05s" }}>
+        <Button variant="outline" onClick={handleExportCSV}>Exportar CSV</Button>
+        <Button variant="outline" onClick={handleExportPDF}>Exportar PDF</Button>
+      </div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6 animate-slide-up">
         <div>

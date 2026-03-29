@@ -7,6 +7,17 @@
   "background_color": "#0a0e1a",
   "theme_color": "#d4a017",
   "orientation": "portrait",
+  "prefer_related_applications": false,
+  "scope": "/",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "screenshots": [
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "shortcuts": [
+    { "name": "Nova Despesa", "url": "/expenses", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Investimentos", "url": "/investments", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ],
+  "splash_pages": null,
   "icons": [
     {
       "src": "/icon-192.png",
