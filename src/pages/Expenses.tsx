@@ -9,7 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import type { Expense } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Expense = Tables<"expenses">;
 
 
 const categories = [

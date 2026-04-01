@@ -7,7 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import type { Account } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Account = Tables<"accounts">;
 
 const bankAccountTypes = ["CDB", "Poupança", "Selic", "Cofrinho", "Digital", "Outros"];
 const expenseTypes = ["Internet", "Carro", "Aluguel", "Supermercado", "Outros"];

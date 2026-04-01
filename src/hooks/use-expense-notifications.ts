@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import type { Expense } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Expense = Tables<"expenses">;
 
 function getTomorrowISO() {
   const t = new Date();

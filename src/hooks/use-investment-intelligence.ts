@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import type { Investment } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Investment = Tables<"investments">;
 
 export function useInvestmentIntelligence(investments: Investment[]) {
   const { toast } = useToast();
