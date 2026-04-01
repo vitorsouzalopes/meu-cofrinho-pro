@@ -54,6 +54,14 @@ const Expenses = () => {
     exportToPDF(`gastos-${selectedYear}-${selectedMonth + 1}.pdf`, html);
     toast({ title: "Exportado PDF", description: "Arquivo PDF gerado!" });
   };
+  const handleShare = async () => {
+    const text = monthExpenses.map((e) => `${e.description}: R$${e.amount.toFixed(2)}`).join("\n");
+    const shared = await shareReport(
+      `Gastos ${months[selectedMonth]}/${selectedYear}`,
+      `Total: R$${totalMonth.toFixed(2)}\n\n${text}`
+    );
+    toast({ title: shared ? "Compartilhado!" : "Copiado para área de transferência" });
+  };
 
   // Form state
   const [desc, setDesc] = useState("");
