@@ -242,6 +242,22 @@ const Today = () => {
           </Card>
         )}
 
+        {/* Saldo disponível para investir */}
+        {totalCurrentMonth > 0 && totalPending < totalCurrentMonth && (
+          <Card className="p-4 border-emerald-accent/30 bg-emerald-accent/5">
+            <div className="flex items-center gap-2 mb-2">
+              <Lightbulb className="w-5 h-5 text-emerald-accent" />
+              <h2 className="font-semibold text-foreground">💰 Sobrou para investir</h2>
+            </div>
+            <p className="text-2xl font-bold text-emerald-accent mb-2">
+              {formatCurrency(Math.max(0, totalCurrentMonth - totalPending))}
+            </p>
+            <Button size="sm" className="w-full" onClick={() => navigate("/suggestions")}>
+              Ver sugestões de investimento
+            </Button>
+          </Card>
+        )}
+
         {/* Sugestão de distribuição */}
         <Card className="p-4 border-gold/20 bg-gold/5">
           <div className="flex items-center gap-2 mb-3">
