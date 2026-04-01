@@ -1,12 +1,12 @@
-import { Home, Wallet, BarChart3, Target, TrendingUp, Clock } from "lucide-react";
+import { Home, Wallet, BarChart3, Lightbulb, Target, TrendingUp } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const navItems = [
   { path: "/", icon: Home, label: "Hoje" },
   { path: "/accounts", icon: Wallet, label: "Contas" },
   { path: "/investments", icon: BarChart3, label: "Invest." },
+  { path: "/suggestions", icon: Lightbulb, label: "Sugestões" },
   { path: "/allocation", icon: Target, label: "Distrib." },
-  { path: "/history", icon: Clock, label: "Histórico" },
   { path: "/progress", icon: TrendingUp, label: "Progresso" },
 ];
 
@@ -23,7 +23,7 @@ const BottomNav = () => {
             <button
               key={path}
               onClick={() => navigate(path)}
-              className={`flex flex-col items-center gap-1 py-3 px-3 transition-all duration-200 ${
+              className={`flex flex-col items-center gap-1 py-3 px-2 transition-all duration-200 ${
                 isActive ? "text-gold" : "text-muted-foreground hover:text-foreground"
               }`}
             >
