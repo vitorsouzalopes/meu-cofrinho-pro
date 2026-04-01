@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          account_category: string
+          account_type: string
+          amount: number
+          bank: string
+          billing_type: string
+          created_at: string
+          due_day: number
+          id: string
+          month_year: string
+          name: string
+          paid: boolean
+          paid_at: string | null
+          start_date: string
+          user_id: string
+        }
+        Insert: {
+          account_category?: string
+          account_type?: string
+          amount?: number
+          bank?: string
+          billing_type?: string
+          created_at?: string
+          due_day?: number
+          id?: string
+          month_year: string
+          name: string
+          paid?: boolean
+          paid_at?: string | null
+          start_date?: string
+          user_id: string
+        }
+        Update: {
+          account_category?: string
+          account_type?: string
+          amount?: number
+          bank?: string
+          billing_type?: string
+          created_at?: string
+          due_day?: number
+          id?: string
+          month_year?: string
+          name?: string
+          paid?: boolean
+          paid_at?: string | null
+          start_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
@@ -21,7 +72,11 @@ export type Database = {
           created_at: string
           date: string
           description: string
+          due_date: number | null
+          frequency: string | null
           id: string
+          next_due_date: string | null
+          type: string | null
           user_id: string
         }
         Insert: {
@@ -30,7 +85,11 @@ export type Database = {
           created_at?: string
           date?: string
           description: string
+          due_date?: number | null
+          frequency?: string | null
           id?: string
+          next_due_date?: string | null
+          type?: string | null
           user_id: string
         }
         Update: {
@@ -39,7 +98,47 @@ export type Database = {
           created_at?: string
           date?: string
           description?: string
+          due_date?: number | null
+          frequency?: string | null
           id?: string
+          next_due_date?: string | null
+          type?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      investments: {
+        Row: {
+          amount: number
+          bank: string
+          created_at: string
+          current_amount: number | null
+          id: string
+          investment_type: string
+          name: string
+          start_date: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          bank?: string
+          created_at?: string
+          current_amount?: number | null
+          id?: string
+          investment_type?: string
+          name: string
+          start_date?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          bank?: string
+          created_at?: string
+          current_amount?: number | null
+          id?: string
+          investment_type?: string
+          name?: string
+          start_date?: string
           user_id?: string
         }
         Relationships: []
@@ -68,6 +167,36 @@ export type Database = {
           email?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      telegram_config: {
+        Row: {
+          created_at: string
+          id: string
+          reminder_days_before: number
+          telegram_chat_id: number | null
+          telegram_user_id: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reminder_days_before?: number
+          telegram_chat_id?: number | null
+          telegram_user_id?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reminder_days_before?: number
+          telegram_chat_id?: number | null
+          telegram_user_id?: number | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
