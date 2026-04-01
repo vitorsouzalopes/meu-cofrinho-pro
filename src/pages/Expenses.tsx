@@ -179,8 +179,9 @@ const Expenses = () => {
     <div className="min-h-screen pb-24 px-4 pt-6 max-w-lg mx-auto">
       {/* Exportação */}
       <div className="flex gap-2 mb-4 animate-slide-up" style={{ animationDelay: "0.05s" }}>
-        <Button variant="outline" onClick={handleExportCSV}>Exportar CSV</Button>
-        <Button variant="outline" onClick={handleExportPDF}>Exportar PDF</Button>
+        <Button variant="outline" size="sm" onClick={handleExportCSV}>CSV</Button>
+        <Button variant="outline" size="sm" onClick={handleExportPDF}>PDF</Button>
+        <Button variant="outline" size="sm" onClick={handleShare}><Share2 className="w-4 h-4 mr-1" />Compartilhar</Button>
       </div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6 animate-slide-up">
