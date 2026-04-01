@@ -8,7 +8,9 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import type { Investment } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Investment = Tables<"investments">;
 
 const investmentTypes = ["CDB", "Selic", "Poupança", "Tesouro", "Ações", "Outros"];
 const popularBanks = ["Itaú", "Nubank", "Banco Inter", "Bradesco", "Santander", "Caixa", "BTG"];

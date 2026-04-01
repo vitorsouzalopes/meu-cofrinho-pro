@@ -6,58 +6,6 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Expense {
-  id: string
-  user_id: string
-  description: string
-  amount: number
-  category: string
-  date: string
-  type: 'unique' | 'recurring'
-  frequency?: 'monthly' | 'weekly' | 'daily'
-  due_date?: number
-  next_due_date?: string
-  created_at: string
-}
-
-export interface TelegramConfig {
-  id: string
-  user_id: string
-  telegram_user_id: number
-  telegram_chat_id: number
-  telegram_username?: string
-  bot_token: string
-  reminder_days_before: number
-  enabled: boolean
-  created_at: string
-  updated_at: string
-}
-
-export interface ExpenseChecklist {
-  id: string
-  user_id: string
-  expense_id: string
-  month_year: string
-  paid: boolean
-  proof_url?: string
-  paid_at?: string
-  created_at: string
-}
-
-export type Account = Database["public"]["Tables"]["accounts"]["Row"]
-
-export type Investment = Database["public"]["Tables"]["investments"]["Row"]
-
-export interface ReminderLog {
-  id: string
-  user_id: string
-  expense_id: string
-  month_year: string
-  reminder_sent_at?: string
-  reminder_type: 'two_days' | 'one_day' | 'due_date'
-  created_at: string
-}
-
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
@@ -66,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          account_category: string
+          account_type: string
+          amount: number
+          bank: string
+          billing_type: string
+          created_at: string
+          due_day: number
+          id: string
+          month_year: string
+          name: string
+          paid: boolean
+          paid_at: string | null
+          start_date: string
+          user_id: string
+        }
+        Insert: {
+          account_category?: string
+          account_type?: string
+          amount?: number
+          bank?: string
+          billing_type?: string
+          created_at?: string
+          due_day?: number
+          id?: string
+          month_year: string
+          name: string
+          paid?: boolean
+          paid_at?: string | null
+          start_date?: string
+          user_id: string
+        }
+        Update: {
+          account_category?: string
+          account_type?: string
+          amount?: number
+          bank?: string
+          billing_type?: string
+          created_at?: string
+          due_day?: number
+          id?: string
+          month_year?: string
+          name?: string
+          paid?: boolean
+          paid_at?: string | null
+          start_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
@@ -73,12 +72,12 @@ export type Database = {
           created_at: string
           date: string
           description: string
+          due_date: number | null
+          frequency: string | null
           id: string
+          next_due_date: string | null
+          type: string | null
           user_id: string
-          type: "unique" | "recurring"
-          frequency?: "monthly" | "weekly" | "daily"
-          due_date?: number
-          next_due_date?: string
         }
         Insert: {
           amount: number
@@ -86,12 +85,12 @@ export type Database = {
           created_at?: string
           date?: string
           description: string
+          due_date?: number | null
+          frequency?: string | null
           id?: string
+          next_due_date?: string | null
+          type?: string | null
           user_id: string
-          type?: "unique" | "recurring"
-          frequency?: "monthly" | "weekly" | "daily"
-          due_date?: number
-          next_due_date?: string
         }
         Update: {
           amount?: number
@@ -99,99 +98,48 @@ export type Database = {
           created_at?: string
           date?: string
           description?: string
+          due_date?: number | null
+          frequency?: string | null
           id?: string
+          next_due_date?: string | null
+          type?: string | null
           user_id?: string
-          type?: "unique" | "recurring"
-          frequency?: "monthly" | "weekly" | "daily"
-          due_date?: number
-          next_due_date?: string
-        }
-        Relationships: []
-      }
-      accounts: {
-        Row: {
-          id: string
-          user_id: string
-          name: string
-          bank: string
-          account_type: string
-          account_category: "bank" | "expense"
-          billing_type: "monthly" | "single"
-          amount: number
-          due_day: number
-          month_year: string
-          paid: boolean
-          paid_at: string | null
-          start_date: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          name: string
-          bank: string
-          account_type: string
-          account_category?: "bank" | "expense"
-          billing_type?: "monthly" | "single"
-          amount: number
-          due_day?: number
-          month_year?: string
-          paid?: boolean
-          paid_at?: string | null
-          start_date: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          name?: string
-          bank?: string
-          account_type?: string
-          account_category?: "bank" | "expense"
-          billing_type?: "monthly" | "single"
-          amount?: number
-          due_day?: number
-          month_year?: string
-          paid?: boolean
-          paid_at?: string | null
-          start_date?: string
-          created_at?: string
         }
         Relationships: []
       }
       investments: {
         Row: {
-          id: string
-          user_id: string
-          name: string
-          bank: string
-          investment_type: string
           amount: number
-          current_amount: number | null
-          start_date: string
+          bank: string
           created_at: string
+          current_amount: number | null
+          id: string
+          investment_type: string
+          name: string
+          start_date: string
+          user_id: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          name: string
-          bank: string
-          investment_type: string
-          amount: number
-          current_amount?: number | null
-          start_date: string
+          amount?: number
+          bank?: string
           created_at?: string
+          current_amount?: number | null
+          id?: string
+          investment_type?: string
+          name: string
+          start_date?: string
+          user_id: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          name?: string
-          bank?: string
-          investment_type?: string
           amount?: number
-          current_amount?: number | null
-          start_date?: string
+          bank?: string
           created_at?: string
+          current_amount?: number | null
+          id?: string
+          investment_type?: string
+          name?: string
+          start_date?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -219,6 +167,36 @@ export type Database = {
           email?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      telegram_config: {
+        Row: {
+          created_at: string
+          id: string
+          reminder_days_before: number
+          telegram_chat_id: number | null
+          telegram_user_id: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reminder_days_before?: number
+          telegram_chat_id?: number | null
+          telegram_user_id?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reminder_days_before?: number
+          telegram_chat_id?: number | null
+          telegram_user_id?: number | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

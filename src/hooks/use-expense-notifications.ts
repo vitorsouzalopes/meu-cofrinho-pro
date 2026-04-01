@@ -1,10 +1,8 @@
-// Commit de ajuste para forçar rebuild no Lovable
-cd meu-cofrinho-pro
-git add .
-git commit -m "ajuste para build"
-git pushimport { useEffect } from "react";
+import { useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import type { Expense } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Expense = Tables<"expenses">;
 
 function getTomorrowISO() {
   const t = new Date();

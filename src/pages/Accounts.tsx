@@ -7,7 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import type { Account } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Account = Tables<"accounts">;
 
 const bankAccountTypes = ["CDB", "Poupança", "Selic", "Cofrinho", "Digital", "Outros"];
 const expenseTypes = ["Internet", "Carro", "Aluguel", "Supermercado", "Outros"];
@@ -104,10 +106,10 @@ const Accounts = () => {
   const openEditAccountDialog = (account: Account) => {
     setEditingAccount(account);
     setName(account.name);
-    setAccountCategory(account.account_category ?? "expense");
+    setAccountCategory((account.account_category ?? "expense") as "bank" | "expense");
     setBank(account.account_category === "bank" ? account.bank : account.bank);
     setAccountType(account.account_type);
-    setBillingType(account.billing_type ?? "single");
+    setBillingType((account.billing_type ?? "single") as "monthly" | "single");
     setAmount(String(account.amount));
     setDueDay(String(account.due_day ?? 1));
     setStartDate(account.start_date);
