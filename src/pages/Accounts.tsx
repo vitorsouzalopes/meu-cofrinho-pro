@@ -106,10 +106,10 @@ const Accounts = () => {
   const openEditAccountDialog = (account: Account) => {
     setEditingAccount(account);
     setName(account.name);
-    setAccountCategory(account.account_category ?? "expense");
+    setAccountCategory((account.account_category ?? "expense") as "bank" | "expense");
     setBank(account.account_category === "bank" ? account.bank : account.bank);
     setAccountType(account.account_type);
-    setBillingType(account.billing_type ?? "single");
+    setBillingType((account.billing_type ?? "single") as "monthly" | "single");
     setAmount(String(account.amount));
     setDueDay(String(account.due_day ?? 1));
     setStartDate(account.start_date);
