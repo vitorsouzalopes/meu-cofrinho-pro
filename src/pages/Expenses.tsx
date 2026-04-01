@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { exportToCSV, exportToPDF } from "@/lib/export";
+import { exportToCSV, exportToPDF, shareReport } from "@/lib/export";
 import { useExpenseNotifications } from "@/hooks/use-expense-notifications";
-import { Plus, Trash2, Home, User, ShoppingCart, Zap, Car, Heart, UtensilsCrossed, MoreHorizontal, Loader2, Settings } from "lucide-react";
+import { Plus, Trash2, Home, User, ShoppingCart, Zap, Car, Heart, UtensilsCrossed, MoreHorizontal, Loader2, Settings, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
