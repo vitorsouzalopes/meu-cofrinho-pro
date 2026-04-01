@@ -10,6 +10,7 @@ import { useGestureBack } from "@/hooks/use-gesture-back";
 import Today from "./pages/Today.tsx";
 import Accounts from "./pages/Accounts.tsx";
 import Investments from "./pages/Investments.tsx";
+import InvestmentSuggestions from "./pages/InvestmentSuggestions.tsx";
 import Allocation from "./pages/Allocation.tsx";
 import History from "./pages/History.tsx";
 import Challenges from "./pages/Challenges.tsx";
