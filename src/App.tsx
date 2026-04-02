@@ -21,6 +21,7 @@ import Expenses from "./pages/Expenses.tsx";
 import TelegramSettings from "./pages/TelegramSettings.tsx";
 import Download from "./pages/Download.tsx";
 import Auth from "./pages/Auth.tsx";
+import Profile from "./pages/Profile.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
