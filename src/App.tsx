@@ -61,6 +61,7 @@ const AppRoutes = () => (
     <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
     <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
     <Route path="/telegram" element={<ProtectedRoute><TelegramSettings /></ProtectedRoute>} />
+    <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
     <Route path="/download" element={<Download />} />
     <Route path="*" element={<NotFound />} />
   </Routes>
