@@ -21,6 +21,7 @@ import Expenses from "./pages/Expenses.tsx";
 import TelegramSettings from "./pages/TelegramSettings.tsx";
 import Download from "./pages/Download.tsx";
 import Auth from "./pages/Auth.tsx";
+import Profile from "./pages/Profile.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -60,6 +61,7 @@ const AppRoutes = () => (
     <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
     <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
     <Route path="/telegram" element={<ProtectedRoute><TelegramSettings /></ProtectedRoute>} />
+    <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
     <Route path="/download" element={<Download />} />
     <Route path="*" element={<NotFound />} />
   </Routes>

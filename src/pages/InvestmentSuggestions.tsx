@@ -3,6 +3,7 @@ import {
   Flame, TrendingUp, Shield, Clock, Zap, PiggyBank,
   Building2, BarChart3, Wallet, RefreshCw, Sparkles, AlertCircle,
 } from "lucide-react";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -292,6 +293,48 @@ const InvestmentSuggestions = () => {
           ))}
         </div>
       </div>
+
+      {/* Charts */}
+      {suggestions.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <Card className="p-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 text-center">Distribuição</p>
+            <ResponsiveContainer width="100%" height={140}>
+              <PieChart>
+                <Pie
+                  data={suggestions.map(s => ({ name: s.name, value: s.amount }))}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={30}
+                  outerRadius={55}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {suggestions.map((_, i) => (
+                    <Cell key={i} fill={["#D4AF37", "#10B981", "#3B82F6", "#F59E0B", "#EF4444", "#8B5CF6"][i % 6]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v: number) => formatCurrency(v)} />
+              </PieChart>
+            </ResponsiveContainer>
+          </Card>
+          <Card className="p-3">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 text-center">Por valor</p>
+            <ResponsiveContainer width="100%" height={140}>
+              <BarChart data={suggestions.slice(0, 4).map(s => ({ name: s.name.slice(0, 8), valor: s.amount }))}>
+                <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                <YAxis hide />
+                <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                <Bar dataKey="valor" radius={[4, 4, 0, 0]}>
+                  {suggestions.slice(0, 4).map((_, i) => (
+                    <Cell key={i} fill={["#D4AF37", "#10B981", "#3B82F6", "#F59E0B"][i % 4]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        </div>
+      )}
 
       {/* Suggestions list */}
       <div className="space-y-3 mb-6">

@@ -1,4 +1,4 @@
-import { Home, Wallet, BarChart3, Lightbulb, Target, TrendingUp } from "lucide-react";
+import { Home, Wallet, BarChart3, Lightbulb, Target, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const navItems = [
@@ -7,7 +7,7 @@ const navItems = [
   { path: "/investments", icon: BarChart3, label: "Invest." },
   { path: "/suggestions", icon: Lightbulb, label: "Sugestões" },
   { path: "/allocation", icon: Target, label: "Distrib." },
-  { path: "/progress", icon: TrendingUp, label: "Progresso" },
+  { path: "/profile", icon: User, label: "Perfil" },
 ];
 
 const BottomNav = () => {
