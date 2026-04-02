@@ -3,6 +3,7 @@ import {
   Flame, TrendingUp, Shield, Clock, Zap, PiggyBank,
   Building2, BarChart3, Wallet, RefreshCw, Sparkles, AlertCircle,
 } from "lucide-react";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
