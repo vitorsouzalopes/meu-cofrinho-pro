@@ -170,6 +170,39 @@ export type Database = {
         }
         Relationships: []
       }
+      salary: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          month_year: string
+          received: boolean
+          received_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          month_year: string
+          received?: boolean
+          received_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          month_year?: string
+          received?: boolean
+          received_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       telegram_config: {
         Row: {
           created_at: string
