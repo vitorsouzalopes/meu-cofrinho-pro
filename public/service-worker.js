@@ -1,18 +1,9 @@
 // service-worker.js
-// Cache básico para funcionamento offline
-const CACHE_NAME = 'cofrinho-pro-cache-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
-];
+// Cache apenas imagens — JS e dados sempre buscados da rede
+const CACHE_NAME = 'cofrinho-pro-cache-v2';
 
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
-  );
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
@@ -21,12 +12,29 @@ self.addEventListener('activate', event => {
       Promise.all(
         cacheNames.filter(name => name !== CACHE_NAME).map(name => caches.delete(name))
       )
-    )
+    ).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request).then(response => response || fetch(event.request))
-  );
+  const url = new URL(event.request.url);
+  const isImage = /\.(png|jpg|jpeg|gif|svg|webp|ico)(\?.*)?$/i.test(url.pathname);
+
+  if (isImage) {
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        if (cached) return cached;
+        return fetch(event.request).then(response => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
+          return response;
+        });
+      })
+    );
+  } else {
+    // JS, HTML, JSON, API calls — always from network
+    event.respondWith(fetch(event.request));
+  }
 });
