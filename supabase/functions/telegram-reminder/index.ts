@@ -5,20 +5,24 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const GATEWAY_URL = "https://connector-gateway.lovable.dev/telegram";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
-    if (!TELEGRAM_BOT_TOKEN) throw new Error("TELEGRAM_BOT_TOKEN not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    const TELEGRAM_API_KEY = Deno.env.get("TELEGRAM_BOT_TOKEN");
+    if (!TELEGRAM_API_KEY) throw new Error("TELEGRAM_BOT_TOKEN not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get all telegram configs
     const { data: configs, error: configErr } = await supabase
       .from("telegram_config")
       .select("*")
@@ -39,7 +43,6 @@ Deno.serve(async (req) => {
       const reminderDays = config.reminder_days_before || 2;
       const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 
-      // Get user's unpaid accounts
       const { data: accounts } = await supabase
         .from("accounts")
         .select("*")
@@ -51,7 +54,6 @@ Deno.serve(async (req) => {
 
       const messages: string[] = [];
 
-      // Overdue
       const overdue = accounts.filter((a: any) => a.due_day < todayDay);
       if (overdue.length > 0) {
         const total = overdue.reduce((s: number, a: any) => s + Number(a.amount), 0);
@@ -60,7 +62,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Due today
       const dueToday = accounts.filter((a: any) => a.due_day === todayDay);
       if (dueToday.length > 0) {
         messages.push(
@@ -68,7 +69,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Due soon (within reminderDays)
       const dueSoon = accounts.filter((a: any) => {
         const diff = a.due_day - todayDay;
         return diff > 0 && diff <= reminderDays;
@@ -79,23 +79,39 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Check salary status
+      const { data: salaryData } = await supabase
+        .from("salary")
+        .select("*")
+        .eq("user_id", config.user_id)
+        .eq("month_year", currentMonthYear)
+        .maybeSingle();
+
+      if (salaryData && salaryData.received) {
+        const totalAccounts = accounts.reduce((s: number, a: any) => s + Number(a.amount), 0);
+        const remaining = Number(salaryData.amount) - totalAccounts;
+        messages.push(
+          `💰 *Saldo restante:* R$${remaining.toFixed(2)}`
+        );
+      }
+
       if (messages.length === 0) continue;
 
       const text = `🐷 *Meu Cofrinho*\n\n${messages.join("\n\n")}`;
 
-      // Send via Telegram Bot API directly
-      const telegramRes = await fetch(
-        `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: config.telegram_chat_id,
-            text,
-            parse_mode: "Markdown",
-          }),
-        }
-      );
+      const telegramRes = await fetch(`${GATEWAY_URL}/sendMessage`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          "X-Connection-Api-Key": TELEGRAM_API_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chat_id: config.telegram_chat_id,
+          text,
+          parse_mode: "Markdown",
+        }),
+      });
 
       const telegramData = await telegramRes.json();
       if (telegramRes.ok) sent++;

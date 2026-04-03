@@ -6,16 +6,24 @@ import "./index.css";
 
 createRoot(document.getElementById("root")!).render(<App />);
 
-// Registro do service worker para PWA
-if ('serviceWorker' in navigator) {
+// Guard: never register SW in iframes or Lovable preview
+const isInIframe = (() => {
+  try { return window.self !== window.top; } catch { return true; }
+})();
+const isPreviewHost =
+  window.location.hostname.includes("id-preview--") ||
+  window.location.hostname.includes("lovableproject.com") ||
+  window.location.hostname.includes("lovable.app");
+
+if (isPreviewHost || isInIframe) {
+  navigator.serviceWorker?.getRegistrations().then((regs) => {
+    regs.forEach((r) => r.unregister());
+  });
+} else if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js')
-      .then(reg => {
-        console.log('Service Worker registrado:', reg);
-      })
-      .catch(err => {
-        console.error('Erro ao registrar Service Worker:', err);
-      });
+      .then(reg => console.log('SW registrado:', reg))
+      .catch(err => console.error('Erro SW:', err));
   });
 }
 
