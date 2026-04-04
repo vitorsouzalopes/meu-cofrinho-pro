@@ -1,16 +1,24 @@
-// service-worker.js
-// Cache apenas imagens — JS e dados sempre buscados da rede
-const CACHE_NAME = 'cofrinho-pro-cache-v2';
+// service-worker.js — auto-versioned cache with forced update
+// BUILD_VERSION is bumped by vite at build time via string replacement
+const BUILD_VERSION = '__BUILD_VERSION__';
+const CACHE_NAME = 'cofrinho-cache-' + BUILD_VERSION;
 
 self.addEventListener('install', event => {
+  console.log('[SW] Installing version:', BUILD_VERSION);
   self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
+  console.log('[SW] Activating version:', BUILD_VERSION);
   event.waitUntil(
     caches.keys().then(cacheNames =>
       Promise.all(
-        cacheNames.filter(name => name !== CACHE_NAME).map(name => caches.delete(name))
+        cacheNames
+          .filter(name => name.startsWith('cofrinho-cache-') && name !== CACHE_NAME)
+          .map(name => {
+            console.log('[SW] Deleting old cache:', name);
+            return caches.delete(name);
+          })
       )
     ).then(() => self.clients.claim())
   );
@@ -34,7 +42,14 @@ self.addEventListener('fetch', event => {
       })
     );
   } else {
-    // JS, HTML, JSON, API calls — always from network
+    // JS, HTML, JSON, API — always network
     event.respondWith(fetch(event.request));
+  }
+});
+
+// Listen for skip waiting message from app
+self.addEventListener('message', event => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
 });
