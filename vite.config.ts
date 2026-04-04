@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => ({
     // Lovable tagger is off by default; set VITE_LOVABLE=true only if explicitly required.
     {
       name: 'sw-version-inject',
-      apply: 'build',
+      apply: 'build' as const,
       closeBundle() {
         // Inject build version into service-worker.js after build
         const fs = require('fs');
