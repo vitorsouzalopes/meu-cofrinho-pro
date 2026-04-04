@@ -3,8 +3,16 @@ import { App as CapacitorApp } from "@capacitor/app";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { checkForUpdates } from "./lib/version";
 
-createRoot(document.getElementById("root")!).render(<App />);
+// Check for updates before rendering — if updated, reload cleanly
+checkForUpdates().then((updated) => {
+  if (updated) {
+    window.location.reload();
+    return;
+  }
+  createRoot(document.getElementById("root")!).render(<App />);
+});
 
 // Guard: never register SW in iframes or Lovable preview
 const isInIframe = (() => {
