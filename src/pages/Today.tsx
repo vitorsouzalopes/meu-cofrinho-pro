@@ -70,7 +70,8 @@ const Today = () => {
     };
 
     fetchData();
-  }, [user, toast, currentMonthYear]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, currentMonthYear]);
 
   // Contas do mês atual
   const currentMonthAccounts = useMemo(
