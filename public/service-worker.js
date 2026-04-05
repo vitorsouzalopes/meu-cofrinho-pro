@@ -2,7 +2,7 @@
 const CACHE_NAME = 'cofrinho-cache-v1';
 
 self.addEventListener('install', event => {
-  console.log('[SW] Installing version:', BUILD_VERSION);
+  console.log('[SW] Installing');
   self.skipWaiting();
 });
 
