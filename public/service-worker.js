@@ -1,7 +1,5 @@
-// service-worker.js — auto-versioned cache with forced update
-// BUILD_VERSION is bumped by vite at build time via string replacement
-const BUILD_VERSION = '__BUILD_VERSION__';
-const CACHE_NAME = 'cofrinho-cache-' + BUILD_VERSION;
+// service-worker.js — cache-first for images, network-first for everything else
+const CACHE_NAME = 'cofrinho-cache-v1';
 
 self.addEventListener('install', event => {
   console.log('[SW] Installing version:', BUILD_VERSION);
