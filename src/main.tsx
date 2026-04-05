@@ -5,10 +5,31 @@ import App from "./App.tsx";
 import "./index.css";
 import { checkForUpdates } from "./lib/version";
 
-// Check for updates before rendering — if updated, reload cleanly
+// Show update splash before React mounts
+function showUpdateSplash() {
+  const root = document.getElementById("root")!;
+  root.innerHTML = `
+    <div style="
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100vh; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: white; font-family: system-ui, sans-serif; gap: 16px;
+    ">
+      <div style="
+        width: 48px; height: 48px; border: 3px solid rgba(255,255,255,0.2);
+        border-top-color: #22d3ee; border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      "></div>
+      <p style="font-size: 18px; font-weight: 600; margin: 0;">Atualizando...</p>
+      <p style="font-size: 14px; color: rgba(255,255,255,0.6); margin: 0;">Uma nova versão foi detectada</p>
+      <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+    </div>
+  `;
+}
+
 checkForUpdates().then((updated) => {
   if (updated) {
-    window.location.reload();
+    showUpdateSplash();
+    setTimeout(() => window.location.reload(), 1500);
     return;
   }
   createRoot(document.getElementById("root")!).render(<App />);
