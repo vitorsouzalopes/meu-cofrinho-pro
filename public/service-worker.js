@@ -7,7 +7,7 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('activate', event => {
-  console.log('[SW] Activating version:', BUILD_VERSION);
+  console.log('[SW] Activating');
   event.waitUntil(
     caches.keys().then(cacheNames =>
       Promise.all(
