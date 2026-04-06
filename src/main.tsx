@@ -26,8 +26,15 @@ function showUpdateSplash() {
   `;
 }
 
+// Guard against infinite reload: max 1 reload per 10 seconds
+const RELOAD_GUARD_KEY = 'cofrinho_last_reload';
+const now = Date.now();
+const lastReload = Number(localStorage.getItem(RELOAD_GUARD_KEY) || '0');
+const canReload = now - lastReload > 10_000;
+
 checkForUpdates().then((updated) => {
-  if (updated) {
+  if (updated && canReload) {
+    localStorage.setItem(RELOAD_GUARD_KEY, String(now));
     showUpdateSplash();
     setTimeout(() => window.location.reload(), 1500);
     return;
