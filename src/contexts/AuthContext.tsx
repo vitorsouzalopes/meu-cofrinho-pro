@@ -58,25 +58,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Listen for future auth changes (login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         if (!isMounted) return;
         setSession(session);
         setUser(session?.user ?? null);
+        if (isMounted) setLoading(false);
 
         if (session?.user) {
-          const { data } = await supabase
+          // Non-blocking role check — never await inside onAuthStateChange
+          supabase
             .from("user_roles")
             .select("role")
             .eq("user_id", session.user.id)
             .eq("role", "admin")
-            .maybeSingle();
-          if (isMounted) setIsAdmin(!!data);
+            .maybeSingle()
+            .then(({ data }) => {
+              if (isMounted) setIsAdmin(!!data);
+            });
         } else {
           setIsAdmin(false);
         }
-
-        // Ensure loading ends after any auth state change
-        if (isMounted) setLoading(false);
       }
     );
 
