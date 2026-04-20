@@ -209,7 +209,7 @@ const TelegramSettings = () => {
       </div>
 
       {/* Manual Configuration Form */}
-      <div className="glass-card p-5 space-y-4 animate-slide-up" style={{ animationDelay: "0.1s" }}>
+      <div className="glass-card p-5 space-y-4 animate-slide-up [animation-delay:0.1s]">
         <h2 className="font-heading font-semibold text-foreground text-sm">Configuração Manual</h2>
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Seu Chat ID do Telegram</label>
@@ -275,7 +275,7 @@ const TelegramSettings = () => {
       </div>
 
       {/* Instructions */}
-      <div className="glass-card p-4 mt-4 space-y-3 animate-slide-up" style={{ animationDelay: "0.2s" }}>
+      <div className="glass-card p-4 mt-4 space-y-3 animate-slide-up [animation-delay:0.2s]">
         <h3 className="font-heading font-semibold text-foreground text-sm">Passos rápidos:</h3>
         <div className="space-y-2 text-xs">
           <div>
