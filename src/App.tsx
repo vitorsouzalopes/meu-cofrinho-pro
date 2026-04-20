@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -23,6 +24,9 @@ import Download from "./pages/Download.tsx";
 import Auth from "./pages/Auth.tsx";
 import Profile from "./pages/Profile.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import UpdateModal from "./components/UpdateModal";
+import { CURRENT_VERSION } from "./constants/version";
+import { supabase } from "@/integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
@@ -69,8 +73,58 @@ const AppRoutes = () => (
 
 const AppContent = () => {
   const { session } = useAuth();
+  const [updateConfig, setUpdateConfig] = useState<{ min_version: string; download_url: string; message: string } | null>(null);
+  const [needsUpdate, setNeedsUpdate] = useState(false);
+
   useScrollRestoration();
   useGestureBack();
+
+  useEffect(() => {
+    const checkVersion = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("app_config" as any)
+          .select("*")
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error checking app version:", error);
+          return;
+        }
+
+        if (data) {
+          const config = data as any;
+          const isOlder = (current: string, min: string) => {
+            const c = current.split('.').map(Number);
+            const m = min.split('.').map(Number);
+            for (let i = 0; i < Math.max(c.length, m.length); i++) {
+              const cv = c[i] || 0;
+              const mv = m[i] || 0;
+              if (cv < mv) return true;
+              if (cv > mv) return false;
+            }
+            return false;
+          };
+
+          if (isOlder(CURRENT_VERSION, config.min_version)) {
+            setUpdateConfig(config);
+            setNeedsUpdate(true);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to check version:", e);
+      }
+    };
+
+    checkVersion();
+  }, []);
+
+  if (needsUpdate && updateConfig) {
+    return <UpdateModal downloadUrl={updateConfig.download_url} message={updateConfig.message} />;
+  }
+
   return (
     <>
       <AppRoutes />
