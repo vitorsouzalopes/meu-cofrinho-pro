@@ -58,6 +58,17 @@ export interface ReminderLog {
   created_at: string
 }
 
+export interface AccountPayment {
+  id: string
+  user_id: string
+  account_id: string
+  month_year: string
+  amount: number
+  paid_at?: string
+  receipt_url?: string
+  created_at: string
+}
+
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)

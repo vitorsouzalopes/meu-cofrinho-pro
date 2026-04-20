@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Trash2, Banknote, Check, Edit3, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Banknote, Check, Edit3, AlertTriangle, FileUp, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import type { Account } from "@/integrations/supabase/types";
+import type { Account, AccountPayment } from "@/integrations/supabase/types";
 
 const bankAccountTypes = ["CDB", "Poupança", "Selic", "Cofrinho", "Digital", "Outros"];
 const expenseTypes = ["Internet", "Carro", "Aluguel", "Supermercado", "Outros"];
@@ -40,6 +40,11 @@ const Accounts = () => {
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedAccountForPayment, setSelectedAccountForPayment] = useState<Account | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [paymentsHistory, setPaymentsHistory] = useState<AccountPayment[]>([]);
 
   const [name, setName] = useState("");
   const [accountCategory, setAccountCategory] = useState<"bank" | "expense">("expense");
@@ -77,6 +82,21 @@ const Accounts = () => {
     } else {
       setAccounts((data ?? []) as Account[]);
     }
+
+    // Load payments history for the last 6 months
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
+    const { data: paymentsData, error: paymentsError } = await supabase
+      .from("account_payments")
+      .select("*")
+      .gte("created_at", sixMonthsAgo.toISOString())
+      .order("paid_at", { ascending: false });
+
+    if (!paymentsError && paymentsData) {
+      setPaymentsHistory(paymentsData as AccountPayment[]);
+    }
+
     setLoading(false);
   }, [currentMonthYear, toast, user]);
 
@@ -170,20 +190,89 @@ const Accounts = () => {
   };
 
   const markAsPaid = async (account: Account) => {
-    const { data, error } = await supabase
+    setSelectedAccountForPayment(account);
+    setReceiptFile(null);
+    setPaymentDialogOpen(true);
+  };
+
+  const confirmPayment = async () => {
+    if (!selectedAccountForPayment || !user) return;
+    setIsUploading(true);
+
+    let receipt_url = null;
+
+    if (receiptFile) {
+      const fileExt = receiptFile.name.split(".").pop();
+      const fileName = `${user.id}/${selectedAccountForPayment.id}-${Date.now()}.${fileExt}`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("receipts")
+        .upload(fileName, receiptFile);
+
+      if (uploadError) {
+        toast({ title: "Erro ao subir comprovante", description: uploadError.message, variant: "destructive" });
+        setIsUploading(false);
+        return;
+      }
+      
+      const { data: urlData } = supabase.storage.from("receipts").getPublicUrl(fileName);
+      receipt_url = urlData.publicUrl;
+    }
+
+    const { data: updatedAccount, error: updateError } = await supabase
       .from("accounts")
       .update({ paid: true, paid_at: new Date().toISOString() })
-      .eq("id", account.id)
+      .eq("id", selectedAccountForPayment.id)
       .select("*")
       .single();
 
-    if (error) {
-      toast({ title: "Erro ao marcar como pago", description: error.message, variant: "destructive" });
-      return;
+    if (updateError) {
+      toast({ title: "Erro ao marcar como pago", description: updateError.message, variant: "destructive" });
+    } else {
+      // Record payment in history
+      const { data: paymentRecord, error: paymentError } = await supabase
+        .from("account_payments")
+        .insert({
+          user_id: user.id,
+          account_id: selectedAccountForPayment.id,
+          month_year: currentMonthYear,
+          amount: selectedAccountForPayment.amount,
+          paid_at: new Date().toISOString(),
+          receipt_url: receipt_url
+        })
+        .select("*")
+        .single();
+
+      if (!paymentError && paymentRecord) {
+        setPaymentsHistory(prev => [paymentRecord as AccountPayment, ...prev]);
+      }
+
+      setAccounts((prev) => prev.map((item) => (item.id === updatedAccount.id ? (updatedAccount as Account) : item)));
+      toast({ title: "Conta marcada como paga" });
     }
 
-    setAccounts((prev) => prev.map((item) => (item.id === data.id ? (data as Account) : item)));
-    toast({ title: "Conta marcada como paga" });
+    setIsUploading(false);
+    setPaymentDialogOpen(false);
+    setSelectedAccountForPayment(null);
+    setReceiptFile(null);
+
+    // Run cleanup for records > 6 months
+    runCleanup();
+  };
+
+  const runCleanup = async () => {
+    if (!user) return;
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
+    // In a real app, you might want to delete the actual storage files too, 
+    // but that requires listing and deleting multiple files. 
+    // For now we clean up the DB records to fulfill the user's request of "can delete".
+    await supabase
+      .from("account_payments")
+      .delete()
+      .lt("created_at", sixMonthsAgo.toISOString())
+      .eq("user_id", user.id);
   };
 
   const bankAccounts = accounts.filter((account) => account.account_category === "bank");
@@ -336,27 +425,46 @@ const Accounts = () => {
       </div>
 
       <div className="glass-card p-4 mb-4">
-        <h2 className="font-semibold text-foreground mb-3">Histórico</h2>
-        {Object.keys(historyByMonth).length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma conta paga ainda.</p>
+        <h2 className="font-semibold text-foreground mb-3">Histórico (6 meses)</h2>
+        {paymentsHistory.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhum pagamento registrado nos últimos 6 meses.</p>
         ) : (
           <div className="space-y-4">
-            {Object.entries(historyByMonth).map(([monthYear, monthAccounts]) => (
+            {/* Group by month_year */}
+            {Array.from(new Set(paymentsHistory.map(p => p.month_year))).sort().reverse().map(monthYear => (
               <div key={monthYear} className="rounded-2xl border border-border p-4">
                 <div className="flex items-center justify-between mb-3">
                   <p className="font-medium text-foreground">{formatMonthYear(monthYear)}</p>
-                  <p className="text-sm text-muted-foreground">Total pago: {formatCurrency(monthAccounts.reduce((sum, account) => sum + Number(account.amount), 0))}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Total: {formatCurrency(paymentsHistory.filter(p => p.month_year === monthYear).reduce((sum, p) => sum + Number(p.amount), 0))}
+                  </p>
                 </div>
                 <div className="space-y-2">
-                  {monthAccounts.map((account) => (
-                    <div key={account.id} className="flex items-center justify-between gap-3 text-sm">
-                      <div>
-                        <p className="font-medium text-foreground">{account.name}</p>
-                        <p className="text-xs text-muted-foreground">{account.billing_type === "monthly" ? "Mensal" : "Único"}</p>
+                  {paymentsHistory.filter(p => p.month_year === monthYear).map((payment) => {
+                    const account = accounts.find(a => a.id === payment.account_id);
+                    return (
+                      <div key={payment.id} className="flex items-center justify-between gap-3 text-sm">
+                        <div className="flex-1">
+                          <p className="font-medium text-foreground">{account?.name || "Conta removida"}</p>
+                          <p className="text-xs text-muted-foreground">Pago em {new Date(payment.paid_at || "").toLocaleDateString("pt-BR")}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold">{formatCurrency(Number(payment.amount))}</p>
+                          {payment.receipt_url && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-8 w-8 p-0" 
+                              onClick={() => window.open(payment.receipt_url, "_blank")}
+                              title="Ver comprovante"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      <p className="text-sm text-foreground">{formatCurrency(Number(account.amount))} ✔</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -437,6 +545,70 @@ const Accounts = () => {
             </div>
             <Button className="w-full" onClick={saveAccount} disabled={saving}>
               {saving ? "Salvando..." : editingAccount ? "Salvar alterações" : "Salvar conta"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)]">
+          <DialogHeader>
+            <DialogTitle>Confirmar Pagamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-3">
+            <div className="p-4 rounded-xl bg-muted border border-border">
+              <p className="text-sm text-muted-foreground mb-1">Conta</p>
+              <p className="font-semibold text-foreground">{selectedAccountForPayment?.name}</p>
+              <div className="flex justify-between mt-2">
+                <p className="text-sm text-foreground">{formatCurrency(Number(selectedAccountForPayment?.amount || 0))}</p>
+                <p className="text-xs text-muted-foreground">Vencimento: Dia {selectedAccountForPayment?.due_day}</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Comprovante (Opcional)</label>
+              <div className="relative">
+                <input
+                  type="file"
+                  id="receipt-upload"
+                  className="hidden"
+                  onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                  accept="image/*,application/pdf"
+                />
+                <label
+                  htmlFor="receipt-upload"
+                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-xl hover:border-gold transition-colors cursor-pointer bg-muted"
+                >
+                  {receiptFile ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Check className="w-8 h-8 text-emerald-accent" />
+                      <p className="text-xs text-foreground font-medium truncate max-w-[200px]">{receiptFile.name}</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2">
+                      <FileUp className="w-8 h-8 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground text-center px-4">
+                        Toque para selecionar imagem ou PDF do comprovante
+                      </p>
+                    </div>
+                  )}
+                </label>
+              </div>
+            </div>
+
+            <Button 
+              className="w-full" 
+              onClick={confirmPayment} 
+              disabled={isUploading}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                "Confirmar Pagamento"
+              )}
             </Button>
           </div>
         </DialogContent>
