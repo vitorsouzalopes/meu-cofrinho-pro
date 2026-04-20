@@ -39,27 +39,27 @@ const History = () => {
       setLoading(true);
       
       try {
-        // 1. Fetch Expenses (Gastos Diários)
-        const { data: expenses, error: expensesError } = await supabase
-          .from("expenses")
-          .select("*")
-          .eq("user_id", user.id);
+        // Separate queries for resilience
+        const [expensesRes, paymentsRes, accountsRes] = await Promise.allSettled([
+          supabase.from("expenses").select("*").eq("user_id", user.id),
+          supabase.from("account_payments").select("*").eq("user_id", user.id),
+          supabase.from("accounts").select("*").eq("user_id", user.id).eq("paid", true)
+        ]);
 
-        // 2. Fetch Account Payments (Boletos Pagos - Novo Histórico)
-        const { data: payments, error: paymentsError } = await supabase
-          .from("account_payments")
-          .select("*")
-          .eq("user_id", user.id);
+        const expenses = expensesRes.status === "fulfilled" && !expensesRes.value.error 
+          ? (expensesRes.value.data || []) 
+          : [];
+        const payments = paymentsRes.status === "fulfilled" && !paymentsRes.value.error 
+          ? (paymentsRes.value.data || []) 
+          : [];
+        const accounts = accountsRes.status === "fulfilled" && !accountsRes.value.error 
+          ? (accountsRes.value.data || []) 
+          : [];
 
-        // 3. Fetch Paid Accounts (Legados ou Únicos sem histórico ainda)
-        const { data: accounts, error: accountsError } = await supabase
-          .from("accounts")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("paid", true);
-
-        if (expensesError || paymentsError || accountsError) {
-          throw new Error("Erro ao carregar dados do histórico");
+        if (expensesRes.status === "rejected" || (expensesRes.status === "fulfilled" && expensesRes.value.error) ||
+            paymentsRes.status === "rejected" || (paymentsRes.status === "fulfilled" && paymentsRes.value.error) ||
+            accountsRes.status === "rejected" || (accountsRes.status === "fulfilled" && accountsRes.value.error)) {
+          console.warn("Algumas fontes do histórico falharam em carregar");
         }
 
         const refinedMerged: HistoryItem[] = [];
