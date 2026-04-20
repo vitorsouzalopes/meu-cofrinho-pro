@@ -521,6 +521,7 @@ const Accounts = () => {
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Categoria da conta</label>
               <select
+                title="Categoria da conta"
                 value={accountCategory}
                 onChange={(e) => {
                   const nextCategory = e.target.value as "bank" | "expense";
@@ -548,6 +549,7 @@ const Accounts = () => {
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
               <select
+                title="Tipo de conta"
                 value={accountType}
                 onChange={(e) => setAccountType(e.target.value)}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
@@ -572,7 +574,12 @@ const Accounts = () => {
             {accountCategory === "expense" ? (
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Tipo de cobrança</label>
-                <select value={billingType} onChange={(e) => setBillingType(e.target.value as "monthly" | "single")} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
+                <select 
+                  title="Tipo de cobrança"
+                  value={billingType} 
+                  onChange={(e) => setBillingType(e.target.value as "monthly" | "single")} 
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
+                >
                   {billingTypes.map((type) => (
                     <option key={type.value} value={type.value}>{type.label}</option>
                   ))}
