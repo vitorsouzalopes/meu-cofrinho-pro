@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings, Send, Copy, Check } from "lucide-react";
+import { Settings, Send, Copy, Check, MessageSquare, Phone, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +20,8 @@ const TelegramSettings = () => {
   const [reminderDays, setReminderDays] = useState(2);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [profile, setProfile] = useState<any>(null);
 
   // Fetch existing config
   useEffect(() => {
@@ -35,6 +37,20 @@ const TelegramSettings = () => {
       if (!error && data) {
         setConfig(data);
         setReminderDays(data.reminder_days_before);
+        setChatId(data.telegram_chat_id?.toString() || "");
+        setUserId(data.telegram_user_id?.toString() || "");
+      }
+
+      // Fetch profile for phone
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+      
+      if (prof) {
+        setProfile(prof);
+        setPhone(prof.phone || "");
       }
       setLoading(false);
     };
@@ -95,7 +111,26 @@ const TelegramSettings = () => {
         setUserId("");
       }
     }
+    
+    // Save phone to profile
+    if (user) {
+      await supabase
+        .from("profiles")
+        .update({ phone, updated_at: new Date().toISOString() })
+        .eq("id", user.id);
+    }
+
     setSaving(false);
+  };
+
+  const handleOneClickConnect = () => {
+    // Strategy: Deep link to bot with user ID
+    // The user needs to message the bot and the bot (external) would catch the /start {id}
+    // Since we don't have the bot name yet, we ask the user to provide it or use a default if exists
+    const botUsername = "SeuBotDeLembretesBot"; // Placeholder - user should change or we can make it dynamic
+    const url = `https://t.me/${botUsername}?start=${user?.id}`;
+    window.open(url, "_blank");
+    toast({ title: "Abrindo Telegram...", description: "Clique em 'Começar' ou 'Start' no bot." });
   };
 
   const handleCopyBotCommand = () => {
@@ -135,8 +170,47 @@ const TelegramSettings = () => {
         </ul>
       </div>
 
-      {/* Configuration Form */}
+      {/* Phone and Simple Connect */}
+      <div className="glass-card p-5 mb-4 space-y-4 animate-slide-up">
+        <h2 className="font-heading font-semibold text-foreground text-sm flex items-center gap-2">
+          <MessageSquare className="w-4 h-4 text-emerald-accent" /> Configuração Rápida
+        </h2>
+        
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Seu Número de Telefone</label>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                type="tel"
+                placeholder="Ex: 11999999999"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="bg-muted border-border pl-9"
+              />
+            </div>
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-1">
+            Usado apenas para facilitar sua identificação no bot.
+          </p>
+        </div>
+
+        <div className="pt-2">
+          <Button 
+            className="w-full bg-[#229ED9] hover:bg-[#229ED9]/90 text-white"
+            onClick={handleOneClickConnect}
+          >
+            Conectar via Telegram <ExternalLink className="w-4 h-4 ml-2" />
+          </Button>
+          <p className="text-[10px] text-center text-muted-foreground mt-2">
+            Abre o Telegram e conecta automaticamente seu usuário.
+          </p>
+        </div>
+      </div>
+
+      {/* Manual Configuration Form */}
       <div className="glass-card p-5 space-y-4 animate-slide-up" style={{ animationDelay: "0.1s" }}>
+        <h2 className="font-heading font-semibold text-foreground text-sm">Configuração Manual</h2>
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Seu Chat ID do Telegram</label>
           <Input

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { User, Camera, LogOut, TrendingUp, Wallet, PiggyBank, Settings, Bell } from "lucide-react";
+import { User, Camera, LogOut, TrendingUp, Wallet, PiggyBank, Settings, Bell, Smartphone, ShieldCheck } from "lucide-react";
+import { PushNotifications } from "@capacitor/push-notifications";
+import { Capacitor } from "@capacitor/core";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,6 +30,8 @@ const ProfilePage = () => {
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [registeringPush, setRegisteringPush] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -81,6 +85,58 @@ const ProfilePage = () => {
   const handleSignOut = async () => {
     await signOut();
     navigate("/auth");
+  };
+
+  const handleRegisterPush = async () => {
+    if (Capacitor.getPlatform() === 'web') {
+      toast({
+        title: "Aviso",
+        description: "Notificações push nativas só funcionam no app instalado (Android/iOS).",
+        variant: "default",
+      });
+      return;
+    }
+
+    setRegisteringPush(true);
+    try {
+      let permStatus = await PushNotifications.checkPermissions();
+
+      if (permStatus.receive === 'prompt') {
+        permStatus = await PushNotifications.requestPermissions();
+      }
+
+      if (permStatus.receive !== 'granted') {
+        throw new Error('Permissão negada pelo usuário');
+      }
+
+      await PushNotifications.register();
+
+      // Listeners should be set up once, ideally in a global context or useEffect
+      // But for simplicity here, we ensure we handle the token
+      PushNotifications.addListener('registration', async (token) => {
+        const { error } = await supabase
+          .from('push_tokens' as any)
+          .upsert({ 
+            user_id: user?.id, 
+            token: token.value,
+            platform: Capacitor.getPlatform()
+          });
+        
+        if (error) console.error("Error saving push token:", error);
+        setPushEnabled(true);
+        toast({ title: "Notificações ativadas!", description: "Você receberá lembretes no seu celular." });
+      });
+
+      PushNotifications.addListener('registrationError', (err) => {
+        console.error('Registration error: ', err.error);
+        toast({ title: "Erro", description: "Falha ao registrar para notificações", variant: "destructive" });
+      });
+
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } finally {
+      setRegisteringPush(false);
+    }
   };
 
   if (loading) {
@@ -176,14 +232,18 @@ const ProfilePage = () => {
             <span className="text-muted-foreground text-sm">→</span>
           </div>
         </Card>
-        <Card className="p-3 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => navigate("/expenses")}>
+        <Card className="p-3 cursor-pointer hover:bg-muted/50 transition-colors" onClick={handleRegisterPush}>
           <div className="flex items-center gap-3">
-            <Settings className="w-5 h-5 text-gold" />
+            <Smartphone className="w-5 h-5 text-gold" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-foreground">Gerenciar Gastos</p>
-              <p className="text-xs text-muted-foreground">Exportar PDF, CSV e compartilhar</p>
+              <p className="text-sm font-medium text-foreground">Notificações Push</p>
+              <p className="text-xs text-muted-foreground">Receber alertas no celular</p>
             </div>
-            <span className="text-muted-foreground text-sm">→</span>
+            {pushEnabled ? (
+              <ShieldCheck className="w-4 h-4 text-emerald-accent" />
+            ) : (
+              <span className="text-muted-foreground text-sm">{registeringPush ? "..." : "→"}</span>
+            )}
           </div>
         </Card>
       </div>

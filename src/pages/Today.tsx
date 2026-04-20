@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, TrendingUp, Wallet, Clock, AlertCircle, Sparkles, Lightbulb, DollarSign, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, TrendingUp, Wallet, Clock, AlertCircle, Sparkles, Lightbulb, DollarSign, CheckCircle2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,13 @@ const Today = () => {
   const [salaryId, setSalaryId] = useState<string | null>(null);
   const [salaryDialogOpen, setSalaryDialogOpen] = useState(false);
   const [salaryInput, setSalaryInput] = useState("");
+  
+  // Extra Income state
+  const [extraIncomes, setExtraIncomes] = useState<any[]>([]);
+  const [extraIncomeDialogOpen, setExtraIncomeDialogOpen] = useState(false);
+  const [extraIncomeName, setExtraIncomeName] = useState("");
+  const [extraIncomeAmount, setExtraIncomeAmount] = useState("");
+  const [editingExtraIncomeId, setEditingExtraIncomeId] = useState<string | null>(null);
 
   const today = new Date();
   const todayDay = today.getDate();
@@ -40,10 +47,11 @@ const Today = () => {
     const fetchData = async () => {
       setLoading(true);
 
-      const [accountsResponse, investmentsResponse, salaryResponse] = await Promise.all([
+      const [accountsResponse, investmentsResponse, salaryResponse, extraResponse] = await Promise.all([
         supabase.from("accounts").select("*").eq("user_id", user.id),
         supabase.from("investments").select("*").eq("user_id", user.id),
         supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
+        supabase.from("extra_income" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear)
       ]);
 
       if (accountsResponse.error) {
@@ -64,6 +72,10 @@ const Today = () => {
         setSalary(Number(s.amount));
         setSalaryReceived(!!s.received);
         setSalaryId(s.id);
+      }
+
+      if (!extraResponse.error && extraResponse.data) {
+        setExtraIncomes(extraResponse.data);
       }
 
       setLoading(false);
@@ -126,8 +138,14 @@ const Today = () => {
     [investments],
   );
 
-  const remainingBalance = salary - totalCurrentMonth;
-  const balanceAfterPending = salary - totalPaid - totalPending;
+  const totalExtraIncome = useMemo(
+    () => extraIncomes.reduce((sum, item) => sum + Number(item.amount), 0),
+    [extraIncomes]
+  );
+
+  const totalIncome = salary + totalExtraIncome;
+  const remainingBalance = totalIncome - totalCurrentMonth;
+  const balanceAfterPending = totalIncome - totalPaid - totalPending;
 
   const saveSalary = async () => {
     if (!user || !salaryInput) return;
@@ -175,6 +193,64 @@ const Today = () => {
     toast({ title: "🎉 Salário recebido! Bora organizar as contas!" });
   };
 
+  const saveExtraIncome = async () => {
+    if (!user || !extraIncomeName || !extraIncomeAmount) return;
+    const amount = parseFloat(extraIncomeAmount);
+    if (isNaN(amount)) return;
+
+    const data = {
+      user_id: user.id,
+      amount,
+      description: extraIncomeName,
+      month_year: currentMonthYear,
+    };
+
+    if (editingExtraIncomeId) {
+      const { error } = await supabase
+        .from("extra_income" as any)
+        .update(data as any)
+        .eq("id", editingExtraIncomeId);
+      
+      if (error) {
+        toast({ title: "Erro ao atualizar ganho", variant: "destructive" });
+        return;
+      }
+      setExtraIncomes(prev => prev.map(item => item.id === editingExtraIncomeId ? { ...item, ...data } : item));
+    } else {
+      const { data: insertedData, error } = await supabase
+        .from("extra_income" as any)
+        .insert(data as any)
+        .select("*")
+        .single();
+      
+      if (error) {
+        toast({ title: "Erro ao salvar ganho", variant: "destructive" });
+        return;
+      }
+      setExtraIncomes(prev => [...prev, insertedData]);
+    }
+
+    setExtraIncomeDialogOpen(false);
+    setExtraIncomeName("");
+    setExtraIncomeAmount("");
+    setEditingExtraIncomeId(null);
+    toast({ title: "💰 Ganho extra registrado!" });
+  };
+
+  const deleteExtraIncome = async (id: string) => {
+    const { error } = await supabase
+      .from("extra_income" as any)
+      .delete()
+      .eq("id", id);
+    
+    if (error) {
+      toast({ title: "Erro ao excluir", variant: "destructive" });
+      return;
+    }
+    setExtraIncomes(prev => prev.filter(item => item.id !== id));
+    toast({ title: "Removido com sucesso!" });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -219,6 +295,56 @@ const Today = () => {
         )}
       </Card>
 
+      {/* Extra Income Card */}
+      <Card className="p-4 mb-4 border-emerald-accent/40 bg-emerald-accent/5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Plus className="w-5 h-5 text-emerald-accent" />
+            <h2 className="font-semibold text-foreground">Ganho extra</h2>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => { 
+            setEditingExtraIncomeId(null);
+            setExtraIncomeName("");
+            setExtraIncomeAmount("");
+            setExtraIncomeDialogOpen(true); 
+          }}>
+            Adicionar
+          </Button>
+        </div>
+        
+        {extraIncomes.length > 0 ? (
+          <div className="space-y-3">
+            <div className="flex justify-between items-end">
+              <p className="text-2xl font-bold text-emerald-accent">{formatCurrency(totalExtraIncome)}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{extraIncomes.length} entradas</p>
+            </div>
+            <div className="space-y-2 pt-2 border-t border-emerald-accent/20">
+              {extraIncomes.map((item) => (
+                <div key={item.id} className="flex items-center justify-between group">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">{item.description}</p>
+                    <p className="text-[10px] text-muted-foreground">{new Date(item.date).toLocaleDateString("pt-BR")}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-foreground">{formatCurrency(Number(item.amount))}</p>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => deleteExtraIncome(item.id)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Registre ganhos extras, como freelas ou vendas.</p>
+        )}
+      </Card>
+
       {/* Balance Forecast */}
       {salary > 0 && (
         <Card className="p-4 mb-4 border-border">
@@ -228,8 +354,8 @@ const Today = () => {
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Salário</span>
-              <span className="font-semibold text-gold">{formatCurrency(salary)}</span>
+              <span className="text-muted-foreground">Renda total</span>
+              <span className="font-semibold text-gold">{formatCurrency(totalIncome)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total de contas</span>
@@ -431,6 +557,41 @@ const Today = () => {
             </div>
             <Button className="w-full" onClick={saveSalary}>
               Salvar salário
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Extra Income Dialog */}
+      <Dialog open={extraIncomeDialogOpen} onOpenChange={setExtraIncomeDialogOpen}>
+        <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)]">
+          <DialogHeader>
+            <DialogTitle>💰 Ganho extra</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-3">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Descrição</label>
+              <Input
+                value={extraIncomeName}
+                onChange={(e) => setExtraIncomeName(e.target.value)}
+                placeholder="Ex: Venda de celular, Freela..."
+                className="bg-muted border-border"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Valor</label>
+              <Input
+                type="number"
+                value={extraIncomeAmount}
+                onChange={(e) => setExtraIncomeAmount(e.target.value)}
+                placeholder="0.00"
+                className="bg-muted border-border"
+                step="0.01"
+                min="0"
+              />
+            </div>
+            <Button className="w-full" onClick={saveExtraIncome}>
+              {editingExtraIncomeId ? "Atualizar" : "Salvar ganho"}
             </Button>
           </div>
         </DialogContent>

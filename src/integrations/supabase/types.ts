@@ -246,6 +246,7 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          phone: string | null
           updated_at: string
         }
         Insert: {
@@ -254,6 +255,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id: string
+          phone?: string | null
           updated_at?: string
         }
         Update: {
@@ -262,10 +264,11 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []
-      }
+      },
       salary: {
         Row: {
           amount: number
@@ -343,6 +346,60 @@ export type Database = {
         Update: {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      },
+      extra_income: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          description: string
+          id: string
+          month_year: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          date?: string
+          description: string
+          id?: string
+          month_year: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          month_year?: string
+          user_id?: string
+        }
+        Relationships: []
+      },
+      push_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          platform: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform?: string | null
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform?: string | null
+          token?: string
           user_id?: string
         }
         Relationships: []
