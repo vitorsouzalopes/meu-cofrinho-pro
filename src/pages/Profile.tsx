@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { User, Camera, LogOut, TrendingUp, Wallet, PiggyBank, Settings, Bell, Smartphone, ShieldCheck } from "lucide-react";
 import { PushNotifications } from "@capacitor/push-notifications";
 import { Capacitor } from "@capacitor/core";
+import { VAPID_PUBLIC_KEY } from "@/constants/vapid";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -87,13 +88,58 @@ const ProfilePage = () => {
     navigate("/auth");
   };
 
+  const urlBase64ToUint8Array = (base64String: string) => {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
+
+  const subscribeUserToWebPush = async () => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      throw new Error('Push notifications não são suportadas neste navegador.');
+    }
+
+    const registration = await navigator.serviceWorker.ready;
+    
+    // Check if subscription already exists
+    let subscription = await registration.pushManager.getSubscription();
+    
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+
+    const { error } = await supabase
+      .from('push_tokens' as any)
+      .upsert({ 
+        user_id: user?.id, 
+        token: JSON.stringify(subscription),
+        platform: 'web'
+      }, { onConflict: 'user_id,token' });
+
+    if (error) throw error;
+    
+    setPushEnabled(true);
+    toast({ title: "Notificações ativadas!", description: "Você receberá lembretes neste navegador." });
+  };
+
   const handleRegisterPush = async () => {
     if (Capacitor.getPlatform() === 'web') {
-      toast({
-        title: "Aviso",
-        description: "Notificações push nativas só funcionam no app instalado (Android/iOS).",
-        variant: "default",
-      });
+      try {
+        setRegisteringPush(true);
+        await subscribeUserToWebPush();
+      } catch (error: any) {
+        toast({ title: "Erro", description: error.message, variant: "destructive" });
+      } finally {
+        setRegisteringPush(false);
+      }
       return;
     }
 
@@ -120,7 +166,7 @@ const ProfilePage = () => {
             user_id: user?.id, 
             token: token.value,
             platform: Capacitor.getPlatform()
-          });
+          }, { onConflict: 'user_id,token' });
         
         if (error) console.error("Error saving push token:", error);
         setPushEnabled(true);
