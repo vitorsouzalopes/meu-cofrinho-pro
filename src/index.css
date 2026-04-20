@@ -99,4 +99,12 @@
   .text-emerald-accent {
     color: hsl(var(--emerald));
   }
+
+  /* Hide Lovable/gpt-engineer branding/badges */
+  #gpt-engineer-tagger,
+  .gpt-engineer-tagger,
+  #lovable-badge,
+  [data-lovable-tagger] {
+    display: none !important;
+  }
 }
