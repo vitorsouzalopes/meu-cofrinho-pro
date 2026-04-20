@@ -10,6 +10,7 @@ import { useGestureBack } from "@/hooks/use-gesture-back";
 import Today from "./pages/Today.tsx";
 import Accounts from "./pages/Accounts.tsx";
 import Investments from "./pages/Investments.tsx";
+import InvestmentSuggestions from "./pages/InvestmentSuggestions.tsx";
 import Allocation from "./pages/Allocation.tsx";
 import History from "./pages/History.tsx";
 import Challenges from "./pages/Challenges.tsx";
@@ -20,6 +21,7 @@ import Expenses from "./pages/Expenses.tsx";
 import TelegramSettings from "./pages/TelegramSettings.tsx";
 import Download from "./pages/Download.tsx";
 import Auth from "./pages/Auth.tsx";
+import Profile from "./pages/Profile.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -50,6 +52,7 @@ const AppRoutes = () => (
     <Route path="/" element={<ProtectedRoute><Today /></ProtectedRoute>} />
     <Route path="/accounts" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
     <Route path="/investments" element={<ProtectedRoute><Investments /></ProtectedRoute>} />
+    <Route path="/suggestions" element={<ProtectedRoute><InvestmentSuggestions /></ProtectedRoute>} />
     <Route path="/allocation" element={<ProtectedRoute><Allocation /></ProtectedRoute>} />
     <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
     <Route path="/challenges" element={<ProtectedRoute><Challenges /></ProtectedRoute>} />
@@ -58,6 +61,7 @@ const AppRoutes = () => (
     <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
     <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
     <Route path="/telegram" element={<ProtectedRoute><TelegramSettings /></ProtectedRoute>} />
+    <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
     <Route path="/download" element={<Download />} />
     <Route path="*" element={<NotFound />} />
   </Routes>

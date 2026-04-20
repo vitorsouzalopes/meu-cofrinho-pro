@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import type { TelegramConfig } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
+
+type TelegramConfig = Tables<"telegram_config">;
 
 const TelegramSettings = () => {
   const { user } = useAuth();

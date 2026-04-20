@@ -124,10 +124,10 @@ const Accounts = () => {
   const openEditAccountDialog = (account: Account) => {
     setEditingAccount(account);
     setName(account.name);
-    setAccountCategory(account.account_category ?? "expense");
+    setAccountCategory((account.account_category ?? "expense") as "bank" | "expense");
     setBank(account.account_category === "bank" ? account.bank : account.bank);
     setAccountType(account.account_type);
-    setBillingType(account.billing_type ?? "single");
+    setBillingType((account.billing_type ?? "single") as "monthly" | "single");
     setAmount(String(account.amount));
     setDueDay(String(account.due_day ?? 1));
     setStartDate(account.start_date);
@@ -375,6 +375,46 @@ const Accounts = () => {
         )}
       </div>
 
+      {/* Contas mensais */}
+      <div className="glass-card p-4 mb-4">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h2 className="font-semibold text-foreground">Contas mensais</h2>
+            <p className="text-xs text-muted-foreground">Despesas que se repetem todo mês.</p>
+          </div>
+          <p className="text-xs text-muted-foreground">{formatMonthYear(currentMonthYear)}</p>
+        </div>
+        {monthlyAccounts.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma conta mensal pendente.</p>
+        ) : (
+          <div className="space-y-3">
+            {monthlyAccounts.map((account) => (
+              <div key={account.id} className="rounded-2xl border border-border p-4">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <div>
+                    <p className="font-semibold text-foreground">{account.name}</p>
+                    <p className="text-xs text-muted-foreground">Dia {account.due_day} • Mensal</p>
+                  </div>
+                  <p className="text-sm font-semibold">{formatCurrency(Number(account.amount))}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <Button variant="outline" size="sm" onClick={() => openEditAccountDialog(account)}>
+                    <Edit3 className="w-3.5 h-3.5" /> Editar
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => deleteAccount(account.id)}>
+                    <Trash2 className="w-3.5 h-3.5" /> Excluir
+                  </Button>
+                  <Button variant="emerald" size="sm" onClick={() => markAsPaid(account)}>
+                    <Check className="w-3.5 h-3.5" /> Pago
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Contas únicas */}
       <div className="glass-card p-4 mb-4">
         <div className="mb-3 flex items-center justify-between">
           <div>

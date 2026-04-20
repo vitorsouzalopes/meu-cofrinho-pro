@@ -1,39 +1,51 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-import type { Investment } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Investment = Tables<"investments">;
 
 export function useInvestmentIntelligence(investments: Investment[]) {
   const { toast } = useToast();
+  const hasNotified = useRef(false);
 
   useEffect(() => {
-    if (!investments.length) return;
-    const total = investments.reduce((sum, inv) => sum + Number(inv.current_amount ?? inv.amount), 0);
-    const aportes = investments.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
-    const retornoNegativo = investments.some(inv => Number(inv.current_amount ?? inv.amount) < Number(inv.amount));
+    if (!investments.length || hasNotified.current) return;
+    hasNotified.current = true;
 
-    // Previsão simples: saldo + aportes futuros (exemplo fictício)
-    const saldoPrevisto = total + 200; // supondo aporte mensal de 200
-    if (saldoPrevisto > total) {
-      toast({
-        title: "Previsão de saldo",
-        description: `Se investir R$200/mês, terá R$${saldoPrevisto.toLocaleString("pt-BR", {minimumFractionDigits:2})} em 1 mês!`,
-      });
-    }
-
-    // Meta inteligente: sugerir valor para investir
-    if (total < 1000) {
-      toast({
-        title: "Meta sugerida",
-        description: "Que tal investir mais R$100 este mês para alcançar R$1000?",
-      });
-    }
+    const total = investments.reduce(
+      (sum, inv) => sum + Number(inv.current_amount ?? inv.amount),
+      0
+    );
 
     // Alerta automático: retorno negativo
-    if (retornoNegativo) {
+    const retornoNegativo = investments.filter(
+      (inv) => Number(inv.current_amount ?? inv.amount) < Number(inv.amount)
+    );
+    if (retornoNegativo.length > 0) {
       toast({
-        title: "Atenção!",
-        description: "Algum investimento está com retorno negativo.",
+        title: "⚠️ Retorno negativo",
+        description: `${retornoNegativo.length} investimento(s) com retorno negativo. Fique atento!`,
         variant: "destructive",
+      });
+    }
+
+    // Meta inteligente
+    if (total < 1000) {
+      const falta = 1000 - total;
+      toast({
+        title: "🎯 Meta sugerida",
+        description: `Faltam R$${falta.toFixed(2)} para chegar a R$1.000,00 investidos!`,
+      });
+    }
+
+    // Saldo parado (investimento sem atualização de valor)
+    const semAtualizacao = investments.filter(
+      (inv) => inv.current_amount === null || Number(inv.current_amount) === Number(inv.amount)
+    );
+    if (semAtualizacao.length > 0 && investments.length >= 2) {
+      toast({
+        title: "💡 Atualize seus valores",
+        description: `${semAtualizacao.length} investimento(s) sem atualização de saldo.`,
       });
     }
   }, [investments, toast]);

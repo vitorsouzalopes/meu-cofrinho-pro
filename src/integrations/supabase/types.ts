@@ -77,6 +77,90 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          account_category: string
+          account_type: string
+          amount: number
+          bank: string
+          billing_type: string
+          created_at: string
+          due_day: number
+          id: string
+          month_year: string
+          name: string
+          paid: boolean
+          paid_at: string | null
+          start_date: string
+          user_id: string
+        }
+        Insert: {
+          account_category?: string
+          account_type?: string
+          amount?: number
+          bank?: string
+          billing_type?: string
+          created_at?: string
+          due_day?: number
+          id?: string
+          month_year: string
+          name: string
+          paid?: boolean
+          paid_at?: string | null
+          start_date?: string
+          user_id: string
+        }
+        Update: {
+          account_category?: string
+          account_type?: string
+          amount?: number
+          bank?: string
+          billing_type?: string
+          created_at?: string
+          due_day?: number
+          id?: string
+          month_year?: string
+          name?: string
+          paid?: boolean
+          paid_at?: string | null
+          start_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      account_payments: {
+        Row: {
+          id: string
+          user_id: string
+          account_id: string
+          month_year: string
+          amount: number
+          paid_at: string | null
+          receipt_url: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          account_id: string
+          month_year: string
+          amount: number
+          paid_at?: string | null
+          receipt_url?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          account_id?: string
+          month_year?: string
+          amount?: number
+          paid_at?: string | null
+          receipt_url?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number
@@ -84,12 +168,12 @@ export type Database = {
           created_at: string
           date: string
           description: string
+          due_date: number | null
+          frequency: string | null
           id: string
+          next_due_date: string | null
+          type: string | null
           user_id: string
-          type: "unique" | "recurring"
-          frequency?: "monthly" | "weekly" | "daily"
-          due_date?: number
-          next_due_date?: string
         }
         Insert: {
           amount: number
@@ -97,12 +181,12 @@ export type Database = {
           created_at?: string
           date?: string
           description: string
+          due_date?: number | null
+          frequency?: string | null
           id?: string
+          next_due_date?: string | null
+          type?: string | null
           user_id: string
-          type?: "unique" | "recurring"
-          frequency?: "monthly" | "weekly" | "daily"
-          due_date?: number
-          next_due_date?: string
         }
         Update: {
           amount?: number
@@ -110,99 +194,48 @@ export type Database = {
           created_at?: string
           date?: string
           description?: string
+          due_date?: number | null
+          frequency?: string | null
           id?: string
+          next_due_date?: string | null
+          type?: string | null
           user_id?: string
-          type?: "unique" | "recurring"
-          frequency?: "monthly" | "weekly" | "daily"
-          due_date?: number
-          next_due_date?: string
-        }
-        Relationships: []
-      }
-      accounts: {
-        Row: {
-          id: string
-          user_id: string
-          name: string
-          bank: string
-          account_type: string
-          account_category: "bank" | "expense"
-          billing_type: "monthly" | "single"
-          amount: number
-          due_day: number
-          month_year: string
-          paid: boolean
-          paid_at: string | null
-          start_date: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          name: string
-          bank: string
-          account_type: string
-          account_category?: "bank" | "expense"
-          billing_type?: "monthly" | "single"
-          amount: number
-          due_day?: number
-          month_year?: string
-          paid?: boolean
-          paid_at?: string | null
-          start_date: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          name?: string
-          bank?: string
-          account_type?: string
-          account_category?: "bank" | "expense"
-          billing_type?: "monthly" | "single"
-          amount?: number
-          due_day?: number
-          month_year?: string
-          paid?: boolean
-          paid_at?: string | null
-          start_date?: string
-          created_at?: string
         }
         Relationships: []
       }
       investments: {
         Row: {
-          id: string
-          user_id: string
-          name: string
-          bank: string
-          investment_type: string
           amount: number
-          current_amount: number | null
-          start_date: string
+          bank: string
           created_at: string
+          current_amount: number | null
+          id: string
+          investment_type: string
+          name: string
+          start_date: string
+          user_id: string
         }
         Insert: {
-          id?: string
-          user_id: string
-          name: string
-          bank: string
-          investment_type: string
-          amount: number
-          current_amount?: number | null
-          start_date: string
+          amount?: number
+          bank?: string
           created_at?: string
+          current_amount?: number | null
+          id?: string
+          investment_type?: string
+          name: string
+          start_date?: string
+          user_id: string
         }
         Update: {
-          id?: string
-          user_id?: string
-          name?: string
-          bank?: string
-          investment_type?: string
           amount?: number
-          current_amount?: number | null
-          start_date?: string
+          bank?: string
           created_at?: string
+          current_amount?: number | null
+          id?: string
+          investment_type?: string
+          name?: string
+          start_date?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -230,6 +263,69 @@ export type Database = {
           email?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      salary: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          month_year: string
+          received: boolean
+          received_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          month_year: string
+          received?: boolean
+          received_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          month_year?: string
+          received?: boolean
+          received_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      telegram_config: {
+        Row: {
+          created_at: string
+          id: string
+          reminder_days_before: number
+          telegram_chat_id: number | null
+          telegram_user_id: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reminder_days_before?: number
+          telegram_chat_id?: number | null
+          telegram_user_id?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reminder_days_before?: number
+          telegram_chat_id?: number | null
+          telegram_user_id?: number | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

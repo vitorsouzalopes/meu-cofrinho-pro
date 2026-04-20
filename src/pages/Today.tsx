@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, TrendingUp, Wallet, Clock, AlertCircle, Sparkles } from "lucide-react";
+import { AlertTriangle, TrendingUp, Wallet, Clock, AlertCircle, Sparkles, Lightbulb, DollarSign, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import type { Account, Investment } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Account = Tables<"accounts">;
+type Investment = Tables<"investments">;
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -19,16 +24,26 @@ const Today = () => {
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Salary state
+  const [salary, setSalary] = useState(0);
+  const [salaryReceived, setSalaryReceived] = useState(false);
+  const [salaryId, setSalaryId] = useState<string | null>(null);
+  const [salaryDialogOpen, setSalaryDialogOpen] = useState(false);
+  const [salaryInput, setSalaryInput] = useState("");
+
+  const today = new Date();
+  const todayDay = today.getDate();
+  const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
       setLoading(true);
-      const today = new Date();
-      const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 
-      const [accountsResponse, investmentsResponse] = await Promise.all([
+      const [accountsResponse, investmentsResponse, salaryResponse] = await Promise.all([
         supabase.from("accounts").select("*").eq("user_id", user.id),
         supabase.from("investments").select("*").eq("user_id", user.id),
+        supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
       ]);
 
       if (accountsResponse.error) {
@@ -39,21 +54,24 @@ const Today = () => {
       }
 
       if (investmentsResponse.error) {
-        toast({ title: "Erro ao carregar investimentos", description: investmentsResponse.error.message, variant: "destructive" });
         setInvestments([]);
       } else {
         setInvestments((investmentsResponse.data ?? []) as Investment[]);
+      }
+
+      if (!salaryResponse.error && salaryResponse.data) {
+        const s = salaryResponse.data as any;
+        setSalary(Number(s.amount));
+        setSalaryReceived(!!s.received);
+        setSalaryId(s.id);
       }
 
       setLoading(false);
     };
 
     fetchData();
-  }, [user, toast]);
-
-  const today = new Date();
-  const todayDay = today.getDate();
-  const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, currentMonthYear]);
 
   // Contas do mês atual
   const currentMonthAccounts = useMemo(
@@ -61,25 +79,21 @@ const Today = () => {
     [accounts, currentMonthYear],
   );
 
-  // Contas pendentes
   const pendingAccounts = useMemo(
     () => currentMonthAccounts.filter((account) => !account.paid),
     [currentMonthAccounts],
   );
 
-  // Contas a pagar HOJE
   const dueToday = useMemo(
     () => pendingAccounts.filter((account) => account.due_day === todayDay),
     [pendingAccounts, todayDay],
   );
 
-  // Contas ATRASADAS
   const overdueAccounts = useMemo(
     () => pendingAccounts.filter((account) => account.due_day < todayDay),
     [pendingAccounts, todayDay],
   );
 
-  // Próximas 7 dias
   const upcomingThisWeek = useMemo(() => {
     return pendingAccounts.filter((account) => {
       const diff = account.due_day - todayDay;
@@ -87,7 +101,6 @@ const Today = () => {
     });
   }, [pendingAccounts, todayDay]);
 
-  // Totais
   const totalPending = useMemo(
     () => pendingAccounts.reduce((sum, account) => sum + Number(account.amount), 0),
     [pendingAccounts],
@@ -103,10 +116,64 @@ const Today = () => {
     [currentMonthAccounts],
   );
 
+  const totalPaid = useMemo(
+    () => currentMonthAccounts.filter(a => a.paid).reduce((sum, a) => sum + Number(a.amount), 0),
+    [currentMonthAccounts],
+  );
+
   const investmentTotal = useMemo(
     () => investments.reduce((sum, inv) => sum + Number(inv.current_amount ?? inv.amount), 0),
     [investments],
   );
+
+  const remainingBalance = salary - totalCurrentMonth;
+  const balanceAfterPending = salary - totalPaid - totalPending;
+
+  const saveSalary = async () => {
+    if (!user || !salaryInput) return;
+    const amount = parseFloat(salaryInput);
+    if (isNaN(amount)) return;
+
+    if (salaryId) {
+      const { error } = await supabase
+        .from("salary" as any)
+        .update({ amount, updated_at: new Date().toISOString() } as any)
+        .eq("id", salaryId);
+      if (error) {
+        toast({ title: "Erro ao atualizar salário", variant: "destructive" });
+        return;
+      }
+    } else {
+      const { data, error } = await supabase
+        .from("salary" as any)
+        .insert({ user_id: user.id, amount, month_year: currentMonthYear } as any)
+        .select("*")
+        .single();
+      if (error) {
+        toast({ title: "Erro ao salvar salário", variant: "destructive" });
+        return;
+      }
+      setSalaryId((data as any).id);
+    }
+
+    setSalary(amount);
+    setSalaryDialogOpen(false);
+    toast({ title: "💰 Salário atualizado!" });
+  };
+
+  const markSalaryReceived = async () => {
+    if (!salaryId) return;
+    const { error } = await supabase
+      .from("salary" as any)
+      .update({ received: true, received_at: new Date().toISOString() } as any)
+      .eq("id", salaryId);
+    if (error) {
+      toast({ title: "Erro", variant: "destructive" });
+      return;
+    }
+    setSalaryReceived(true);
+    toast({ title: "🎉 Salário recebido! Bora organizar as contas!" });
+  };
 
   if (loading) {
     return (
@@ -123,12 +190,75 @@ const Today = () => {
         <p className="text-xs text-muted-foreground">Acompanhe suas contas e finanças.</p>
       </div>
 
+      {/* Salary Card */}
+      <Card className="p-4 mb-4 border-gold/40 bg-gold/5">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-gold" />
+            <h2 className="font-semibold text-foreground">Salário do mês</h2>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => { setSalaryInput(String(salary || "")); setSalaryDialogOpen(true); }}>
+            {salary > 0 ? "Editar" : "Adicionar"}
+          </Button>
+        </div>
+        {salary > 0 ? (
+          <div className="space-y-2">
+            <p className="text-2xl font-bold text-gold">{formatCurrency(salary)}</p>
+            {!salaryReceived ? (
+              <Button variant="emerald" size="sm" className="w-full" onClick={markSalaryReceived}>
+                <CheckCircle2 className="w-4 h-4 mr-1" /> Marcar como recebido
+              </Button>
+            ) : (
+              <p className="text-xs text-emerald-accent font-medium flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Salário recebido ✓
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Informe seu salário para ver a previsão de saldo.</p>
+        )}
+      </Card>
+
+      {/* Balance Forecast */}
+      {salary > 0 && (
+        <Card className="p-4 mb-4 border-border">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="w-5 h-5 text-foreground" />
+            <h2 className="font-semibold text-foreground">Previsão do mês</h2>
+          </div>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Salário</span>
+              <span className="font-semibold text-gold">{formatCurrency(salary)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Total de contas</span>
+              <span className="font-semibold text-destructive">- {formatCurrency(totalCurrentMonth)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Já pago</span>
+              <span className="font-semibold text-foreground">- {formatCurrency(totalPaid)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Pendente</span>
+              <span className="font-semibold text-foreground">- {formatCurrency(totalPending)}</span>
+            </div>
+            <div className="border-t border-border pt-2 flex justify-between">
+              <span className="font-medium text-foreground">Saldo restante</span>
+              <span className={`text-lg font-bold ${remainingBalance >= 0 ? "text-emerald-accent" : "text-destructive"}`}>
+                {formatCurrency(remainingBalance)}
+              </span>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Cards de resumo */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         <Card className="p-4 border-gold/30">
           <div className="flex items-center gap-2 mb-2">
             <Wallet className="w-4 h-4 text-gold" />
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Total</p>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">Contas</p>
           </div>
           <p className="font-semibold text-lg text-gold">{formatCurrency(totalCurrentMonth)}</p>
         </Card>
@@ -230,7 +360,7 @@ const Today = () => {
           </Card>
         )}
 
-        {/* Resumo Se tudo está ok */}
+        {/* Tudo em dia */}
         {pendingAccounts.length === 0 && (
           <Card className="p-6 text-center border-emerald-accent/30 bg-emerald-accent/5">
             <TrendingUp className="w-12 h-12 mx-auto mb-3 text-emerald-accent" />
@@ -239,28 +369,72 @@ const Today = () => {
           </Card>
         )}
 
+        {/* Sobrou para investir */}
+        {salary > 0 && remainingBalance > 0 && (
+          <Card className="p-4 border-emerald-accent/30 bg-emerald-accent/5">
+            <div className="flex items-center gap-2 mb-2">
+              <Lightbulb className="w-5 h-5 text-emerald-accent" />
+              <h2 className="font-semibold text-foreground">💰 Sobrou para investir</h2>
+            </div>
+            <p className="text-2xl font-bold text-emerald-accent mb-2">
+              {formatCurrency(remainingBalance)}
+            </p>
+            <Button size="sm" className="w-full" onClick={() => navigate("/suggestions")}>
+              Ver sugestões de investimento
+            </Button>
+          </Card>
+        )}
+
         {/* Sugestão de distribuição */}
-        <Card className="p-4 border-gold/20 bg-gold/5">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-5 h-5 text-gold" />
-            <h2 className="font-semibold text-foreground">💡 Sugestão</h2>
-          </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-muted-foreground">Investir</p>
-              <p className="font-medium text-foreground">{formatCurrency(pendingAccounts.length === 0 ? totalCurrentMonth * 0.3 : Math.max(0, totalCurrentMonth * 0.3 - totalPending))}</p>
+        {salary > 0 && (
+          <Card className="p-4 border-gold/20 bg-gold/5">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="w-5 h-5 text-gold" />
+              <h2 className="font-semibold text-foreground">💡 Sugestão</h2>
             </div>
-            <div className="flex items-center justify-between">
-              <p className="text-muted-foreground">Guardar no cofrinho</p>
-              <p className="font-medium text-foreground">{formatCurrency(pendingAccounts.length === 0 ? totalCurrentMonth * 0.2 : Math.max(0, totalCurrentMonth * 0.2 - totalPending))}</p>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <p className="text-muted-foreground">Investir (30%)</p>
+                <p className="font-medium text-foreground">{formatCurrency(salary * 0.3)}</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-muted-foreground">Guardar no cofrinho (20%)</p>
+                <p className="font-medium text-foreground">{formatCurrency(salary * 0.2)}</p>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-border">
+                <p className="text-muted-foreground font-medium">Contas (50%)</p>
+                <p className="font-semibold text-gold">{formatCurrency(salary * 0.5)}</p>
+              </div>
             </div>
-            <div className="flex items-center justify-between pt-2 border-t border-border">
-              <p className="text-muted-foreground font-medium">Pagar contas</p>
-              <p className="font-semibold text-gold">{formatCurrency(totalPending)}</p>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        )}
       </div>
+
+      {/* Salary Dialog */}
+      <Dialog open={salaryDialogOpen} onOpenChange={setSalaryDialogOpen}>
+        <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)]">
+          <DialogHeader>
+            <DialogTitle>💰 Salário do mês</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-3">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Valor do salário</label>
+              <Input
+                type="number"
+                value={salaryInput}
+                onChange={(e) => setSalaryInput(e.target.value)}
+                placeholder="3000"
+                className="bg-muted border-border"
+                step="0.01"
+                min="0"
+              />
+            </div>
+            <Button className="w-full" onClick={saveSalary}>
+              Salvar salário
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
