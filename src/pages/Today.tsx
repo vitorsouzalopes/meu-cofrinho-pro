@@ -212,7 +212,11 @@ const Today = () => {
         .eq("id", editingExtraIncomeId);
       
       if (error) {
-        toast({ title: "Erro ao atualizar ganho", variant: "destructive" });
+        toast({ 
+          title: "Erro ao atualizar ganho", 
+          description: (error as any).message,
+          variant: "destructive" 
+        });
         return;
       }
       setExtraIncomes(prev => prev.map(item => item.id === editingExtraIncomeId ? { ...item, ...data } : item));
@@ -224,7 +228,11 @@ const Today = () => {
         .single();
       
       if (error) {
-        toast({ title: "Erro ao salvar ganho", variant: "destructive" });
+        toast({ 
+          title: "Erro ao salvar ganho", 
+          description: (error as any).message,
+          variant: "destructive" 
+        });
         return;
       }
       setExtraIncomes(prev => [...prev, insertedData]);
