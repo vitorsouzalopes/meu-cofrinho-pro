@@ -7,9 +7,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
 
 const Progress = () => {
   const { user } = useAuth();
