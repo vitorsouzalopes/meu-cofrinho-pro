@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, TrendingUp, Wallet, Clock, AlertCircle, Sparkles, Lightbulb, DollarSign, CheckCircle2, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, TrendingUp, Wallet, Clock, AlertCircle, Sparkles, Lightbulb, DollarSign, CheckCircle2, Plus, Trash2, ChevronRight, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,10 @@ const Today = () => {
   const [extraIncomeAmount, setExtraIncomeAmount] = useState("");
   const [editingExtraIncomeId, setEditingExtraIncomeId] = useState<string | null>(null);
 
+  // Challenges state
+  const [activeChallenge, setActiveChallenge] = useState<any>(null);
+  const [challengeDoneToday, setChallengeDoneToday] = useState(false);
+
   const today = new Date();
   const todayDay = today.getDate();
   const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
@@ -47,12 +51,29 @@ const Today = () => {
     const fetchData = async () => {
       setLoading(true);
 
-      const [accountsResponse, investmentsResponse, salaryResponse, extraResponse] = await Promise.all([
+      const [accountsResponse, investmentsResponse, salaryResponse, extraResponse, challengeResponse] = await Promise.all([
         supabase.from("accounts").select("*").eq("user_id", user.id),
         supabase.from("investments").select("*").eq("user_id", user.id),
         supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
-        supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear)
+        supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear),
+        supabase.from("user_challenges" as any).select("*").eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle()
       ]);
+
+      const activeUC = challengeResponse?.data as any;
+      if (activeUC) {
+        setActiveChallenge(activeUC);
+        const { data: progressToday } = await supabase
+          .from("challenge_progress" as any)
+          .select("*")
+          .eq("user_challenge_id", activeUC.id)
+          .eq("status_date", new Date().toISOString().split("T")[0])
+          .maybeSingle();
+        
+        setChallengeDoneToday(!!progressToday);
+      } else {
+        setActiveChallenge(null);
+        setChallengeDoneToday(false);
+      }
 
       if (accountsResponse.error) {
         toast({ title: "Erro ao carregar contas", description: accountsResponse.error.message, variant: "destructive" });
@@ -275,6 +296,25 @@ const Today = () => {
         <p className="text-xs text-muted-foreground">Acompanhe suas contas e finanças.</p>
       </div>
 
+      {/* Challenge Reminder */}
+      {activeChallenge && !challengeDoneToday && (
+        <Card 
+          className="p-4 mb-4 border-primary/40 bg-primary/5 animate-pulse-gold cursor-pointer"
+          onClick={() => navigate("/progress")}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-xl">
+              🎯
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-foreground text-sm">Fazer check-in de hoje</h3>
+              <p className="text-xs text-muted-foreground">Não esqueça de guardar sua reserva hoje!</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+          </div>
+        </Card>
+      )}
+
       {/* Salary Card */}
       <Card className="p-4 mb-4 border-gold/40 bg-gold/5">
         <div className="flex items-center justify-between mb-2">
@@ -350,6 +390,7 @@ const Today = () => {
                   <div className="flex items-center gap-2 shrink-0">
                     <p className="text-sm font-semibold text-emerald-accent">+{formatCurrency(Number(item.amount))}</p>
                     <button
+                      title="Excluir ganho"
                       className="w-6 h-6 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/10 transition-all"
                       onClick={() => deleteExtraIncome(item.id)}
                     >

@@ -1,19 +1,71 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { challenges, type Challenge } from "@/data/challenges";
 import ChallengeCard from "@/components/ChallengeCard";
-import { useNavigate } from "react-router-dom";
 
-const categories = ["Todos", ...new Set(challenges.map((c) => c.category))];
+const categories = ["Todos", ...new Set(challenges.map((c) => c.category as string))];
 
 const Challenges = () => {
   const [activeCategory, setActiveCategory] = useState("Todos");
+  const [activeChallengesIds, setActiveChallengesIds] = useState<string[]>([]);
+  const { user } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchActive = async () => {
+      try {
+        const { data } = await supabase
+          .from("user_challenges" as any)
+          .select("challenge_id")
+          .eq("user_id", user.id)
+          .eq("status", "active");
+        
+        if (data) {
+          setActiveChallengesIds(data.map((c: any) => c.challenge_id));
+        }
+      } catch (err) {
+        console.warn("Table user_challenges might not exist yet.");
+      }
+    };
+    fetchActive();
+  }, [user]);
 
   const filtered = activeCategory === "Todos" ? challenges : challenges.filter((c) => c.category === activeCategory);
 
-  const handleSelect = (challenge: Challenge) => {
-    // In a full app this would start the challenge
-    navigate("/progress");
+  const handleSelect = async (challenge: Challenge) => {
+    if (!user) {
+      toast({ title: "Ops!", description: "Você precisa estar logado para iniciar.", variant: "destructive" });
+      return;
+    }
+
+    if (activeChallengesIds.includes(challenge.id)) {
+      navigate("/progress");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("user_challenges" as any)
+        .insert({
+          user_id: user.id,
+          challenge_id: challenge.id,
+          status: "active",
+          start_date: new Date().toISOString().split("T")[0]
+        });
+
+      if (error) throw error;
+
+      toast({ title: "🚀 Desafio Iniciado!", description: `Boa sorte no ${challenge.title}!` });
+      setActiveChallengesIds(prev => [...prev, challenge.id]);
+      navigate("/progress");
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message || "Tabela de desafios inexistente no backend.", variant: "destructive" });
+    }
   };
 
   return (
@@ -42,7 +94,11 @@ const Challenges = () => {
       <div className="space-y-3">
         {filtered.map((challenge, i) => (
           <div key={challenge.id} style={{ animationDelay: `${i * 0.05}s` }}>
-            <ChallengeCard challenge={challenge} onSelect={handleSelect} />
+            <ChallengeCard 
+              challenge={challenge} 
+              onSelect={handleSelect}
+              isActive={activeChallengesIds.includes(challenge.id)}
+            />
           </div>
         ))}
       </div>
