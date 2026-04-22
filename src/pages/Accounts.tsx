@@ -146,8 +146,8 @@ const Accounts = () => {
       billing_type: billingType,
       amount: parseFloat(amount),
       due_day: parseInt(dueDay, 10),
-      month_year: billingType === "monthly" ? null : currentMonthYear,
-      is_template: billingType === "monthly",
+      month_year: (billingType === "monthly" || billingType === "debt") ? null : currentMonthYear,
+      is_template: billingType === "monthly" || billingType === "debt",
       paid: false,
       start_date: startDate,
     };

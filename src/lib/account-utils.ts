@@ -2,13 +2,13 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const ensureMonthlyInstances = async (userId: string, currentMonthYear: string) => {
   try {
-    // 1. Fetch all monthly templates
+    // 1. Fetch all monthly and debt templates
     const { data: templates, error: templatesError } = await supabase
       .from("accounts")
       .select("*")
       .eq("user_id", userId)
       .eq("is_template", true)
-      .eq("billing_type", "monthly");
+      .in("billing_type", ["monthly", "debt"]);
 
     if (templatesError) throw templatesError;
 
@@ -35,7 +35,7 @@ export const ensureMonthlyInstances = async (userId: string, currentMonthYear: s
           amount: template.amount,
           due_day: template.due_day,
           account_type: template.account_type,
-          billing_type: 'monthly',
+          billing_type: template.billing_type,
           month_year: currentMonthYear,
           is_template: false,
           parent_id: template.id,
