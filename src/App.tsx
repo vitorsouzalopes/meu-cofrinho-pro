@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import BottomNav from "@/components/BottomNav";
 import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
 import { useGestureBack } from "@/hooks/use-gesture-back";
+import { checkForUpdates } from "@/lib/version";
 import Today from "./pages/Today.tsx";
 import Accounts from "./pages/Accounts.tsx";
 import Investments from "./pages/Investments.tsx";
@@ -123,6 +124,18 @@ const AppContent = () => {
     };
 
     checkVersion();
+  }, []);
+
+  // Heartbeat: Check for frontend updates every 30 minutes
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const updated = await checkForUpdates();
+      if (updated) {
+        window.location.reload();
+      }
+    }, 1000 * 60 * 30);
+    
+    return () => clearInterval(interval);
   }, []);
 
   if (needsUpdate && updateConfig) {

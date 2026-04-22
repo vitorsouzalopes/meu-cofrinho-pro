@@ -40,6 +40,31 @@ export async function checkForUpdates(): Promise<boolean> {
   return false;
 }
 
+/**
+ * Forces a complete refresh of the app, clearing all caches.
+ */
+export async function forceSilentUpdate() {
+  console.log("[Update] Forcing silent update...");
+  
+  if ('caches' in window) {
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => caches.delete(k)));
+  }
+
+  if ('serviceWorker' in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    for (const reg of regs) {
+      await reg.update();
+      if (reg.waiting) {
+        reg.waiting.postMessage('SKIP_WAITING');
+      }
+    }
+  }
+
+  localStorage.removeItem(VERSION_KEY); // Clear version to trigger splash on next load
+  window.location.reload();
+}
+
 declare global {
   const __APP_VERSION__: string;
 }
