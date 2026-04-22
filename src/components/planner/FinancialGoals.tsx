@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,11 +17,19 @@ const PRESET_GOALS = [
   { id: "other", icon: Target, label: "Outro" },
 ];
 
-export default function FinancialGoals() {
+export default function FinancialGoals({ initialIncome = 0, initialExpenses = 0 }: { initialIncome?: number, initialExpenses?: number }) {
   const [selectedPreset, setSelectedPreset] = useState<string>("travel");
   const [goalName, setGoalName] = useState<string>("Viagem de Férias");
   const [goalAmount, setGoalAmount] = useState<number>(5000);
-  const [monthlySavings, setMonthlySavings] = useState<number>(300); // Ex: parte da sobra MISTA
+  
+  // Calculate default savings based on MIXED strategy (20% of available)
+  const defaultSavings = Math.max(0, (initialIncome - initialExpenses) * 0.2);
+  const [monthlySavings, setMonthlySavings] = useState<number>(defaultSavings || 300);
+
+  // Update when props change, if user hasn't heavily modified it (or just set it directly)
+  useEffect(() => {
+    setMonthlySavings(Math.max(0, (initialIncome - initialExpenses) * 0.2));
+  }, [initialIncome, initialExpenses]);
 
   const calculateGoal = (target: number, monthly: number) => {
     if (!target || !monthly || monthly <= 0) return { months: 0, withInvestment: 0 };
