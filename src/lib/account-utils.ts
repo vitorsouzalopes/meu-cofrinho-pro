@@ -24,9 +24,17 @@ export const ensureMonthlyInstances = async (userId: string, currentMonthYear: s
 
     // 3. Generate missing instances
     if (templates && templates.length > 0) {
-      const missingTemplates = templates.filter(template => 
-        !instances?.some(instance => instance.parent_id === template.id)
-      );
+      const missingTemplates = templates.filter(template => {
+        const hasInstance = instances?.some(instance => instance.parent_id === template.id);
+        if (hasInstance) return false;
+        
+        // For debts, only generate if they still have installments left
+        if (template.billing_type === 'debt') {
+          return template.remaining_months === null || template.remaining_months > 0;
+        }
+        
+        return true;
+      });
 
       if (missingTemplates.length > 0) {
         const newInstances = missingTemplates.map(template => ({

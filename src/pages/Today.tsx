@@ -17,6 +17,10 @@ type Investment = Tables<"investments">;
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
+const today = new Date();
+const todayDay = today.getDate();
+const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+
 const Today = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -42,10 +46,6 @@ const Today = () => {
   // Challenges state
   const [activeChallenge, setActiveChallenge] = useState<any>(null);
   const [challengeDoneToday, setChallengeDoneToday] = useState(false);
-
-  const today = new Date();
-  const todayDay = today.getDate();
-  const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 
   useEffect(() => {
     if (!user) return;
@@ -107,8 +107,7 @@ const Today = () => {
     };
 
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, currentMonthYear]);
+  }, [user?.id]);
 
   // Contas do mês atual
   const currentMonthAccounts = useMemo(

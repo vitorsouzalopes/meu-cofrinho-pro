@@ -116,7 +116,7 @@ const History = () => {
     };
 
     fetchAllHistory();
-  }, [user, toast]);
+  }, [user?.id]);
 
   const historyByMonth = useMemo(() => {
     return historyItems.reduce<Record<string, HistoryItem[]>>((acc, item) => {

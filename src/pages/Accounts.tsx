@@ -28,11 +28,11 @@ const formatMonthYear = (monthYear: string) => {
   return new Date(year, month - 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 };
 
-const Accounts = () => {
-  const today = new Date();
-  const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-  const todayDay = today.getDate();
+const today = new Date();
+const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+const todayDay = today.getDate();
 
+const Accounts = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -92,11 +92,11 @@ const Accounts = () => {
       }
 
     } catch (error: any) {
-      toast({ title: "Erro ao carregar contas", description: error.message, variant: "destructive" });
+      console.error("Erro ao carregar contas:", error);
     } finally {
       setLoading(false);
     }
-  }, [currentMonthYear, toast, user]);
+  }, [user?.id]);
 
   useEffect(() => {
     loadAccounts();
@@ -257,6 +257,22 @@ const Accounts = () => {
 
       setAccounts((prev) => prev.map((item) => (item.id === updatedAccount.id ? (updatedAccount as Account) : item)));
       toast({ title: "Conta marcada como paga" });
+
+      // If it's a debt instance, decrement remaining_months on the template
+      if (selectedAccountForPayment.billing_type === "debt" && selectedAccountForPayment.parent_id) {
+        const { data: template } = await supabase
+          .from("accounts")
+          .select("remaining_months")
+          .eq("id", selectedAccountForPayment.parent_id)
+          .single();
+        
+        if (template && template.remaining_months && template.remaining_months > 0) {
+          await supabase
+            .from("accounts")
+            .update({ remaining_months: template.remaining_months - 1 })
+            .eq("id", selectedAccountForPayment.parent_id);
+        }
+      }
     }
 
     setIsUploading(false);
