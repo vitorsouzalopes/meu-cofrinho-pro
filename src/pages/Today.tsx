@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, TrendingUp, Wallet, Clock, AlertCircle, Sparkles, Lightbulb, DollarSign, CheckCircle2, Plus, Trash2, ChevronRight, Target } from "lucide-react";
+import { AlertTriangle, TrendingUp, Wallet, Clock, AlertCircle, Sparkles, Lightbulb, DollarSign, CheckCircle2, Plus, Trash2, ChevronRight, Target, BrainCircuit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -295,6 +295,23 @@ const Today = () => {
         <h1 className="font-heading text-xl font-bold text-foreground">Dashboard</h1>
         <p className="text-xs text-muted-foreground">Acompanhe suas contas e finanças.</p>
       </div>
+
+      {/* Smart Planner Banner */}
+      <Card 
+        className="p-4 mb-4 border-sky-accent/40 bg-sky-accent/5 cursor-pointer hover:bg-sky-accent/10 transition-colors"
+        onClick={() => navigate("/planner")}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-sky-accent/20 flex items-center justify-center">
+            <BrainCircuit className="w-5 h-5 text-sky-accent" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-foreground text-sm">Planejador Inteligente</h3>
+            <p className="text-xs text-muted-foreground">Simule dívidas e trace objetivos</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-sky-accent" />
+        </div>
+      </Card>
 
       {/* Challenge Reminder */}
       {activeChallenge && !challengeDoneToday && (
