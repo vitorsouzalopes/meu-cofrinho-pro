@@ -93,6 +93,8 @@ export type Database = {
           paid_at: string | null
           start_date: string
           user_id: string
+          remaining_months: number | null
+          total_debt_amount: number | null
         }
         Insert: {
           account_category?: string
@@ -109,6 +111,8 @@ export type Database = {
           paid_at?: string | null
           start_date?: string
           user_id: string
+          remaining_months?: number | null
+          total_debt_amount?: number | null
         }
         Update: {
           account_category?: string
@@ -125,6 +129,8 @@ export type Database = {
           paid_at?: string | null
           start_date?: string
           user_id?: string
+          remaining_months?: number | null
+          total_debt_amount?: number | null
         }
         Relationships: []
       }
