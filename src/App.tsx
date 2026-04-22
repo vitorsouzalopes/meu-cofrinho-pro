@@ -25,6 +25,7 @@ import Auth from "./pages/Auth.tsx";
 import Profile from "./pages/Profile.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import MonthlyAccounts from "./pages/MonthlyAccounts.tsx";
+import Goals from "./pages/Goals.tsx";
 import UpdateModal from "./components/UpdateModal";
 import { CURRENT_VERSION } from "./constants/version";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,6 +58,7 @@ const AppRoutes = () => (
     <Route path="/" element={<ProtectedRoute><Today /></ProtectedRoute>} />
     <Route path="/accounts" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
     <Route path="/monthly-accounts" element={<ProtectedRoute><MonthlyAccounts /></ProtectedRoute>} />
+    <Route path="/goals" element={<ProtectedRoute><Goals /></ProtectedRoute>} />
     <Route path="/investments" element={<ProtectedRoute><Investments /></ProtectedRoute>} />
     <Route path="/suggestions" element={<ProtectedRoute><InvestmentSuggestions /></ProtectedRoute>} />
     <Route path="/allocation" element={<ProtectedRoute><Allocation /></ProtectedRoute>} />

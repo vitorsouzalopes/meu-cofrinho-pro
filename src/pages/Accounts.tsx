@@ -297,7 +297,7 @@ const Accounts = () => {
     return diff >= 0 && diff <= 7;
   });
 
-  const totalExpense = currentMonthExpenseAccounts.reduce((sum, account) => sum + Number(account.amount), 0);
+  const totalExpense = currentMonthExpenseAccounts.filter(a => !a.paid).reduce((sum, account) => sum + Number(account.amount), 0);
   const totalDebt = debtAccounts.reduce((sum, account) => sum + Number(account.amount), 0);
 
   const paidHistory = accounts.filter((account) => account.paid).sort((a, b) => (a.month_year > b.month_year ? -1 : 1));

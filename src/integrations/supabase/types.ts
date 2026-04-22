@@ -167,6 +167,39 @@ export type Database = {
         }
         Relationships: []
       }
+      goals: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          target_amount: number
+          monthly_amount: number
+          priority: number
+          is_auto: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          target_amount: number
+          monthly_amount?: number
+          priority?: number
+          is_auto?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          target_amount?: number
+          monthly_amount?: number
+          priority?: number
+          is_auto?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, TrendingUp, Wallet, Clock, AlertCircle, Sparkles, Lightbulb, DollarSign, CheckCircle2, Plus, Trash2, ChevronRight, Target, BrainCircuit } from "lucide-react";
+import { AlertTriangle, TrendingUp, Wallet, Clock, AlertCircle, Sparkles, Lightbulb, DollarSign, CheckCircle2, Plus, Trash2, ChevronRight, Target, BrainCircuit, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -391,6 +391,25 @@ const Today = () => {
             <span className="text-muted-foreground">Em andamento</span>
             <span className="font-medium text-gold">{formatCurrency(totalPending)}</span>
           </div>
+        </div>
+      </Card>
+
+      {/* 🎯 Objetivos e Metas */}
+      <Card 
+        className="p-5 mb-4 border-gold/20 bg-gold/5 cursor-pointer hover:bg-gold/10 transition-colors group"
+        onClick={() => navigate("/goals")}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="bg-gold/20 p-3 rounded-2xl text-gold group-hover:scale-110 transition-transform">
+              <Target className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="font-bold text-foreground">Objetivos</h2>
+              <p className="text-xs text-muted-foreground">Planeje seu futuro e metas</p>
+            </div>
+          </div>
+          <ArrowLeft className="w-5 h-5 text-gold rotate-180" />
         </div>
       </Card>
 
