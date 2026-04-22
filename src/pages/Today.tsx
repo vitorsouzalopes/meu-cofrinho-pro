@@ -203,6 +203,7 @@ const Today = () => {
       amount,
       description: extraIncomeName,
       month_year: currentMonthYear,
+      date: new Date().toISOString().split("T")[0],
     };
 
     if (editingExtraIncomeId) {
@@ -308,7 +309,10 @@ const Today = () => {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Plus className="w-5 h-5 text-emerald-accent" />
-            <h2 className="font-semibold text-foreground">Ganho extra</h2>
+            <div>
+              <h2 className="font-semibold text-foreground">Ganho extra</h2>
+              <p className="text-[10px] text-muted-foreground">Freelas, vendas, bicos…</p>
+            </div>
           </div>
           <Button variant="outline" size="sm" onClick={() => { 
             setEditingExtraIncomeId(null);
@@ -316,55 +320,90 @@ const Today = () => {
             setExtraIncomeAmount("");
             setExtraIncomeDialogOpen(true); 
           }}>
-            Adicionar
+            + Adicionar
           </Button>
         </div>
         
         {extraIncomes.length > 0 ? (
           <div className="space-y-3">
-            <div className="flex justify-between items-end">
-              <p className="text-2xl font-bold text-emerald-accent">{formatCurrency(totalExtraIncome)}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{extraIncomes.length} entradas</p>
+            {/* Total acumulado do mês */}
+            <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-accent/10 border border-emerald-accent/20">
+              <div>
+                <p className="text-[10px] text-emerald-accent uppercase tracking-wider font-medium">Total do mês</p>
+                <p className="text-2xl font-bold text-emerald-accent mt-0.5">{formatCurrency(totalExtraIncome)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{extraIncomes.length} {extraIncomes.length === 1 ? "entrada" : "entradas"}</p>
+              </div>
             </div>
-            <div className="space-y-2 pt-2 border-t border-emerald-accent/20">
+
+            {/* Lista de entradas */}
+            <div className="space-y-1.5">
               {extraIncomes.map((item) => (
-                <div key={item.id} className="flex items-center justify-between group">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">{item.description}</p>
-                    <p className="text-[10px] text-muted-foreground">{new Date(item.date).toLocaleDateString("pt-BR")}</p>
+                <div key={item.id} className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg hover:bg-emerald-accent/5 group transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{item.description}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {item.date ? new Date(item.date + "T12:00:00").toLocaleDateString("pt-BR") : "—"}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-foreground">{formatCurrency(Number(item.amount))}</p>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  <div className="flex items-center gap-2 shrink-0">
+                    <p className="text-sm font-semibold text-emerald-accent">+{formatCurrency(Number(item.amount))}</p>
+                    <button
+                      className="w-6 h-6 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/10 transition-all"
                       onClick={() => deleteExtraIncome(item.id)}
                     >
                       <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
-                    </Button>
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Registre ganhos extras, como freelas ou vendas.</p>
+          <div className="flex flex-col items-center py-4 text-center">
+            <div className="w-10 h-10 rounded-full bg-emerald-accent/10 flex items-center justify-center mb-2">
+              <Plus className="w-5 h-5 text-emerald-accent" />
+            </div>
+            <p className="text-sm text-muted-foreground">Nenhum ganho extra este mês.</p>
+            <p className="text-[10px] text-muted-foreground/60 mt-0.5">Freelas, vendas e bicos somam à sua renda total.</p>
+          </div>
         )}
       </Card>
 
       {/* Balance Forecast */}
-      {salary > 0 && (
+      {(salary > 0 || totalExtraIncome > 0) && (
         <Card className="p-4 mb-4 border-border">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="w-5 h-5 text-foreground" />
             <h2 className="font-semibold text-foreground">Previsão do mês</h2>
           </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Renda total</span>
-              <span className="font-semibold text-gold">{formatCurrency(totalIncome)}</span>
+
+          {/* Composição da Renda Total */}
+          <div className="p-3 rounded-lg bg-gold/5 border border-gold/20 mb-3">
+            <p className="text-[10px] text-gold uppercase tracking-wider font-medium mb-2">Composição da renda</p>
+            <div className="space-y-1.5 text-sm">
+              {salary > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Salário</span>
+                  <span className="font-medium text-foreground">{formatCurrency(salary)}</span>
+                </div>
+              )}
+              {totalExtraIncome > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Ganho extra</span>
+                  <span className="font-medium text-emerald-accent">+ {formatCurrency(totalExtraIncome)}</span>
+                </div>
+              )}
+              <div className="border-t border-gold/20 pt-1.5 flex justify-between">
+                <span className="font-semibold text-foreground">Renda total</span>
+                <span className="font-bold text-gold">{formatCurrency(totalIncome)}</span>
+              </div>
             </div>
+          </div>
+
+          {/* Balanço */}
+          <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total de contas</span>
               <span className="font-semibold text-destructive">- {formatCurrency(totalCurrentMonth)}</span>
@@ -377,9 +416,9 @@ const Today = () => {
               <span className="text-muted-foreground">Pendente</span>
               <span className="font-semibold text-foreground">- {formatCurrency(totalPending)}</span>
             </div>
-            <div className="border-t border-border pt-2 flex justify-between">
+            <div className="border-t border-border pt-2 flex justify-between items-center">
               <span className="font-medium text-foreground">Saldo restante</span>
-              <span className={`text-lg font-bold ${remainingBalance >= 0 ? "text-emerald-accent" : "text-destructive"}`}>
+              <span className={`text-xl font-bold ${remainingBalance >= 0 ? "text-emerald-accent" : "text-destructive"}`}>
                 {formatCurrency(remainingBalance)}
               </span>
             </div>
