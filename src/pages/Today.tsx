@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, TrendingUp, Wallet, Clock, AlertCircle, Sparkles, Lightbulb, DollarSign, CheckCircle2, Plus, Trash2, ChevronRight, Target, BrainCircuit, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -46,68 +46,74 @@ const Today = () => {
   // Challenges state
   const [activeChallenge, setActiveChallenge] = useState<any>(null);
   const [challengeDoneToday, setChallengeDoneToday] = useState(false);
+  const hasGenerated = useRef(false);
+
+  // Generate instances once on mount
+  useEffect(() => {
+    if (!user?.id || hasGenerated.current) return;
+    hasGenerated.current = true;
+    
+    ensureMonthlyInstances(user.id, currentMonthYear)
+      .catch(err => console.error("Erro na geração automática:", err));
+  }, [user?.id]);
 
   useEffect(() => {
-    if (!user) return;
     const fetchData = async () => {
-      setLoading(true);
-
-      // Ensure instances exist for current month
-      await ensureMonthlyInstances(user.id, currentMonthYear);
-
-      const [accountsResponse, investmentsResponse, salaryResponse, extraResponse, challengeResponse] = await Promise.all([
-        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false),
-        supabase.from("investments").select("*").eq("user_id", user.id),
-        supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
-        supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear),
-        supabase.from("user_challenges" as any).select("*").eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle()
-      ]);
-
-      const activeUC = challengeResponse?.data as any;
-      if (activeUC) {
-        setActiveChallenge(activeUC);
-        const { data: progressToday } = await supabase
-          .from("challenge_progress" as any)
-          .select("*")
-          .eq("user_challenge_id", activeUC.id)
-          .eq("status_date", new Date().toISOString().split("T")[0])
-          .maybeSingle();
-        
-        setChallengeDoneToday(!!progressToday);
-      } else {
-        setActiveChallenge(null);
-        setChallengeDoneToday(false);
+      if (!user?.id) {
+        setLoading(false);
+        return;
       }
+      
+      try {
+        setLoading(true);
 
-      if (accountsResponse.error) {
-        toast({ title: "Erro ao carregar contas", description: accountsResponse.error.message, variant: "destructive" });
-        setAccounts([]);
-      } else {
+        const [accountsResponse, investmentsResponse, salaryResponse, extraResponse, challengeResponse] = await Promise.all([
+          supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false),
+          supabase.from("investments").select("*").eq("user_id", user.id),
+          supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
+          supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear),
+          supabase.from("user_challenges" as any).select("*").eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle()
+        ]);
+
+        if (accountsResponse.error) throw accountsResponse.error;
+
         setAccounts((accountsResponse.data ?? []) as Account[]);
-      }
-
-      if (investmentsResponse.error) {
-        setInvestments([]);
-      } else {
         setInvestments((investmentsResponse.data ?? []) as Investment[]);
-      }
 
-      if (!salaryResponse.error && salaryResponse.data) {
-        const s = salaryResponse.data as any;
-        setSalary(Number(s.amount));
-        setSalaryReceived(!!s.received);
-        setSalaryId(s.id);
-      }
+        if (salaryResponse.data) {
+          const s = salaryResponse.data as any;
+          setSalary(Number(s.amount));
+          setSalaryReceived(!!s.received);
+          setSalaryId(s.id);
+        }
 
-      if (!extraResponse.error && extraResponse.data) {
-        setExtraIncomes(extraResponse.data);
-      }
+        if (extraResponse.data) {
+          setExtraIncomes(extraResponse.data);
+        }
 
-      setLoading(false);
+        const activeUC = challengeResponse?.data as any;
+        if (activeUC) {
+          setActiveChallenge(activeUC);
+          const { data: progressToday } = await supabase
+            .from("challenge_progress" as any)
+            .select("*")
+            .eq("user_challenge_id", activeUC.id)
+            .eq("status_date", new Date().toISOString().split("T")[0])
+            .maybeSingle();
+          
+          setChallengeDoneToday(!!progressToday);
+        }
+
+      } catch (error: any) {
+        console.error("Erro no Today fetchData:", error);
+        toast({ title: "Erro ao carregar dados", description: error.message, variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchData();
-  }, [user?.id]);
+  }, [user?.id, toast]);
 
   // Contas do mês atual
   const currentMonthAccounts = useMemo(

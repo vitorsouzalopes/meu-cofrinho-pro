@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, Trash2, Banknote, Check, Edit3, AlertTriangle, FileUp, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +46,7 @@ const Accounts = () => {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [paymentsHistory, setPaymentsHistory] = useState<AccountPayment[]>([]);
+  const hasGenerated = useRef(false);
 
   const [name, setName] = useState("");
   const [billingType, setBillingType] = useState<"monthly" | "single" | "debt">("monthly");
@@ -57,14 +58,14 @@ const Accounts = () => {
   const [remainingMonths, setRemainingMonths] = useState("");
   const [totalDebtAmount, setTotalDebtAmount] = useState("");
 
-    const loadAccounts = useCallback(async () => {
-    if (!user) return;
+  const loadAccounts = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
 
     try {
-      // Ensure instances exist for current month
-      await ensureMonthlyInstances(user.id, currentMonthYear);
-
       // Load all current accounts (non-templates for this month)
       const { data, error } = await supabase
         .from("accounts")
@@ -97,6 +98,16 @@ const Accounts = () => {
       setLoading(false);
     }
   }, [user?.id]);
+
+  // Generate instances once on mount
+  useEffect(() => {
+    if (!user?.id || hasGenerated.current) return;
+    hasGenerated.current = true;
+    
+    ensureMonthlyInstances(user.id, currentMonthYear)
+      .then(() => loadAccounts()) // Reload accounts after generation finishes
+      .catch(err => console.error("Erro na geração automática:", err));
+  }, [user?.id, loadAccounts]);
 
   useEffect(() => {
     loadAccounts();
