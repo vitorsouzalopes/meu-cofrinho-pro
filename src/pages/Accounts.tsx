@@ -365,42 +365,14 @@ const Accounts = () => {
           </div>
 
           {/* Contas mensais */}
-          <div className="glass-card p-4 mb-4">
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <h2 className="font-semibold text-foreground">Contas Mensais</h2>
-                <p className="text-xs text-muted-foreground">Despesas recorrentes do mês.</p>
-              </div>
-              <p className="text-xs text-muted-foreground">{formatMonthYear(currentMonthYear)}</p>
+          <div className="glass-card p-4 mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-foreground">Contas Mensais</h2>
+              <p className="text-xs text-muted-foreground">Despesas recorrentes do mês.</p>
             </div>
-            {monthlyAccounts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Nenhuma conta mensal pendente.</p>
-            ) : (
-              <div className="space-y-3">
-                {monthlyAccounts.map((account) => (
-                  <div key={account.id} className="rounded-2xl border border-border p-4">
-                    <div className="flex items-center justify-between gap-3 mb-2">
-                      <div>
-                        <p className="font-semibold text-foreground">{account.name}</p>
-                        <p className="text-xs text-muted-foreground">Dia {account.due_day}</p>
-                      </div>
-                      <p className="text-sm font-semibold">{formatCurrency(Number(account.amount))}</p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <Button variant="outline" size="sm" onClick={() => openEditAccountDialog(account)}>
-                        <Edit3 className="w-3.5 h-3.5" /> Editar
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => deleteAccount(account.id)}>
-                        <Trash2 className="w-3.5 h-3.5" /> Excluir
-                      </Button>
-                      <Button variant="emerald" size="sm" onClick={() => markAsPaid(account)}>
-                        <Check className="w-3.5 h-3.5" /> Pago
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <Button variant="outline" size="sm" onClick={() => navigate("/monthly-accounts")}>
+              Ver contas
+            </Button>
           </div>
 
           {/* Contas únicas */}
