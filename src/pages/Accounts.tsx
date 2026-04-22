@@ -7,17 +7,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Planner from "./Planner";
 import type { Account, AccountPayment } from "@/integrations/supabase/types";
 
-const bankAccountTypes = ["CDB", "Poupança", "Selic", "Cofrinho", "Digital", "Outros"];
-const expenseTypes = ["Internet", "Carro", "Aluguel", "Supermercado", "Outros"];
-const billingTypes = [
-  { value: "monthly", label: "Mensal" },
-  { value: "single", label: "Apenas este mês" },
-];
+const expenseTypes = ["Internet", "Carro", "Aluguel", "Supermercado", "Cartão de Crédito", "Empréstimo", "Outros"];
 const accountCategories = [
-  { value: "expense", label: "Conta de despesa" },
-  { value: "bank", label: "Conta de banco" },
+  { value: "monthly", label: "Despesa Mensal" },
+  { value: "single", label: "Apenas este mês" },
+  { value: "debt", label: "Conta de Dívida" }
 ];
 
 const formatCurrency = (value: number) =>
@@ -47,13 +45,14 @@ const Accounts = () => {
   const [paymentsHistory, setPaymentsHistory] = useState<AccountPayment[]>([]);
 
   const [name, setName] = useState("");
-  const [accountCategory, setAccountCategory] = useState<"bank" | "expense">("expense");
-  const [bank, setBank] = useState("Despesa");
+  const [billingType, setBillingType] = useState<"monthly" | "single" | "debt">("monthly");
+  const [bank, setBank] = useState("");
   const [accountType, setAccountType] = useState("Internet");
-  const [billingType, setBillingType] = useState<"monthly" | "single">("monthly");
   const [amount, setAmount] = useState("");
   const [dueDay, setDueDay] = useState("5");
   const [startDate, setStartDate] = useState(today.toISOString().split("T")[0]);
+  const [remainingMonths, setRemainingMonths] = useState("");
+  const [totalDebtAmount, setTotalDebtAmount] = useState("");
 
     const loadAccounts = useCallback(async () => {
     if (!user) return;
@@ -107,13 +106,14 @@ const Accounts = () => {
   const resetForm = () => {
     setEditingAccount(null);
     setName("");
-    setAccountCategory("expense");
-    setBank("Despesa");
-    setAccountType("Internet");
     setBillingType("monthly");
+    setBank("");
+    setAccountType("Internet");
     setAmount("");
     setDueDay("5");
     setStartDate(today.toISOString().split("T")[0]);
+    setRemainingMonths("");
+    setTotalDebtAmount("");
   };
 
   const openNewAccountDialog = () => {
@@ -124,32 +124,38 @@ const Accounts = () => {
   const openEditAccountDialog = (account: Account) => {
     setEditingAccount(account);
     setName(account.name);
-    setAccountCategory((account.account_category ?? "expense") as "bank" | "expense");
-    setBank(account.account_category === "bank" ? account.bank : account.bank);
+    setBank(account.bank || "");
     setAccountType(account.account_type);
-    setBillingType((account.billing_type ?? "single") as "monthly" | "single");
+    setBillingType((account.billing_type ?? "single") as "monthly" | "single" | "debt");
     setAmount(String(account.amount));
     setDueDay(String(account.due_day ?? 1));
     setStartDate(account.start_date);
+    setRemainingMonths(account.remaining_months ? String(account.remaining_months) : "");
+    setTotalDebtAmount(account.total_debt_amount ? String(account.total_debt_amount) : "");
     setDialogOpen(true);
   };
 
   const saveAccount = async () => {
     if (!name.trim() || !amount || !user) return;
     setSaving(true);
-    const record = {
+    const record: Partial<Account> = {
       user_id: user.id,
       name: name.trim(),
-      account_category: accountCategory,
-      bank: accountCategory === "bank" ? bank.trim() : "Despesa",
-      account_type: accountType,
-      billing_type: accountCategory === "expense" ? billingType : "single",
+      account_category: "expense",
+      bank: bank.trim() || "Despesa",
+      account_type: billingType === "single" ? "Única" : (billingType === "debt" ? "Dívida" : accountType),
+      billing_type: billingType,
       amount: parseFloat(amount),
-      due_day: accountCategory === "expense" ? parseInt(dueDay, 10) : 1,
+      due_day: parseInt(dueDay, 10),
       month_year: currentMonthYear,
       paid: false,
       start_date: startDate,
     };
+
+    if (billingType === "debt") {
+      record.remaining_months = remainingMonths ? parseInt(remainingMonths, 10) : null;
+      record.total_debt_amount = totalDebtAmount ? parseFloat(totalDebtAmount) : null;
+    }
 
     if (editingAccount) {
       const { data, error } = await supabase
@@ -275,12 +281,12 @@ const Accounts = () => {
       .eq("user_id", user.id);
   };
 
-  const bankAccounts = accounts.filter((account) => account.account_category === "bank");
   const currentMonthExpenseAccounts = accounts.filter(
     (account) => account.month_year === currentMonthYear && account.account_category === "expense"
   );
   const monthlyAccounts = currentMonthExpenseAccounts.filter((account) => account.billing_type === "monthly" && !account.paid);
   const singleAccounts = currentMonthExpenseAccounts.filter((account) => account.billing_type === "single" && !account.paid);
+  const debtAccounts = currentMonthExpenseAccounts.filter((account) => account.billing_type === "debt" && !account.paid);
   const overdueAccounts = currentMonthExpenseAccounts.filter((account) => !account.paid && account.due_day < todayDay);
   const dueTodayAccounts = currentMonthExpenseAccounts.filter((account) => !account.paid && account.due_day === todayDay);
   const weekAccounts = currentMonthExpenseAccounts.filter((account) => {
@@ -290,7 +296,7 @@ const Accounts = () => {
   });
 
   const totalExpense = currentMonthExpenseAccounts.reduce((sum, account) => sum + Number(account.amount), 0);
-  const totalBank = bankAccounts.reduce((sum, account) => sum + Number(account.amount), 0);
+  const totalDebt = debtAccounts.reduce((sum, account) => sum + Number(account.amount), 0);
 
   const paidHistory = accounts.filter((account) => account.paid).sort((a, b) => (a.month_year > b.month_year ? -1 : 1));
   const historyByMonth = paidHistory.reduce<Record<string, Account[]>>((acc, account) => {
@@ -319,150 +325,167 @@ const Accounts = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <Banknote className="w-5 h-5 text-gold" />
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Total de despesas</p>
-              <p className="font-semibold text-lg">{formatCurrency(totalExpense)}</p>
+      <Tabs defaultValue="gerenciar" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="gerenciar">Gerenciar Contas</TabsTrigger>
+          <TabsTrigger value="planejador">Planejador Inteligente</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="gerenciar" className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <Banknote className="w-5 h-5 text-gold" />
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Mensal</p>
+                  <p className="font-semibold text-lg">{formatCurrency(totalExpense)}</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 text-destructive" />
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Dívidas</p>
+                  <p className="font-semibold text-lg">{formatCurrency(totalDebt)}</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <Card className="p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Vence hoje</p>
+              <p className="mt-2 font-semibold text-foreground">{dueTodayAccounts.length}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Próximos 7 dias</p>
+              <p className="mt-2 font-semibold text-foreground">{weekAccounts.length}</p>
+            </Card>
+          </div>
+
+          {/* Contas mensais */}
+          <div className="glass-card p-4 mb-4">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-foreground">Contas Mensais</h2>
+                <p className="text-xs text-muted-foreground">Despesas recorrentes do mês.</p>
+              </div>
+              <p className="text-xs text-muted-foreground">{formatMonthYear(currentMonthYear)}</p>
             </div>
+            {monthlyAccounts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma conta mensal pendente.</p>
+            ) : (
+              <div className="space-y-3">
+                {monthlyAccounts.map((account) => (
+                  <div key={account.id} className="rounded-2xl border border-border p-4">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div>
+                        <p className="font-semibold text-foreground">{account.name}</p>
+                        <p className="text-xs text-muted-foreground">Dia {account.due_day}</p>
+                      </div>
+                      <p className="text-sm font-semibold">{formatCurrency(Number(account.amount))}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <Button variant="outline" size="sm" onClick={() => openEditAccountDialog(account)}>
+                        <Edit3 className="w-3.5 h-3.5" /> Editar
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => deleteAccount(account.id)}>
+                        <Trash2 className="w-3.5 h-3.5" /> Excluir
+                      </Button>
+                      <Button variant="emerald" size="sm" onClick={() => markAsPaid(account)}>
+                        <Check className="w-3.5 h-3.5" /> Pago
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <Banknote className="w-5 h-5 text-emerald-accent" />
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Investimentos</p>
-              <p className="font-semibold text-lg">{formatCurrency(totalBank)}</p>
+
+          {/* Contas únicas */}
+          <div className="glass-card p-4 mb-4">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-foreground">Apenas este mês</h2>
+                <p className="text-xs text-muted-foreground">Despesas únicas que não se repetem.</p>
+              </div>
             </div>
-          </div>
-        </Card>
-      </div>
-
-      <div className="glass-card p-4 mb-4">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <h2 className="font-semibold text-foreground">Contas de banco</h2>
-            <p className="text-xs text-muted-foreground">Investimentos e contas bancárias apenas para visualização.</p>
-          </div>
-          <p className="text-xs text-muted-foreground">{formatCurrency(totalBank)}</p>
-        </div>
-        {bankAccounts.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma conta de banco cadastrada.</p>
-        ) : (
-          <div className="space-y-3">
-            {bankAccounts.map((account) => (
-              <div key={account.id} className="rounded-2xl border border-border p-4">
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <div>
-                    <p className="font-semibold text-foreground">{account.name}</p>
-                    <p className="text-xs text-muted-foreground">{account.bank} • {account.account_type}</p>
+            {singleAccounts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma conta única pendente.</p>
+            ) : (
+              <div className="space-y-3">
+                {singleAccounts.map((account) => (
+                  <div key={account.id} className="rounded-2xl border border-border p-4">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div>
+                        <p className="font-semibold text-foreground">{account.name}</p>
+                        <p className="text-xs text-muted-foreground">Dia {account.due_day}</p>
+                      </div>
+                      <p className="text-sm font-semibold">{formatCurrency(Number(account.amount))}</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <Button variant="outline" size="sm" onClick={() => openEditAccountDialog(account)}>
+                        <Edit3 className="w-3.5 h-3.5" /> Editar
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => deleteAccount(account.id)}>
+                        <Trash2 className="w-3.5 h-3.5" /> Excluir
+                      </Button>
+                      <Button variant="emerald" size="sm" onClick={() => markAsPaid(account)}>
+                        <Check className="w-3.5 h-3.5" /> Pago
+                      </Button>
+                    </div>
                   </div>
-                  <p className="text-sm font-semibold">{formatCurrency(Number(account.amount))}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <Button variant="outline" size="sm" onClick={() => openEditAccountDialog(account)}>
-                    <Edit3 className="w-3.5 h-3.5" /> Editar
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => deleteAccount(account.id)}>
-                    <Trash2 className="w-3.5 h-3.5" /> Excluir
-                  </Button>
-                </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Contas mensais */}
-      <div className="glass-card p-4 mb-4">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <h2 className="font-semibold text-foreground">Contas mensais</h2>
-            <p className="text-xs text-muted-foreground">Despesas que se repetem todo mês.</p>
-          </div>
-          <p className="text-xs text-muted-foreground">{formatMonthYear(currentMonthYear)}</p>
-        </div>
-        {monthlyAccounts.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma conta mensal pendente.</p>
-        ) : (
-          <div className="space-y-3">
-            {monthlyAccounts.map((account) => (
-              <div key={account.id} className="rounded-2xl border border-border p-4">
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <div>
-                    <p className="font-semibold text-foreground">{account.name}</p>
-                    <p className="text-xs text-muted-foreground">Dia {account.due_day} • Mensal</p>
+          {/* Dívidas e Parcelamentos */}
+          <div className="glass-card p-4 mb-4 border-destructive/20">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-destructive">Dívidas e Parcelamentos</h2>
+                <p className="text-xs text-muted-foreground">Controle de dívidas ativas.</p>
+              </div>
+            </div>
+            {debtAccounts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Você não possui dívidas cadastradas. Que ótimo! 🎉</p>
+            ) : (
+              <div className="space-y-3">
+                {debtAccounts.map((account) => (
+                  <div key={account.id} className="rounded-2xl border border-destructive/30 p-4 bg-destructive/5">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div>
+                        <p className="font-semibold text-foreground">{account.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {account.bank} • Vence dia {account.due_day}
+                          {account.remaining_months && ` • Restam ${account.remaining_months}x`}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-destructive">{formatCurrency(Number(account.amount))}</p>
+                        {account.total_debt_amount && (
+                          <p className="text-[10px] text-muted-foreground">Total: {formatCurrency(Number(account.total_debt_amount))}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <Button variant="outline" size="sm" onClick={() => openEditAccountDialog(account)}>
+                        <Edit3 className="w-3.5 h-3.5" /> Editar
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => deleteAccount(account.id)}>
+                        <Trash2 className="w-3.5 h-3.5" /> Excluir
+                      </Button>
+                      <Button variant="emerald" size="sm" onClick={() => markAsPaid(account)}>
+                        <Check className="w-3.5 h-3.5" /> Pago
+                      </Button>
+                    </div>
                   </div>
-                  <p className="text-sm font-semibold">{formatCurrency(Number(account.amount))}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <Button variant="outline" size="sm" onClick={() => openEditAccountDialog(account)}>
-                    <Edit3 className="w-3.5 h-3.5" /> Editar
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => deleteAccount(account.id)}>
-                    <Trash2 className="w-3.5 h-3.5" /> Excluir
-                  </Button>
-                  <Button variant="emerald" size="sm" onClick={() => markAsPaid(account)}>
-                    <Check className="w-3.5 h-3.5" /> Pago
-                  </Button>
-                </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        )}
-      </div>
-
-      {/* Contas únicas */}
-      <div className="glass-card p-4 mb-4">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <h2 className="font-semibold text-foreground">Contas deste mês</h2>
-            <p className="text-xs text-muted-foreground">Despesas únicas que não se repetem.</p>
-          </div>
-          <p className="text-xs text-muted-foreground">{formatMonthYear(currentMonthYear)}</p>
-        </div>
-        {singleAccounts.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma conta única para este mês.</p>
-        ) : (
-          <div className="space-y-3">
-            {singleAccounts.map((account) => (
-              <div key={account.id} className="rounded-2xl border border-border p-4">
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <div>
-                    <p className="font-semibold text-foreground">{account.name}</p>
-                    <p className="text-xs text-muted-foreground">Dia {account.due_day}</p>
-                  </div>
-                  <p className="text-sm font-semibold">{formatCurrency(Number(account.amount))}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <Button variant="outline" size="sm" onClick={() => openEditAccountDialog(account)}>
-                    <Edit3 className="w-3.5 h-3.5" /> Editar
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => deleteAccount(account.id)}>
-                    <Trash2 className="w-3.5 h-3.5" /> Excluir
-                  </Button>
-                  <Button variant="emerald" size="sm" onClick={() => markAsPaid(account)}>
-                    <Check className="w-3.5 h-3.5" /> Pago
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <Card className="p-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Vence hoje</p>
-          <p className="mt-2 font-semibold text-foreground">{dueTodayAccounts.length}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Próximas 7 dias</p>
-          <p className="mt-2 font-semibold text-foreground">{weekAccounts.length}</p>
-        </Card>
-      </div>
 
       <div className="glass-card p-4 mb-4">
         <h2 className="font-semibold text-foreground mb-3">Histórico (6 meses)</h2>
@@ -511,6 +534,12 @@ const Accounts = () => {
           </div>
         )}
       </div>
+      </TabsContent>
+
+      <TabsContent value="planejador" className="space-y-4">
+        <Planner />
+      </TabsContent>
+    </Tabs>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)]">
@@ -519,15 +548,16 @@ const Accounts = () => {
           </DialogHeader>
           <div className="space-y-4 mt-3">
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Categoria da conta</label>
+              <label className="text-xs text-muted-foreground mb-1 block">Tipo de Conta</label>
               <select
-                title="Categoria da conta"
-                value={accountCategory}
+                title="Tipo de Conta"
+                value={billingType}
                 onChange={(e) => {
-                  const nextCategory = e.target.value as "bank" | "expense";
-                  setAccountCategory(nextCategory);
-                  setAccountType(nextCategory === "bank" ? bankAccountTypes[0] : expenseTypes[0]);
-                  setBank(nextCategory === "bank" ? "Itaú" : "Despesa");
+                  const type = e.target.value as "monthly" | "single" | "debt";
+                  setBillingType(type);
+                  if (type === "single") setAccountType("Única");
+                  if (type === "debt") setAccountType("Dívida");
+                  if (type === "monthly") setAccountType("Internet");
                 }}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
               >
@@ -536,60 +566,66 @@ const Accounts = () => {
                 ))}
               </select>
             </div>
+
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Nome da conta</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={accountCategory === "bank" ? "Itaú CDB" : "Internet"} className="bg-muted border-border" />
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Internet, Aluguel, Nubank..." className="bg-muted border-border" />
             </div>
-            {accountCategory === "bank" ? (
+
+            {billingType === "debt" && (
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Banco</label>
-                <Input value={bank} onChange={(e) => setBank(e.target.value)} placeholder="Itaú" className="bg-muted border-border" />
+                <label className="text-xs text-muted-foreground mb-1 block">Banco / Instituição</label>
+                <Input value={bank} onChange={(e) => setBank(e.target.value)} placeholder="Ex: Nubank, Itaú..." className="bg-muted border-border" />
               </div>
-            ) : null}
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
-              <select
-                title="Tipo de conta"
-                value={accountType}
-                onChange={(e) => setAccountType(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
-              >
-                {(accountCategory === "bank" ? bankAccountTypes : expenseTypes).map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+            )}
+
+            {billingType === "monthly" && (
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Valor</label>
-                <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="120" className="bg-muted border-border" step="0.01" min="0" />
-              </div>
-              {accountCategory === "expense" ? (
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Vencimento (dia)</label>
-                  <Input type="number" value={dueDay} onChange={(e) => setDueDay(e.target.value)} placeholder="5" className="bg-muted border-border" min="1" max="31" />
-                </div>
-              ) : null}
-            </div>
-            {accountCategory === "expense" ? (
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Tipo de cobrança</label>
-                <select 
-                  title="Tipo de cobrança"
-                  value={billingType} 
-                  onChange={(e) => setBillingType(e.target.value as "monthly" | "single")} 
+                <label className="text-xs text-muted-foreground mb-1 block">Categoria</label>
+                <select
+                  title="Categoria da despesa"
+                  value={accountType}
+                  onChange={(e) => setAccountType(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
                 >
-                  {billingTypes.map((type) => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
+                  {expenseTypes.map((type) => (
+                    <option key={type} value={type}>{type}</option>
                   ))}
                 </select>
               </div>
-            ) : null}
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">
+                  {billingType === "debt" ? "Valor da Parcela" : "Valor"}
+                </label>
+                <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="120" className="bg-muted border-border" step="0.01" min="0" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Vencimento (dia)</label>
+                <Input type="number" value={dueDay} onChange={(e) => setDueDay(e.target.value)} placeholder="5" className="bg-muted border-border" min="1" max="31" />
+              </div>
+            </div>
+
+            {billingType === "debt" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Meses Restantes (Opcional)</label>
+                  <Input type="number" value={remainingMonths} onChange={(e) => setRemainingMonths(e.target.value)} placeholder="12" className="bg-muted border-border" min="1" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Valor Total (Opcional)</label>
+                  <Input type="number" value={totalDebtAmount} onChange={(e) => setTotalDebtAmount(e.target.value)} placeholder="1500" className="bg-muted border-border" step="0.01" min="0" />
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Data de início</label>
               <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-muted border-border" />
             </div>
+
             <Button className="w-full" onClick={saveAccount} disabled={saving}>
               {saving ? "Salvando..." : editingAccount ? "Salvar alterações" : "Salvar conta"}
             </Button>

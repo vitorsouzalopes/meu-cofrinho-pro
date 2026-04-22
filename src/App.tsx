@@ -23,7 +23,6 @@ import TelegramSettings from "./pages/TelegramSettings.tsx";
 import Download from "./pages/Download.tsx";
 import Auth from "./pages/Auth.tsx";
 import Profile from "./pages/Profile.tsx";
-import Planner from "./pages/Planner.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import UpdateModal from "./components/UpdateModal";
 import { CURRENT_VERSION } from "./constants/version";
@@ -67,7 +66,6 @@ const AppRoutes = () => (
     <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
     <Route path="/telegram" element={<ProtectedRoute><TelegramSettings /></ProtectedRoute>} />
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-    <Route path="/planner" element={<ProtectedRoute><Planner /></ProtectedRoute>} />
     <Route path="/download" element={<Download />} />
     <Route path="*" element={<NotFound />} />
   </Routes>

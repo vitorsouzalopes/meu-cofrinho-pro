@@ -285,361 +285,122 @@ const Today = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
-      </div>
     );
   }
 
+  const status = overdueAccounts.length > 0 ? "ATRASO" : "OK";
+
   return (
     <div className="min-h-screen pb-24 px-4 pt-6 max-w-lg mx-auto">
-      <div className="mb-6">
-        <h1 className="font-heading text-xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-xs text-muted-foreground">Acompanhe suas contas e finanças.</p>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="font-heading text-xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-xs text-muted-foreground">Visão rápida de tudo.</p>
+        </div>
       </div>
 
-      {/* Smart Planner Banner */}
-      <Card 
-        className="p-4 mb-4 border-sky-accent/40 bg-sky-accent/5 cursor-pointer hover:bg-sky-accent/10 transition-colors"
-        onClick={() => navigate("/planner")}
-      >
+      {/* 🔝 Status geral */}
+      <Card className={`p-4 mb-4 flex items-center justify-between ${status === "ATRASO" ? "border-destructive/40 bg-destructive/5" : "border-emerald-accent/40 bg-emerald-accent/5"}`}>
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-sky-accent/20 flex items-center justify-center">
-            <BrainCircuit className="w-5 h-5 text-sky-accent" />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-semibold text-foreground text-sm">Planejador Inteligente</h3>
-            <p className="text-xs text-muted-foreground">Simule dívidas e trace objetivos</p>
-          </div>
-          <ChevronRight className="w-4 h-4 text-sky-accent" />
-        </div>
-      </Card>
-
-      {/* Challenge Reminder */}
-      {activeChallenge && !challengeDoneToday && (
-        <Card 
-          className="p-4 mb-4 border-primary/40 bg-primary/5 animate-pulse-gold cursor-pointer"
-          onClick={() => navigate("/progress")}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-xl">
-              🎯
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-foreground text-sm">Fazer check-in de hoje</h3>
-              <p className="text-xs text-muted-foreground">Não esqueça de guardar sua reserva hoje!</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </div>
-        </Card>
-      )}
-
-      {/* Salary Card */}
-      <Card className="p-4 mb-4 border-gold/40 bg-gold/5">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-gold" />
-            <h2 className="font-semibold text-foreground">Salário do mês</h2>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => { setSalaryInput(String(salary || "")); setSalaryDialogOpen(true); }}>
-            {salary > 0 ? "Editar" : "Adicionar"}
-          </Button>
-        </div>
-        {salary > 0 ? (
-          <div className="space-y-2">
-            <p className="text-2xl font-bold text-gold">{formatCurrency(salary)}</p>
-            {!salaryReceived ? (
-              <Button variant="emerald" size="sm" className="w-full" onClick={markSalaryReceived}>
-                <CheckCircle2 className="w-4 h-4 mr-1" /> Marcar como recebido
-              </Button>
-            ) : (
-              <p className="text-xs text-emerald-accent font-medium flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Salário recebido ✓
-              </p>
-            )}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">Informe seu salário para ver a previsão de saldo.</p>
-        )}
-      </Card>
-
-      {/* Extra Income Card */}
-      <Card className="p-4 mb-4 border-emerald-accent/40 bg-emerald-accent/5">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Plus className="w-5 h-5 text-emerald-accent" />
-            <div>
-              <h2 className="font-semibold text-foreground">Ganho extra</h2>
-              <p className="text-[10px] text-muted-foreground">Freelas, vendas, bicos…</p>
-            </div>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => { 
-            setEditingExtraIncomeId(null);
-            setExtraIncomeName("");
-            setExtraIncomeAmount("");
-            setExtraIncomeDialogOpen(true); 
-          }}>
-            + Adicionar
-          </Button>
-        </div>
-        
-        {extraIncomes.length > 0 ? (
-          <div className="space-y-3">
-            {/* Total acumulado do mês */}
-            <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-accent/10 border border-emerald-accent/20">
-              <div>
-                <p className="text-[10px] text-emerald-accent uppercase tracking-wider font-medium">Total do mês</p>
-                <p className="text-2xl font-bold text-emerald-accent mt-0.5">{formatCurrency(totalExtraIncome)}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{extraIncomes.length} {extraIncomes.length === 1 ? "entrada" : "entradas"}</p>
-              </div>
-            </div>
-
-            {/* Lista de entradas */}
-            <div className="space-y-1.5">
-              {extraIncomes.map((item) => (
-                <div key={item.id} className="flex items-center justify-between gap-3 py-2 px-3 rounded-lg hover:bg-emerald-accent/5 group transition-colors">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{item.description}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {item.date ? new Date(item.date + "T12:00:00").toLocaleDateString("pt-BR") : "—"}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <p className="text-sm font-semibold text-emerald-accent">+{formatCurrency(Number(item.amount))}</p>
-                    <button
-                      title="Excluir ganho"
-                      className="w-6 h-6 flex items-center justify-center rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/10 transition-all"
-                      onClick={() => deleteExtraIncome(item.id)}
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center py-4 text-center">
-            <div className="w-10 h-10 rounded-full bg-emerald-accent/10 flex items-center justify-center mb-2">
-              <Plus className="w-5 h-5 text-emerald-accent" />
-            </div>
-            <p className="text-sm text-muted-foreground">Nenhum ganho extra este mês.</p>
-            <p className="text-[10px] text-muted-foreground/60 mt-0.5">Freelas, vendas e bicos somam à sua renda total.</p>
-          </div>
-        )}
-      </Card>
-
-      {/* Balance Forecast */}
-      {(salary > 0 || totalExtraIncome > 0) && (
-        <Card className="p-4 mb-4 border-border">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-foreground" />
-            <h2 className="font-semibold text-foreground">Previsão do mês</h2>
-          </div>
-
-          {/* Composição da Renda Total */}
-          <div className="p-3 rounded-lg bg-gold/5 border border-gold/20 mb-3">
-            <p className="text-[10px] text-gold uppercase tracking-wider font-medium mb-2">Composição da renda</p>
-            <div className="space-y-1.5 text-sm">
-              {salary > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Salário</span>
-                  <span className="font-medium text-foreground">{formatCurrency(salary)}</span>
-                </div>
-              )}
-              {totalExtraIncome > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Ganho extra</span>
-                  <span className="font-medium text-emerald-accent">+ {formatCurrency(totalExtraIncome)}</span>
-                </div>
-              )}
-              <div className="border-t border-gold/20 pt-1.5 flex justify-between">
-                <span className="font-semibold text-foreground">Renda total</span>
-                <span className="font-bold text-gold">{formatCurrency(totalIncome)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Balanço */}
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Total de contas</span>
-              <span className="font-semibold text-destructive">- {formatCurrency(totalCurrentMonth)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Já pago</span>
-              <span className="font-semibold text-foreground">- {formatCurrency(totalPaid)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Pendente</span>
-              <span className="font-semibold text-foreground">- {formatCurrency(totalPending)}</span>
-            </div>
-            <div className="border-t border-border pt-2 flex justify-between items-center">
-              <span className="font-medium text-foreground">Saldo restante</span>
-              <span className={`text-xl font-bold ${remainingBalance >= 0 ? "text-emerald-accent" : "text-destructive"}`}>
-                {formatCurrency(remainingBalance)}
-              </span>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Cards de resumo */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        <Card className="p-4 border-gold/30">
-          <div className="flex items-center gap-2 mb-2">
-            <Wallet className="w-4 h-4 text-gold" />
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Contas</p>
-          </div>
-          <p className="font-semibold text-lg text-gold">{formatCurrency(totalCurrentMonth)}</p>
-        </Card>
-
-        <Card className="p-4 border-emerald-accent/30">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="w-4 h-4 text-emerald-accent" />
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Invest.</p>
-          </div>
-          <p className="font-semibold text-lg text-emerald-accent">{formatCurrency(investmentTotal)}</p>
-        </Card>
-
-        <Card className={`p-4 ${overdueAccounts.length > 0 ? "border-destructive/30" : "border-gold/30"}`}>
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className={`w-4 h-4 ${overdueAccounts.length > 0 ? "text-destructive" : "text-foreground/50"}`} />
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Atrasadas</p>
-          </div>
-          <p className={`font-semibold text-lg ${overdueAccounts.length > 0 ? "text-destructive" : "text-foreground/50"}`}>
-            {overdueAccounts.length}
-          </p>
-        </Card>
-
-        <Card className="p-4 border-sky-accent/30">
-          <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-4 h-4 text-sky-accent" />
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Hoje</p>
-          </div>
-          <p className="font-semibold text-lg text-sky-accent">{dueToday.length}</p>
-        </Card>
-      </div>
-
-      <div className="space-y-4">
-        {/* Contas atrasadas */}
-        {overdueAccounts.length > 0 && (
-          <Card className="p-4 border-destructive/50 bg-destructive/5">
-            <div className="flex items-center gap-2 mb-3">
-              <AlertCircle className="w-5 h-5 text-destructive" />
-              <h2 className="font-semibold text-foreground">⚠️ Contas Atrasadas</h2>
-            </div>
-            <div className="space-y-2">
-              {overdueAccounts.map((account) => (
-                <div key={account.id} className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-foreground text-sm">{account.name}</p>
-                    <p className="text-xs text-muted-foreground">Desde dia {account.due_day}</p>
-                  </div>
-                  <p className="font-semibold text-destructive">{formatCurrency(Number(account.amount))}</p>
-                </div>
-              ))}
-            </div>
-            <Button variant="destructive" size="sm" className="w-full mt-3" onClick={() => navigate("/accounts")}>
-              Resolver agora
-            </Button>
-          </Card>
-        )}
-
-        {/* Contas a pagar HOJE */}
-        {dueToday.length > 0 && (
-          <Card className="p-4 border-sky-accent/30">
-            <div className="flex items-center gap-2 mb-3">
-              <Clock className="w-5 h-5 text-sky-accent" />
-              <h2 className="font-semibold text-foreground">⏰ Vence Hoje</h2>
-            </div>
-            <div className="space-y-2">
-              {dueToday.map((account) => (
-                <div key={account.id} className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-foreground text-sm">{account.name}</p>
-                    <p className="text-xs text-muted-foreground">{account.billing_type === "monthly" ? "Mensal" : "Única"}</p>
-                  </div>
-                  <p className="font-semibold text-sky-accent">{formatCurrency(Number(account.amount))}</p>
-                </div>
-              ))}
-            </div>
-            <Button size="sm" className="w-full mt-3" onClick={() => navigate("/accounts")}>
-              Ver contas
-            </Button>
-          </Card>
-        )}
-
-        {/* Próximos 7 dias */}
-        {upcomingThisWeek.length > 0 && (
-          <Card className="p-4 border-gold/30">
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="w-5 h-5 text-gold" />
-              <h2 className="font-semibold text-foreground">📅 Próximos 7 Dias</h2>
-            </div>
-            <div className="space-y-2">
-              {upcomingThisWeek.sort((a, b) => a.due_day - b.due_day).map((account) => (
-                <div key={account.id} className="flex items-center justify-between text-sm">
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">{account.name}</p>
-                    <p className="text-xs text-muted-foreground">Dia {account.due_day}</p>
-                  </div>
-                  <p className="font-semibold text-gold">{formatCurrency(Number(account.amount))}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {/* Tudo em dia */}
-        {pendingAccounts.length === 0 && (
-          <Card className="p-6 text-center border-emerald-accent/30 bg-emerald-accent/5">
-            <TrendingUp className="w-12 h-12 mx-auto mb-3 text-emerald-accent" />
-            <p className="text-lg font-semibold text-foreground">Tudo em dia! ✓</p>
-            <p className="text-xs text-muted-foreground mt-2">Todas as contas do mês foram pagas.</p>
-          </Card>
-        )}
-
-        {/* Sobrou para investir */}
-        {salary > 0 && remainingBalance > 0 && (
-          <Card className="p-4 border-emerald-accent/30 bg-emerald-accent/5">
-            <div className="flex items-center gap-2 mb-2">
-              <Lightbulb className="w-5 h-5 text-emerald-accent" />
-              <h2 className="font-semibold text-foreground">💰 Sobrou para investir</h2>
-            </div>
-            <p className="text-2xl font-bold text-emerald-accent mb-2">
-              {formatCurrency(remainingBalance)}
+          {status === "ATRASO" ? (
+            <AlertCircle className="w-8 h-8 text-destructive" />
+          ) : (
+            <CheckCircle2 className="w-8 h-8 text-emerald-accent" />
+          )}
+          <div>
+            <h2 className={`font-bold text-lg ${status === "ATRASO" ? "text-destructive" : "text-emerald-accent"}`}>
+              {status === "ATRASO" ? "Contas em Atraso" : "Tudo em dia"}
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              {status === "ATRASO" ? `${overdueAccounts.length} conta(s) pendente(s)` : "Nenhuma conta atrasada."}
             </p>
-            <Button size="sm" className="w-full" onClick={() => navigate("/suggestions")}>
-              Ver sugestões de investimento
-            </Button>
-          </Card>
-        )}
+          </div>
+        </div>
+      </Card>
 
-        {/* Sugestão de distribuição */}
-        {salary > 0 && (
-          <Card className="p-4 border-gold/20 bg-gold/5">
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="w-5 h-5 text-gold" />
-              <h2 className="font-semibold text-foreground">💡 Sugestão</h2>
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-muted-foreground">Investir (30%)</p>
-                <p className="font-medium text-foreground">{formatCurrency(salary * 0.3)}</p>
-              </div>
-              <div className="flex items-center justify-between">
-                <p className="text-muted-foreground">Guardar no cofrinho (20%)</p>
-                <p className="font-medium text-foreground">{formatCurrency(salary * 0.2)}</p>
-              </div>
-              <div className="flex items-center justify-between pt-2 border-t border-border">
-                <p className="text-muted-foreground font-medium">Contas (50%)</p>
-                <p className="font-semibold text-gold">{formatCurrency(salary * 0.5)}</p>
-              </div>
-            </div>
-          </Card>
-        )}
+      {/* 📊 Cards principais */}
+      <div className="grid grid-cols-3 gap-2 mb-6">
+        <Card className="p-3 border-gold/30 text-center cursor-pointer hover:bg-gold/5 transition-colors" onClick={() => navigate("/accounts")}>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Contas</p>
+          <p className="font-bold text-gold">{currentMonthAccounts.length}</p>
+        </Card>
+        <Card className={`p-3 text-center cursor-pointer transition-colors ${overdueAccounts.length > 0 ? "border-destructive/30 hover:bg-destructive/5" : "border-border hover:bg-muted"}`} onClick={() => navigate("/accounts")}>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Atrasadas</p>
+          <p className={`font-bold ${overdueAccounts.length > 0 ? "text-destructive" : "text-foreground"}`}>{overdueAccounts.length}</p>
+        </Card>
+        <Card className="p-3 border-sky-accent/30 text-center cursor-pointer hover:bg-sky-accent/5 transition-colors" onClick={() => navigate("/investments")}>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Investidos</p>
+          <p className="font-bold text-sky-accent">{investments.length}</p>
+        </Card>
       </div>
+
+      {/* 💰 Renda do mês */}
+      <Card className="p-4 mb-4 border-emerald-accent/20">
+        <div className="flex items-center justify-between mb-3 border-b border-border pb-2">
+          <h2 className="font-bold text-foreground flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-emerald-accent" /> Renda do mês
+          </h2>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => { setSalaryInput(String(salary || "")); setSalaryDialogOpen(true); }}>
+              Salário
+            </Button>
+            <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => { 
+              setEditingExtraIncomeId(null); setExtraIncomeName(""); setExtraIncomeAmount(""); setExtraIncomeDialogOpen(true); 
+            }}>
+              Extra
+            </Button>
+          </div>
+        </div>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Salário</span>
+            <span className="font-medium text-foreground">{formatCurrency(salary)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Extra</span>
+            <span className="font-medium text-emerald-accent">{formatCurrency(totalExtraIncome)}</span>
+          </div>
+          <div className="pt-2 border-t border-border flex justify-between items-center">
+            <span className="font-semibold text-foreground">Total</span>
+            <span className="text-lg font-bold text-emerald-accent">{formatCurrency(totalIncome)}</span>
+          </div>
+        </div>
+      </Card>
+
+      {/* 📉 Despesas */}
+      <Card className="p-4 mb-4 border-destructive/20">
+        <div className="flex items-center justify-between mb-3 border-b border-border pb-2">
+          <h2 className="font-bold text-foreground flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-destructive" /> Despesas
+          </h2>
+          <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => navigate("/accounts")}>
+            Ver contas
+          </Button>
+        </div>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Total contas</span>
+            <span className="font-medium text-foreground">{formatCurrency(totalCurrentMonth)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Já pago</span>
+            <span className="font-medium text-emerald-accent">{formatCurrency(totalPaid)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Em andamento</span>
+            <span className="font-medium text-gold">{formatCurrency(totalPending)}</span>
+          </div>
+        </div>
+      </Card>
+
+      {/* 💵 Saldo restante */}
+      <Card className={`p-5 mb-6 text-center border ${remainingBalance >= 0 ? "border-sky-accent/40 bg-sky-accent/5" : "border-destructive/40 bg-destructive/5"}`}>
+        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Saldo Restante</p>
+        <p className={`text-3xl font-bold ${remainingBalance >= 0 ? "text-sky-accent" : "text-destructive"}`}>
+          {formatCurrency(remainingBalance)}
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">disponível no mês</p>
+      </Card>
 
       {/* Salary Dialog */}
       <Dialog open={salaryDialogOpen} onOpenChange={setSalaryDialogOpen}>

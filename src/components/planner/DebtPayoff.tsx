@@ -56,7 +56,9 @@ export default function DebtPayoff({ initialIncome = 0, initialExpenses = 0 }: {
   const [income, setIncome] = useState<number>(initialIncome);
   const [fixedExpenses, setFixedExpenses] = useState<number>(initialExpenses);
   const [debtAmount, setDebtAmount] = useState<number>(5000);
-  const [interestRate, setInterestRate] = useState<number>(12); 
+  const [interestRate, setInterestRate] = useState<number>(12);
+  const [showAdvancedHard, setShowAdvancedHard] = useState<boolean>(false);
+  const [showAdvancedMixed, setShowAdvancedMixed] = useState<boolean>(false);
 
   // Update when props change
   useEffect(() => {
@@ -90,15 +92,19 @@ export default function DebtPayoff({ initialIncome = 0, initialExpenses = 0 }: {
 
   const simulate = (debt: number, payment: number, rate: number) => {
     if (payment <= 0 || payment <= debt * (rate / 100)) {
-      return { months: Infinity, totalPaid: Infinity };
+      return { months: Infinity, totalPaid: Infinity, table: [] };
     }
     let months = 0;
     let totalPaid = 0;
     let currentDebt = debt;
+    const table = [];
 
     while (currentDebt > 0 && months < 360) {
-      currentDebt += currentDebt * (rate / 100);
+      const interest = currentDebt * (rate / 100);
+      currentDebt += interest;
+      let actualPayment = payment;
       if (payment >= currentDebt) {
+        actualPayment = currentDebt;
         totalPaid += currentDebt;
         currentDebt = 0;
       } else {
@@ -106,8 +112,14 @@ export default function DebtPayoff({ initialIncome = 0, initialExpenses = 0 }: {
         totalPaid += payment;
       }
       months++;
+      table.push({
+        month: months,
+        interest,
+        payment: actualPayment,
+        remainingDebt: currentDebt
+      });
     }
-    return { months, totalPaid };
+    return { months, totalPaid, table };
   };
 
   const hardResult = simulate(debtAmount, hardPayment, interestRate);
@@ -259,6 +271,40 @@ export default function DebtPayoff({ initialIncome = 0, initialExpenses = 0 }: {
                   Você quita mais rápido e paga menos juros, mas <span className="font-bold">abre mão de qualquer folga financeira</span>.
                 </p>
               </div>
+
+              <div className="mt-4">
+                <button 
+                  onClick={() => setShowAdvancedHard(!showAdvancedHard)}
+                  className="text-xs text-destructive hover:underline font-medium flex items-center justify-center w-full"
+                >
+                  {showAdvancedHard ? "Ocultar Detalhes" : "Ver Detalhes Mês a Mês"}
+                </button>
+                
+                {showAdvancedHard && hardResult.table && hardResult.table.length > 0 && (
+                  <div className="mt-3 overflow-x-auto">
+                    <table className="w-full text-[10px] text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-border text-muted-foreground">
+                          <th className="py-1">Mês</th>
+                          <th className="py-1">Juros</th>
+                          <th className="py-1">Parcela</th>
+                          <th className="py-1">Saldo Devedor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {hardResult.table.map((row) => (
+                          <tr key={row.month} className="border-b border-border/50">
+                            <td className="py-1.5">{row.month}</td>
+                            <td className="py-1.5 text-destructive">{formatCurrency(row.interest)}</td>
+                            <td className="py-1.5 font-medium">{formatCurrency(row.payment)}</td>
+                            <td className="py-1.5">{formatCurrency(row.remainingDebt)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </Card>
 
             {/* MIXED Strategy */}
@@ -292,6 +338,40 @@ export default function DebtPayoff({ initialIncome = 0, initialExpenses = 0 }: {
                 <p className="text-xs text-sky-accent">
                   Você mantém qualidade de vida e guarda <span className="font-bold">{formatCurrency(mixedSaved)}/mês</span>, mas <span className="font-bold">paga {formatCurrency((mixedResult.totalPaid === Infinity || hardResult.totalPaid === Infinity) ? 0 : mixedResult.totalPaid - hardResult.totalPaid)} a mais em juros</span>.
                 </p>
+              </div>
+
+              <div className="mt-4">
+                <button 
+                  onClick={() => setShowAdvancedMixed(!showAdvancedMixed)}
+                  className="text-xs text-sky-accent hover:underline font-medium flex items-center justify-center w-full"
+                >
+                  {showAdvancedMixed ? "Ocultar Detalhes" : "Ver Detalhes Mês a Mês"}
+                </button>
+                
+                {showAdvancedMixed && mixedResult.table && mixedResult.table.length > 0 && (
+                  <div className="mt-3 overflow-x-auto">
+                    <table className="w-full text-[10px] text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-border text-muted-foreground">
+                          <th className="py-1">Mês</th>
+                          <th className="py-1">Juros</th>
+                          <th className="py-1">Parcela</th>
+                          <th className="py-1">Saldo Devedor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {mixedResult.table.map((row) => (
+                          <tr key={row.month} className="border-b border-border/50">
+                            <td className="py-1.5">{row.month}</td>
+                            <td className="py-1.5 text-sky-accent">{formatCurrency(row.interest)}</td>
+                            <td className="py-1.5 font-medium">{formatCurrency(row.payment)}</td>
+                            <td className="py-1.5">{formatCurrency(row.remainingDebt)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </Card>
           </div>
