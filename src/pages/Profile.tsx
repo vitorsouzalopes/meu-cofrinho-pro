@@ -104,8 +104,12 @@ const ProfilePage = () => {
       throw new Error('Push notifications não são suportadas neste navegador.');
     }
 
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await navigator.serviceWorker.getRegistration();
     
+    if (!registration) {
+      throw new Error('As notificações push requerem o PWA instalado ou não funcionam no modo Preview da IDE.');
+    }
+
     // Check if subscription already exists
     let subscription = await registration.pushManager.getSubscription();
     
