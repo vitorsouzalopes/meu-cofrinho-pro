@@ -43,7 +43,7 @@ const History = () => {
         const [expensesRes, paymentsRes, accountsRes] = await Promise.allSettled([
           supabase.from("expenses").select("*").eq("user_id", user.id),
           supabase.from("account_payments").select("*").eq("user_id", user.id),
-          supabase.from("accounts").select("*").eq("user_id", user.id).eq("paid", true)
+          supabase.from("accounts").select("*").eq("user_id", user.id).eq("paid", true).eq("is_template", false)
         ]);
 
         const expenses = expensesRes.status === "fulfilled" && !expensesRes.value.error 

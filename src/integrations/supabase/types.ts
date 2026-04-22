@@ -131,8 +131,17 @@ export type Database = {
           user_id?: string
           remaining_months?: number | null
           total_debt_amount?: number | null
+          is_template?: boolean
+          parent_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       account_payments: {
         Row: {

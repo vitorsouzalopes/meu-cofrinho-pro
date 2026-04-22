@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { ensureMonthlyInstances } from "@/lib/account-utils";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Account = Tables<"accounts">;
@@ -51,8 +52,11 @@ const Today = () => {
     const fetchData = async () => {
       setLoading(true);
 
+      // Ensure instances exist for current month
+      await ensureMonthlyInstances(user.id, currentMonthYear);
+
       const [accountsResponse, investmentsResponse, salaryResponse, extraResponse, challengeResponse] = await Promise.all([
-        supabase.from("accounts").select("*").eq("user_id", user.id),
+        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false),
         supabase.from("investments").select("*").eq("user_id", user.id),
         supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
         supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear),

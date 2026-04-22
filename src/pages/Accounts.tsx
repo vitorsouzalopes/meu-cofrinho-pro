@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
+import { ensureMonthlyInstances } from "@/lib/account-utils";
 import Planner from "./Planner";
 import type { Account, AccountPayment } from "@/integrations/supabase/types";
 
@@ -60,45 +61,41 @@ const Accounts = () => {
     if (!user) return;
     setLoading(true);
 
-    const resetResponse = await supabase
-      .from("accounts")
-      .update({ paid: false, paid_at: null, month_year: currentMonthYear })
-      .eq("user_id", user.id)
-      .eq("billing_type", "monthly")
-      .neq("month_year", currentMonthYear);
+    try {
+      // Ensure instances exist for current month
+      await ensureMonthlyInstances(user.id, currentMonthYear);
 
-    if (resetResponse.error) {
-      toast({ title: "Erro ao atualizar contas mensais", description: resetResponse.error.message, variant: "destructive" });
-    }
+      // Load all current accounts (non-templates for this month)
+      const { data, error } = await supabase
+        .from("accounts")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("is_template", false)
+        .eq("month_year", currentMonthYear)
+        .order("due_day", { ascending: true });
 
-    const { data, error } = await supabase
-      .from("accounts")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      toast({ title: "Não foi possível carregar contas", description: error.message, variant: "destructive" });
-      setAccounts([]);
-    } else {
+      if (error) throw error;
       setAccounts((data ?? []) as Account[]);
+
+      // Load payments history for the last 6 months
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from("account_payments")
+        .select("*")
+        .gte("created_at", sixMonthsAgo.toISOString())
+        .order("paid_at", { ascending: false });
+
+      if (!paymentsError && paymentsData) {
+        setPaymentsHistory(paymentsData as AccountPayment[]);
+      }
+
+    } catch (error: any) {
+      toast({ title: "Erro ao carregar contas", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
-
-    // Load payments history for the last 6 months
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    
-    const { data: paymentsData, error: paymentsError } = await supabase
-      .from("account_payments")
-      .select("*")
-      .gte("created_at", sixMonthsAgo.toISOString())
-      .order("paid_at", { ascending: false });
-
-    if (!paymentsError && paymentsData) {
-      setPaymentsHistory(paymentsData as AccountPayment[]);
-    }
-
-    setLoading(false);
   }, [currentMonthYear, toast, user]);
 
   useEffect(() => {
@@ -149,7 +146,8 @@ const Accounts = () => {
       billing_type: billingType,
       amount: parseFloat(amount),
       due_day: parseInt(dueDay, 10),
-      month_year: currentMonthYear,
+      month_year: billingType === "monthly" ? null : currentMonthYear,
+      is_template: billingType === "monthly",
       paid: false,
       start_date: startDate,
     };
@@ -160,6 +158,8 @@ const Accounts = () => {
     }
 
     if (editingAccount) {
+      // If we are editing an instance, it shouldn't become a template unless explicitly changed
+      // But for simplicity, we follow the billingType selected
       const { data, error } = await supabase
         .from("accounts")
         .update(record)
@@ -170,16 +170,16 @@ const Accounts = () => {
       if (error) {
         toast({ title: "Erro ao atualizar conta", description: error.message, variant: "destructive" });
       } else {
-        setAccounts((prev) => prev.map((item) => (item.id === data.id ? (data as Account) : item)));
         toast({ title: "Conta atualizada" });
+        loadAccounts(); // Reload to refresh instances if template was updated
       }
     } else {
       const { data, error } = await supabase.from("accounts").insert(record).select("*").single();
       if (error) {
         toast({ title: "Erro ao salvar conta", description: error.message, variant: "destructive" });
       } else {
-        setAccounts((prev) => [data as Account, ...prev]);
         toast({ title: "Conta adicionada com sucesso" });
+        loadAccounts(); // Reload to generate instance if it was a template
       }
     }
 
