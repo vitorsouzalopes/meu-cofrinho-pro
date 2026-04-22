@@ -51,7 +51,7 @@ const Today = () => {
         supabase.from("accounts").select("*").eq("user_id", user.id),
         supabase.from("investments").select("*").eq("user_id", user.id),
         supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
-        supabase.from("extra_income" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear)
+        supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear)
       ]);
 
       if (accountsResponse.error) {
@@ -208,8 +208,8 @@ const Today = () => {
 
     if (editingExtraIncomeId) {
       const { error } = await supabase
-        .from("extra_income" as any)
-        .update(data as any)
+        .from("extra_income")
+        .update(data)
         .eq("id", editingExtraIncomeId);
       
       if (error) {
@@ -223,8 +223,8 @@ const Today = () => {
       setExtraIncomes(prev => prev.map(item => item.id === editingExtraIncomeId ? { ...item, ...data } : item));
     } else {
       const { data: insertedData, error } = await supabase
-        .from("extra_income" as any)
-        .insert(data as any)
+        .from("extra_income")
+        .insert(data)
         .select("*")
         .single();
       
@@ -248,7 +248,7 @@ const Today = () => {
 
   const deleteExtraIncome = async (id: string) => {
     const { error } = await supabase
-      .from("extra_income" as any)
+      .from("extra_income")
       .delete()
       .eq("id", id);
     
