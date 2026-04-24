@@ -28,26 +28,9 @@ export function filtrarContasPorMes(contas: any[], mes: number, ano: number) {
  * Transforma templates de dívida em instâncias de conta para o cálculo
  */
 export function sincronizarDividas(contas: any[], dividas: any[]) {
-  // Filtra as dívidas que já possuem instâncias no mês para não duplicar
-  const dividasSemInstancia = dividas.filter(d => 
-    !contas.some(c => c.parent_id === d.id || (c.name === d.name && (c.billing_type === 'debt' || c.tipo === 'divida')))
-  );
-
-  const contasDivida = dividasSemInstancia.map(d => ({
-    ...d,
-    id: `virtual-debt-${d.id}`,
-    nome: d.name || d.nome,
-    valor: Number(d.amount || d.parcelaMensal || 0),
-    tipo: "divida",
-    vencimento: d.vencimento || new Date().toISOString(),
-    status: "pendente",
-    is_template: false,
-    parent_id: d.id,
-    virtual: true
-  }));
-
-  // Retorna contas normais + as dívidas sincronizadas (sem duplicar se já existir instância)
-  return [...contas, ...contasDivida];
+  // Retorna apenas a lista de contas/instâncias reais.
+  // Não geramos mais dívidas virtuais a partir dos templates de dívida.
+  return [...contas];
 }
 
 /**
@@ -55,47 +38,9 @@ export function sincronizarDividas(contas: any[], dividas: any[]) {
  * Prioridade: Instância > Template
  */
 export function resolverContasDoMes(instancias: any[], templates: any[], currentMonthYear: string) {
-  const [currYear, currMonth] = currentMonthYear.split('-').map(Number);
-  
-  // 1. Filtrar templates que estão ativos
-  const templatesAtivos = templates.filter(t => {
-    if (!t.start_date) return true;
-    const [sYear, sMonth] = t.start_date.split('-').map(Number);
-    // Verifica se o template já deveria ter começado
-    const jaComecou = (currYear > sYear) || (currYear === sYear && currMonth >= sMonth);
-    const aindaAtivo = t.billing_type !== 'debt' || (t.remaining_months === null || t.remaining_months > 0);
-    return jaComecou && aindaAtivo;
-  });
-
-  const listaFinal = [...instancias];
-
-  // 2. Para cada template, se não houver instância, adiciona como virtual
-  templatesAtivos.forEach(t => {
-    // Verifica se já existe uma instância real para este template neste mês
-    const temInstancia = instancias.some(i => i.parent_id === t.id);
-    
-    // IMPORTANTE: Se o usuário deletou a instância real, ela não está em 'instancias'.
-    // No momento, não temos uma tabela de 'exclusões', então ele reapareceria como virtual.
-    // Para evitar confusão, se for uma conta mensal/dívida, só mostramos o virtual se não houver NADA com aquele nome também.
-    const temNomeIgual = instancias.some(i => i.name === t.name);
-
-    if (!temInstancia && !temNomeIgual) {
-      listaFinal.push({
-        ...t,
-        id: `virtual-${t.id}`,
-        nome: t.name,
-        valor: Number(t.amount || 0),
-        tipo: t.billing_type,
-        vencimento: `${currentMonthYear}-${String(t.due_day || 5).padStart(2, '0')}`,
-        status: "pendente",
-        is_template: false,
-        parent_id: t.id,
-        virtual: true
-      });
-    }
-  });
-
-  return listaFinal;
+  // Retorna apenas as instâncias reais que já existem no banco de dados.
+  // Ignoramos a geração de dados virtuais/projeções para manter apenas os dados reais.
+  return [...instancias];
 }
 
 /**

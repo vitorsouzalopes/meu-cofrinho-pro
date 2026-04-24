@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { User, LogOut, Settings, HelpCircle, Smartphone, ShieldCheck, RefreshCcw, Target, CreditCard, ChevronRight, FileDown, Plus } from "lucide-react";
+import { User, LogOut, Settings, HelpCircle, RefreshCcw, Target, ChevronRight, FileDown, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -100,6 +100,35 @@ const ProfilePage = () => {
     navigate("/auth");
   };
 
+  const limparDadosAutoGerados = async () => {
+    if (!user) return;
+    const confirmed = window.confirm(
+      "Isso vai deletar do banco todas as contas do mês atual que foram geradas automaticamente (e ainda não foram pagas). Contas pagas e as que você criou manualmente sem vínculo a template serão preservadas. Deseja continuar?"
+    );
+    if (!confirmed) return;
+
+    const today = new Date();
+    const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+
+    // Deleta instâncias auto-geradas (têm parent_id) que ainda não foram pagas
+    const { error, count } = await supabase
+      .from("accounts")
+      .delete({ count: "exact" })
+      .eq("user_id", user.id)
+      .eq("is_template", false)
+      .eq("month_year", currentMonthYear)
+      .eq("paid", false)
+      .not("parent_id", "is", null);
+
+    if (error) {
+      toast({ title: "Erro ao limpar", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: `✅ ${count ?? 0} registro(s) removido(s) com sucesso!` });
+      window.dispatchEvent(new CustomEvent("finance-data-updated"));
+      loadData();
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -197,6 +226,7 @@ const ProfilePage = () => {
           { icon: <FileDown className="w-5 h-5" />, label: "Exportar Dados" },
           { icon: <HelpCircle className="w-5 h-5" />, label: "Ajuda e Suporte" },
           { icon: <RefreshCcw className="w-5 h-5" />, label: "Sincronizar Mês", onClick: loadData },
+          { icon: <Trash2 className="w-5 h-5" />, label: "Limpar Dados Auto-Gerados do Mês", onClick: limparDadosAutoGerados, color: "text-amber-500" },
           { icon: <LogOut className="w-5 h-5" />, label: "Logout", onClick: handleSignOut, color: "text-destructive" },
         ].map((item, i) => (
           <div 

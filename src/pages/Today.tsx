@@ -84,15 +84,7 @@ const Today = () => {
     try {
       setLoading(true);
 
-      if (!hasGenerated.current) {
-        hasGenerated.current = true;
-        try {
-          await ensureMonthlyInstances(user.id, currentMonthYear);
-        } catch (e) {
-          console.error("Erro ao gerar instâncias:", e);
-        }
-      }
-
+      // Consultas individuais para evitar que um erro 404 trave tudo
       const [resInst, resTemp, resSal, resExtra] = await Promise.all([
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
