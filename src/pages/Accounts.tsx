@@ -31,8 +31,15 @@ const MONTHS = buildMonthList();
 const TODAY_MY = MONTHS[1].value; // índice 1 = mês atual
 
 // ─── Badge de Status ──────────────────────────────────────────────────────────
-const StatusBadge = ({ status, dueDay }: { status: string; dueDay?: number }) => {
-  const today = new Date().getDate();
+const StatusBadge = ({
+  status,
+  dueDay,
+  monthYear,
+}: {
+  status: string;
+  dueDay?: number | null;
+  monthYear: string; // formato: "2026-05"
+}) => {
   if (status === "pago") {
     return (
       <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-[10px] font-bold text-primary">
@@ -40,20 +47,34 @@ const StatusBadge = ({ status, dueDay }: { status: string; dueDay?: number }) =>
       </span>
     );
   }
-  if (dueDay && dueDay < today) {
-    return (
-      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 text-[10px] font-bold text-destructive">
-        <span className="w-1.5 h-1.5 rounded-full bg-destructive inline-block" /> Atrasado
-      </span>
-    );
+
+  if (dueDay) {
+    const [year, month] = monthYear.split("-").map(Number);
+    // Data de vencimento real (com mês e ano corretos)
+    const dueDate = new Date(year, month - 1, dueDay);
+    const now = new Date();
+    // Zera as horas para comparar só datas
+    now.setHours(0, 0, 0, 0);
+    dueDate.setHours(0, 0, 0, 0);
+
+    const diffDays = Math.round((dueDate.getTime() - now.getTime()) / 86400000);
+
+    if (diffDays < 0) {
+      return (
+        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 text-[10px] font-bold text-destructive">
+          <span className="w-1.5 h-1.5 rounded-full bg-destructive inline-block" /> Atrasado
+        </span>
+      );
+    }
+    if (diffDays <= 7) {
+      return (
+        <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-[10px] font-bold text-amber-500">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" /> Vence em {diffDays === 0 ? "hoje" : `${diffDays}d`}
+        </span>
+      );
+    }
   }
-  if (dueDay && dueDay <= today + 3) {
-    return (
-      <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-[10px] font-bold text-amber-500">
-        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" /> Vence em breve
-      </span>
-    );
-  }
+
   return (
     <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-[10px] font-bold text-muted-foreground">
       <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground inline-block" /> Pendente
@@ -271,12 +292,14 @@ const AccountForm = ({ open, onClose, onSaved, editing, userId, monthYear }: Acc
 // ─── Card de Conta ────────────────────────────────────────────────────────────
 const AccountCard = ({
   account,
+  monthYear,
   onEdit,
   onDelete,
   onPay,
   accentColor = "blue",
 }: {
   account: any;
+  monthYear: string;
   onEdit: () => void;
   onDelete: () => void;
   onPay: () => void;
@@ -306,7 +329,11 @@ const AccountCard = ({
           </div>
 
           <div className="flex justify-between items-center mt-2 gap-2 flex-wrap">
-            <StatusBadge status={account.paid ? "pago" : "pendente"} dueDay={account.due_day} />
+            <StatusBadge
+              status={account.paid ? "pago" : "pendente"}
+              dueDay={account.due_day}
+              monthYear={monthYear}
+            />
 
             {/* Ações */}
             <div className="flex items-center gap-1.5">
@@ -611,16 +638,11 @@ const Accounts = () => {
               <AccountCard
                 key={a.id}
                 account={a}
+                monthYear={selectedMonth}
                 accentColor="blue"
-                onEdit={() => {
-                  setEditingAccount(a);
-                  setDialogOpen(true);
-                }}
+                onEdit={() => { setEditingAccount(a); setDialogOpen(true); }}
                 onDelete={() => deleteAccount(a)}
-                onPay={() => {
-                  setPayingAccount(a);
-                  setPayDialogOpen(true);
-                }}
+                onPay={() => { setPayingAccount(a); setPayDialogOpen(true); }}
               />
             ))
           )}
@@ -635,16 +657,11 @@ const Accounts = () => {
               <AccountCard
                 key={a.id}
                 account={a}
+                monthYear={selectedMonth}
                 accentColor="red"
-                onEdit={() => {
-                  setEditingAccount(a);
-                  setDialogOpen(true);
-                }}
+                onEdit={() => { setEditingAccount(a); setDialogOpen(true); }}
                 onDelete={() => deleteAccount(a)}
-                onPay={() => {
-                  setPayingAccount(a);
-                  setPayDialogOpen(true);
-                }}
+                onPay={() => { setPayingAccount(a); setPayDialogOpen(true); }}
               />
             ))
           )}
@@ -659,16 +676,11 @@ const Accounts = () => {
               <AccountCard
                 key={a.id}
                 account={a}
+                monthYear={selectedMonth}
                 accentColor="amber"
-                onEdit={() => {
-                  setEditingAccount(a);
-                  setDialogOpen(true);
-                }}
+                onEdit={() => { setEditingAccount(a); setDialogOpen(true); }}
                 onDelete={() => deleteAccount(a)}
-                onPay={() => {
-                  setPayingAccount(a);
-                  setPayDialogOpen(true);
-                }}
+                onPay={() => { setPayingAccount(a); setPayDialogOpen(true); }}
               />
             ))
           )}

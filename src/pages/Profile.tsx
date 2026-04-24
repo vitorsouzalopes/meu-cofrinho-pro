@@ -110,7 +110,6 @@ const ProfilePage = () => {
     const today = new Date();
     const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 
-    // Deleta instâncias auto-geradas (têm parent_id) que ainda não foram pagas
     const { error, count } = await supabase
       .from("accounts")
       .delete({ count: "exact" })
@@ -124,6 +123,66 @@ const ProfilePage = () => {
       toast({ title: "Erro ao limpar", description: error.message, variant: "destructive" });
     } else {
       toast({ title: `✅ ${count ?? 0} registro(s) removido(s) com sucesso!` });
+      window.dispatchEvent(new CustomEvent("finance-data-updated"));
+      loadData();
+    }
+  };
+
+  // Apaga TODOS os objetivos do usuário
+  const limparObjetivos = async () => {
+    if (!user) return;
+    if (!window.confirm("⚠️ Isso vai APAGAR TODOS os seus objetivos permanentemente. Deseja continuar?")) return;
+
+    const { error, count } = await supabase
+      .from("goals" as any)
+      .delete({ count: "exact" })
+      .eq("user_id", user.id);
+
+    if (error) {
+      toast({ title: "Erro ao limpar objetivos", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: `🗑️ ${count ?? 0} objetivo(s) removido(s)!` });
+      window.dispatchEvent(new CustomEvent("finance-data-updated"));
+      loadData();
+    }
+  };
+
+  // Apaga TODAS as dívidas (templates + instâncias)
+  const limparDividasAtivas = async () => {
+    if (!user) return;
+    if (!window.confirm("⚠️ Isso vai APAGAR TODAS as dívidas (templates e instâncias mensais). Deseja continuar?")) return;
+
+    // 1. Pega os IDs dos templates de dívida
+    const { data: debtTemplates } = await supabase
+      .from("accounts")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("is_template", true)
+      .eq("billing_type", "debt");
+
+    const templateIds = (debtTemplates ?? []).map((t: any) => t.id);
+
+    // 2. Apaga instâncias filhas das dívidas
+    if (templateIds.length > 0) {
+      await supabase
+        .from("accounts")
+        .delete()
+        .eq("user_id", user.id)
+        .in("parent_id", templateIds);
+    }
+
+    // 3. Apaga os templates de dívida
+    const { error, count } = await supabase
+      .from("accounts")
+      .delete({ count: "exact" })
+      .eq("user_id", user.id)
+      .eq("is_template", true)
+      .eq("billing_type", "debt");
+
+    if (error) {
+      toast({ title: "Erro ao limpar dívidas", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: `🗑️ ${count ?? 0} dívida(s) removida(s)!` });
       window.dispatchEvent(new CustomEvent("finance-data-updated"));
       loadData();
     }
@@ -227,6 +286,8 @@ const ProfilePage = () => {
           { icon: <HelpCircle className="w-5 h-5" />, label: "Ajuda e Suporte" },
           { icon: <RefreshCcw className="w-5 h-5" />, label: "Sincronizar Mês", onClick: loadData },
           { icon: <Trash2 className="w-5 h-5" />, label: "Limpar Dados Auto-Gerados do Mês", onClick: limparDadosAutoGerados, color: "text-amber-500" },
+          { icon: <Trash2 className="w-5 h-5" />, label: "Apagar Todos os Objetivos", onClick: limparObjetivos, color: "text-destructive" },
+          { icon: <Trash2 className="w-5 h-5" />, label: "Apagar Todas as Dívidas Ativas", onClick: limparDividasAtivas, color: "text-destructive" },
           { icon: <LogOut className="w-5 h-5" />, label: "Logout", onClick: handleSignOut, color: "text-destructive" },
         ].map((item, i) => (
           <div 

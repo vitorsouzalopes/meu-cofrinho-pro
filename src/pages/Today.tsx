@@ -65,6 +65,7 @@ const Today = () => {
   const navigate = useNavigate();
   const [accounts, setAccounts] = useState<any[]>([]);
   const [templates, setTemplates] = useState<Account[]>([]);
+  const [goals, setGoals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [salary, setSalary] = useState(0);
   const [salaryId, setSalaryId] = useState<string | null>(null);
@@ -73,7 +74,9 @@ const Today = () => {
   const [extraIncomes, setExtraIncomes] = useState<any[]>([]);
   
   const hasGenerated = useRef(false);
-  const currentMonthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(today);
+  const currentMonthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(today).toUpperCase();
+  const nextMonthDate = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  const nextMonthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(nextMonthDate).toUpperCase();
 
   const fetchData = useCallback(async () => {
     if (!user?.id) {
@@ -85,11 +88,12 @@ const Today = () => {
       setLoading(true);
 
       // Consultas individuais para evitar que um erro 404 trave tudo
-      const [resInst, resTemp, resSal, resExtra] = await Promise.all([
+      const [resInst, resTemp, resSal, resExtra, resGoals] = await Promise.all([
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
         supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
-        supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear)
+        supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear),
+        supabase.from("goals" as any).select("*").eq("user_id", user.id).limit(2)
       ]);
 
       const rawAccounts = resInst.data || [];
@@ -108,6 +112,7 @@ const Today = () => {
       setAccounts(mappedAccounts);
       setTemplates(rawTemplates);
       setExtraIncomes(resExtra.data || []);
+      setGoals(resGoals.data || []);
       
       if (resSal.data) {
         const s = resSal.data as any;
@@ -216,7 +221,7 @@ const Today = () => {
           {/* Current Month Column */}
           <Card className="p-4 bg-card border border-border/50 animate-slide-up" style={{ animationDelay: "0.2s" }}>
             <p className="text-[9px] font-bold uppercase text-muted-foreground mb-4 border-b border-border/40 pb-2 flex justify-between items-center">
-              <span>Contas (JAN)</span>
+              <span>Contas ({currentMonthName})</span>
               <span className="text-[8px] opacity-60">ATIVO</span>
             </p>
             <div className="space-y-4">
@@ -237,7 +242,7 @@ const Today = () => {
 
           {/* Next Month Column */}
           <Card className="p-4 bg-card border border-border/50 animate-slide-up" style={{ animationDelay: "0.3s" }}>
-            <p className="text-[9px] font-bold uppercase text-muted-foreground mb-4 border-b border-border/40 pb-2">Próximos (FEV)</p>
+            <p className="text-[9px] font-bold uppercase text-muted-foreground mb-4 border-b border-border/40 pb-2">Próximos ({nextMonthName})</p>
             <div className="space-y-4">
               {templates.slice(0, 3).map(tmp => (
                 <div key={tmp.id} className="flex items-center gap-2">
@@ -245,7 +250,7 @@ const Today = () => {
                     <Wallet className="w-3.5 h-3.5 text-amber-500" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-medium text-foreground truncate">{tmp.name} (FE)</p>
+                    <p className="text-[10px] font-medium text-foreground truncate">{tmp.name}</p>
                     <p className="text-[9px] text-muted-foreground font-mono">({formatCurrency(Number(tmp.amount))})</p>
                   </div>
                 </div>
@@ -261,16 +266,58 @@ const Today = () => {
         </div>
       </div>
 
-      {/* Progress Widgets Section */}
+      {/* Progress Widgets Section - dados reais */}
       <div className="grid grid-cols-2 gap-4 mb-10">
-        <Card className="p-5 bg-card border border-border/50 flex flex-col items-center animate-slide-up hover:border-primary/30 transition-colors" style={{ animationDelay: "0.4s" }}>
-          <p className="text-[10px] font-bold uppercase text-muted-foreground self-start mb-6">Objetivo: Viagem</p>
-          <DonutChart percentage={65} label="R$ 3.250 / R$ 5.000" />
-        </Card>
-        <Card className="p-5 bg-card border border-border/50 flex flex-col items-center animate-slide-up hover:border-primary/30 transition-colors" style={{ animationDelay: "0.5s" }}>
-          <p className="text-[10px] font-bold uppercase text-muted-foreground self-start mb-6">Dívidas Ativas</p>
-          <DonutChart percentage={25} label="R$ 750 / R$ 3.000" color="var(--primary)" />
-        </Card>
+        {/* Objetivos */}
+        {goals.length > 0 ? goals.slice(0, 2).map((goal: any) => {
+          const pct = goal.target_amount > 0
+            ? Math.min(100, Math.round(((goal.current_amount || 0) / goal.target_amount) * 100))
+            : 0;
+          return (
+            <Card key={goal.id} className="p-5 bg-card border border-border/50 flex flex-col items-center animate-slide-up hover:border-primary/30 transition-colors" style={{ animationDelay: "0.4s" }}>
+              <p className="text-[10px] font-bold uppercase text-muted-foreground self-start mb-6 truncate w-full">{goal.name}</p>
+              <DonutChart
+                percentage={pct}
+                label={`R$ ${(goal.current_amount || 0).toLocaleString('pt-BR')} / R$ ${goal.target_amount.toLocaleString('pt-BR')}`}
+              />
+            </Card>
+          );
+        }) : (
+          <Card
+            className="p-5 bg-card border border-dashed border-border/50 flex flex-col items-center justify-center animate-slide-up cursor-pointer hover:border-primary/40 transition-colors"
+            onClick={() => navigate("/goals")}
+          >
+            <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Objetivos</p>
+            <p className="text-[10px] text-muted-foreground/60 text-center">Nenhuma meta cadastrada</p>
+            <p className="text-[9px] text-primary font-bold mt-3">+ Adicionar</p>
+          </Card>
+        )}
+
+        {/* Dívidas Ativas */}
+        {(() => {
+          const debts = accounts.filter(a => a.tipo === 'debt' || a.tipo === 'divida');
+          const totalDebt = debts.reduce((s: number, d: any) => s + d.valor, 0);
+          const paid = debts.filter((d: any) => d.status === 'pago').reduce((s: number, d: any) => s + d.valor, 0);
+          const pct = totalDebt > 0 ? Math.min(100, Math.round((paid / totalDebt) * 100)) : 0;
+          return debts.length > 0 ? (
+            <Card className="p-5 bg-card border border-border/50 flex flex-col items-center animate-slide-up hover:border-primary/30 transition-colors" style={{ animationDelay: "0.5s" }}>
+              <p className="text-[10px] font-bold uppercase text-muted-foreground self-start mb-6">Dívidas Ativas</p>
+              <DonutChart
+                percentage={pct}
+                label={`R$ ${paid.toLocaleString('pt-BR')} / R$ ${totalDebt.toLocaleString('pt-BR')}`}
+                color="hsl(var(--destructive))"
+              />
+            </Card>
+          ) : (
+            <Card
+              className="p-5 bg-card border border-dashed border-border/50 flex flex-col items-center justify-center animate-slide-up cursor-pointer hover:border-primary/40 transition-colors"
+              onClick={() => navigate("/accounts")}
+            >
+              <p className="text-[10px] font-bold uppercase text-muted-foreground mb-2">Dívidas Ativas</p>
+              <p className="text-[10px] text-primary font-bold">Nenhuma dívida 🎉</p>
+            </Card>
+          );
+        })()}
       </div>
 
       {/* Salary Dialog */}
