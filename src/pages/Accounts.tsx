@@ -369,6 +369,30 @@ const Accounts = () => {
   const totalExpense = totais.gastos;
   const totalDebt = totais.totalDividas;
 
+  // Filtros para as abas e seções (Usando a nova estrutura)
+  const monthlyAccounts = accounts.filter(a => a.tipo === "monthly" && a.status === "pendente");
+  const singleAccounts = accounts.filter(a => a.tipo === "single" && a.status === "pendente");
+  const debtAccounts = accounts.filter(a => (a.tipo === "divida" || a.tipo === "debt") && a.status === "pendente");
+  
+  const overdueAccounts = accounts.filter(a => {
+    if (a.status === "pago") return false;
+    const d = new Date(a.vencimento).getDate();
+    return d < todayDay;
+  });
+
+  const dueTodayAccounts = accounts.filter(a => {
+    if (a.status === "pago") return false;
+    const d = new Date(a.vencimento).getDate();
+    return d === todayDay;
+  });
+
+  const weekAccounts = accounts.filter(a => {
+    if (a.status === "pago") return false;
+    const d = new Date(a.vencimento).getDate();
+    const diff = d - todayDay;
+    return diff >= 0 && diff <= 7;
+  });
+
 
   const paidHistory = accounts.filter((account) => account.paid).sort((a, b) => (a.month_year > b.month_year ? -1 : 1));
   const historyByMonth = paidHistory.reduce<Record<string, Account[]>>((acc, account) => {
