@@ -37,13 +37,13 @@ const Accounts = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [editingAccount, setEditingAccount] = useState<any | null>(null);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [selectedAccountForPayment, setSelectedAccountForPayment] = useState<Account | null>(null);
+  const [selectedAccountForPayment, setSelectedAccountForPayment] = useState<any | null>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [paymentsHistory, setPaymentsHistory] = useState<AccountPayment[]>([]);
@@ -58,69 +58,55 @@ const Accounts = () => {
   const [startDate, setStartDate] = useState(today.toISOString().split("T")[0]);
   const [remainingMonths, setRemainingMonths] = useState("");
   const [totalDebtAmount, setTotalDebtAmount] = useState("");
-
   const [templates, setTemplates] = useState<Account[]>([]);
 
-  const loadAccounts = useCallback(async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-
+  const loadData = useCallback(async () => {
+    if (!user) return;
     try {
-      // Load all current accounts (non-templates for this month) and all templates
-      const [instancesResponse, templatesResponse, paymentsResponse] = await Promise.all([
-        supabase
-          .from("accounts")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("is_template", false)
-          .eq("month_year", currentMonthYear)
-          .order("due_day", { ascending: true }),
-        supabase
-          .from("accounts")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("is_template", true),
-        // Load payments history for the last 6 months
-        supabase
-          .from("account_payments")
-          .select("*")
-          .gte("created_at", new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString())
-          .order("paid_at", { ascending: false })
+      setLoading(true);
+      const [instancesRes, templatesRes, paymentsRes] = await Promise.all([
+        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
+        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
+        supabase.from("account_payments").select("*").eq("user_id", user.id).order("paid_at", { ascending: false }).limit(20)
       ]);
 
-      if (instancesResponse.error) throw instancesResponse.error;
-      if (templatesResponse.error) throw templatesResponse.error;
+      const rawAccounts = (instancesRes.data ?? []) as any[];
+      const rawTemplates = (templatesRes.data ?? []) as any[];
 
-      setAccounts((instancesResponse.data ?? []) as Account[]);
-      setTemplates((templatesResponse.data ?? []) as Account[]);
+      const resolved = resolverContasDoMes(rawAccounts, rawTemplates, currentMonthYear);
 
-      if (!paymentsResponse.error && paymentsResponse.data) {
-        setPaymentsHistory(paymentsResponse.data as AccountPayment[]);
-      }
+      const mappedAccounts = resolved.map(a => ({
+        id: a.id,
+        nome: a.name || a.nome,
+        valor: Number(a.amount || a.valor || 0),
+        tipo: a.billing_type || a.tipo,
+        vencimento: a.due_day ? `${currentMonthYear}-${String(a.due_day).padStart(2, '0')}` : (a.vencimento || a.month_year),
+        status: (a.paid || a.status === "pago") ? "pago" : "pendente",
+        parcela: a.remaining_months,
+        parent_id: a.parent_id,
+        account_category: a.account_category || "expense",
+        virtual: a.virtual
+      }));
 
+      setAccounts(mappedAccounts);
+      setTemplates(rawTemplates);
+      setPaymentsHistory((paymentsRes.data ?? []) as AccountPayment[]);
     } catch (error: any) {
-      console.error("Erro ao carregar contas:", error);
+      toast({ title: "Erro ao carregar dados", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, currentMonthYear]);
 
-  // Generate instances once on mount
   useEffect(() => {
     if (!user?.id || hasGenerated.current) return;
     hasGenerated.current = true;
-    
-    ensureMonthlyInstances(user.id, currentMonthYear)
-      .then(() => loadAccounts()) // Reload accounts after generation finishes
-      .catch(err => console.error("Erro na geração automática:", err));
-  }, [user?.id, loadAccounts]);
+    ensureMonthlyInstances(user.id, currentMonthYear).then(() => loadData());
+  }, [user?.id, loadData]);
 
   useEffect(() => {
-    loadAccounts();
-  }, [loadAccounts]);
+    loadData();
+  }, [loadData]);
 
   const resetForm = () => {
     setEditingAccount(null);
@@ -140,15 +126,15 @@ const Accounts = () => {
     setDialogOpen(true);
   };
 
-  const openEditAccountDialog = (account: Account) => {
+  const openEditAccountDialog = (account: any) => {
     setEditingAccount(account);
-    setName(account.name);
+    setName(account.nome || account.name);
     setBank(account.bank || "");
-    setAccountType(account.account_type);
-    setBillingType((account.billing_type ?? "single") as "monthly" | "single" | "debt");
-    setAmount(String(account.amount));
-    setDueDay(String(account.due_day ?? 1));
-    setStartDate(account.start_date);
+    setAccountType(account.tipo || account.account_type);
+    setBillingType((account.tipo || account.billing_type || "single") as "monthly" | "single" | "debt");
+    setAmount(String(account.valor || account.amount));
+    setDueDay(String(account.due_day || 5));
+    setStartDate(account.start_date || today.toISOString().split("T")[0]);
     setRemainingMonths(account.remaining_months ? String(account.remaining_months) : "");
     setTotalDebtAmount(account.total_debt_amount ? String(account.total_debt_amount) : "");
     setDialogOpen(true);
@@ -157,7 +143,7 @@ const Accounts = () => {
   const saveAccount = async () => {
     if (!name.trim() || !amount || !user) return;
     setSaving(true);
-    const record: Partial<Account> = {
+    const record: any = {
       user_id: user.id,
       name: name.trim(),
       account_category: "expense",
@@ -177,56 +163,33 @@ const Accounts = () => {
       record.total_debt_amount = totalDebtAmount ? parseFloat(totalDebtAmount) : null;
     }
 
-    if (editingAccount) {
-      // If we are editing an instance, it shouldn't become a template unless explicitly changed
-      // But for simplicity, we follow the billingType selected
-      const { data, error } = await supabase
-        .from("accounts")
-        .update(record)
-        .eq("id", editingAccount.id)
-        .select("*")
-        .single();
+    const { error } = editingAccount && !String(editingAccount.id).startsWith('virtual-')
+      ? await supabase.from("accounts").update(record).eq("id", editingAccount.id)
+      : await supabase.from("accounts").insert(record);
 
-      if (error) {
-        toast({ title: "Erro ao atualizar conta", description: error.message, variant: "destructive" });
-      } else {
-        toast({ title: "Conta atualizada" });
-        loadAccounts(); // Reload to refresh instances if template was updated
-      }
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     } else {
-      const { data, error } = await supabase.from("accounts").insert(record).select("*").single();
-      if (error) {
-        toast({ title: "Erro ao salvar conta", description: error.message, variant: "destructive" });
-      } else {
-        toast({ title: "Conta adicionada com sucesso" });
-        loadAccounts(); // Reload to generate instance if it was a template
-      }
+      toast({ title: "Conta salva com sucesso" });
+      setDialogOpen(false);
+      loadData();
     }
-
-    setDialogOpen(false);
-    resetForm();
     setSaving(false);
   };
 
   const deleteAccount = async (id: string) => {
     if (!user) return;
-    
-    // Se for virtual, precisamos deletar o template pai
-    const isVirtual = typeof id === 'string' && id.startsWith('virtual-');
-    const realId = isVirtual ? id.replace('virtual-', '').replace('debt-', '') : id;
-
+    const realId = String(id).startsWith('virtual-') ? id.replace('virtual-', '').replace('debt-', '') : id;
     const { error } = await supabase.from("accounts").delete().eq("id", realId);
     if (error) {
-      toast({ title: "Erro ao remover conta", description: error.message, variant: "destructive" });
-      return;
+      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Conta removida" });
+      loadData();
     }
-    
-    setAccounts((prev) => prev.filter((account) => account.id !== id));
-    toast({ title: isVirtual ? "Modelo de conta removido" : "Conta removida" });
-    loadData();
   };
 
-  const markAsPaid = async (account: any) => {
+  const markAsPaid = (account: any) => {
     setSelectedAccountForPayment(account);
     setReceiptFile(null);
     setPaymentDialogOpen(true);
@@ -235,187 +198,68 @@ const Accounts = () => {
   const confirmPayment = async () => {
     if (!selectedAccountForPayment || !user) return;
     setIsUploading(true);
-
-    let receipt_url = null;
     let targetId = selectedAccountForPayment.id;
-    const isVirtual = typeof targetId === 'string' && targetId.startsWith('virtual-');
 
-    // Se for virtual, precisamos criar a instância primeiro
-    if (isVirtual) {
+    if (String(targetId).startsWith('virtual-')) {
       const templateId = targetId.replace('virtual-', '').replace('debt-', '');
-      const { data: newInstance, error: createError } = await supabase
-        .from("accounts")
-        .insert({
-          user_id: user.id,
-          parent_id: templateId,
-          name: selectedAccountForPayment.nome,
-          amount: selectedAccountForPayment.valor,
-          billing_type: selectedAccountForPayment.tipo,
-          month_year: currentMonthYear,
-          is_template: false,
-          due_day: new Date(selectedAccountForPayment.vencimento).getDate(),
-          paid: false
-        })
-        .select("*")
-        .single();
-
-      if (createError) {
-        toast({ title: "Erro ao gerar instância", description: createError.message, variant: "destructive" });
+      const { data, error } = await supabase.from("accounts").insert({
+        user_id: user.id,
+        parent_id: templateId,
+        name: selectedAccountForPayment.nome,
+        amount: selectedAccountForPayment.valor,
+        billing_type: selectedAccountForPayment.tipo,
+        month_year: currentMonthYear,
+        is_template: false,
+        due_day: parseInt(dueDay, 10),
+        paid: false
+      }).select().single();
+      if (error) {
+        toast({ title: "Erro ao criar instância", variant: "destructive" });
         setIsUploading(false);
         return;
       }
-      targetId = newInstance.id;
+      targetId = data.id;
     }
 
-    if (receiptFile) {
-      const fileExt = receiptFile.name.split(".").pop();
-      const fileName = `${user.id}/${targetId}-${Date.now()}.${fileExt}`;
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("receipts")
-        .upload(fileName, receiptFile);
-
-      if (uploadError) {
-        toast({ title: "Erro ao subir comprovante", description: uploadError.message, variant: "destructive" });
-        setIsUploading(false);
-        return;
-      }
-      
-      const { data: urlData } = supabase.storage.from("receipts").getPublicUrl(fileName);
-      receipt_url = urlData.publicUrl;
+    const { error } = await supabase.from("accounts").update({ paid: true, paid_at: new Date().toISOString() }).eq("id", targetId);
+    if (!error) {
+      await supabase.from("account_payments").insert({
+        user_id: user.id,
+        account_id: targetId,
+        month_year: currentMonthYear,
+        amount: selectedAccountForPayment.valor,
+        paid_at: new Date().toISOString()
+      });
+      toast({ title: "Pago com sucesso!" });
+      loadData();
     }
-
-    const { data: updatedAccount, error: updateError } = await supabase
-      .from("accounts")
-      .update({ paid: true, paid_at: new Date().toISOString() })
-      .eq("id", targetId)
-      .select("*")
-      .single();
-
-    if (updateError) {
-      toast({ title: "Erro ao marcar como pago", description: updateError.message, variant: "destructive" });
-    } else {
-      // Record payment in history
-      await supabase
-        .from("account_payments")
-        .insert({
-          user_id: user.id,
-          account_id: targetId,
-          month_year: currentMonthYear,
-          amount: selectedAccountForPayment.valor,
-          paid_at: new Date().toISOString(),
-          receipt_url: receipt_url
-        });
-
-      toast({ title: "Conta marcada como paga" });
-      loadData(); // Recarrega tudo para refletir a mudança
-    }
-
     setIsUploading(false);
     setPaymentDialogOpen(false);
-    setSelectedAccountForPayment(null);
   };
 
-    // Run cleanup for records > 6 months
-    runCleanup();
-  };
-
-  const runCleanup = async () => {
-    if (!user) return;
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    
-    // In a real app, you might want to delete the actual storage files too, 
-    // but that requires listing and deleting multiple files. 
-    // For now we clean up the DB records to fulfill the user's request of "can delete".
-    await supabase
-      .from("account_payments")
-      .delete()
-      .lt("created_at", sixMonthsAgo.toISOString())
-      .eq("user_id", user.id);
-  };
-
-
-  const loadData = async () => {
-    if (!user) return;
-    try {
-      setLoading(true);
-      
-      const [instancesRes, templatesRes] = await Promise.all([
-        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
-        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true)
-      ]);
-
-      const rawAccounts = (instancesRes.data ?? []) as any[];
-      const rawTemplates = (templatesRes.data ?? []) as any[];
-
-      // RESOLVER (Instâncias + Templates Virtuais) - SEM DUPLICAÇÃO
-      const resolved = resolverContasDoMes(rawAccounts, rawTemplates, currentMonthYear);
-
-      // MAPEAR PARA ESTRUTURA ÚNICA
-      const mappedAccounts = resolved.map(a => ({
-        id: a.id,
-        nome: a.name || a.nome,
-        valor: Number(a.amount || a.valor || 0),
-        tipo: a.billing_type || a.tipo,
-        vencimento: a.due_day ? `${currentMonthYear}-${String(a.due_day).padStart(2, '0')}` : (a.vencimento || a.month_year),
-        status: (a.paid || a.status === "pago") ? "pago" : "pendente",
-        parcela: a.remaining_months,
-        parent_id: a.parent_id,
-        account_category: a.account_category || "expense",
-        virtual: a.virtual
-      }));
-
-      setAccounts(mappedAccounts);
-      setTemplates(rawTemplates);
-    } catch (error: any) {
-      toast({ title: "Erro ao carregar contas", description: error.message, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const totais = useMemo(() => {
-    return calcularTotaisFinanceiros({
-      contas: accounts.filter(a => a.tipo !== 'divida' && a.tipo !== 'debt'),
-      dividas: accounts.filter(a => a.tipo === 'divida' || a.tipo === 'debt')
-    });
-  }, [accounts]);
+  const totais = useMemo(() => calcularTotaisFinanceiros({
+    contas: accounts.filter(a => a.tipo !== 'divida' && a.tipo !== 'debt'),
+    dividas: accounts.filter(a => a.tipo === 'divida' || a.tipo === 'debt')
+  }), [accounts]);
 
   const totalExpense = totais.gastos;
   const totalDebt = totais.totalDividas;
 
-  // Filtros para as abas e seções (Usando a nova estrutura)
   const monthlyAccounts = accounts.filter(a => a.tipo === "monthly" && a.status === "pendente");
   const singleAccounts = accounts.filter(a => a.tipo === "single" && a.status === "pendente");
   const debtAccounts = accounts.filter(a => (a.tipo === "divida" || a.tipo === "debt") && a.status === "pendente");
-  
-  const overdueAccounts = accounts.filter(a => {
-    if (a.status === "pago") return false;
-    const d = new Date(a.vencimento).getDate();
-    return d < todayDay;
-  });
+  const overdueAccounts = accounts.filter(a => a.status === "pendente" && new Date(a.vencimento).getDate() < todayDay);
+  const dueTodayAccounts = accounts.filter(a => a.status === "pendente" && new Date(a.vencimento).getDate() === todayDay);
+  const weekAccounts = accounts.filter(a => a.status === "pendente" && new Date(a.vencimento).getDate() >= todayDay && new Date(a.vencimento).getDate() <= todayDay + 7);
 
-  const dueTodayAccounts = accounts.filter(a => {
-    if (a.status === "pago") return false;
-    const d = new Date(a.vencimento).getDate();
-    return d === todayDay;
-  });
-
-  const weekAccounts = accounts.filter(a => {
-    if (a.status === "pago") return false;
-    const d = new Date(a.vencimento).getDate();
-    const diff = d - todayDay;
-    return diff >= 0 && diff <= 7;
-  });
-
-
-  const paidHistory = accounts.filter((account) => account.paid).sort((a, b) => (a.month_year > b.month_year ? -1 : 1));
-  const historyByMonth = paidHistory.reduce<Record<string, Account[]>>((acc, account) => {
-    acc[account.month_year] = acc[account.month_year] || [];
-    acc[account.month_year].push(account);
-    return acc;
-  }, {});
+  const paymentsHistoryGrouped = useMemo(() => {
+    return paymentsHistory.reduce((acc: any, p) => {
+      const my = p.month_year;
+      if (!acc[my]) acc[my] = [];
+      acc[my].push(p);
+      return acc;
+    }, {});
+  }, [paymentsHistory]);
 
   if (loading) {
     return (
@@ -476,7 +320,6 @@ const Accounts = () => {
             </Card>
           </div>
 
-          {/* Contas mensais */}
           <div className="glass-card p-4 mb-4 flex items-center justify-between">
             <div>
               <h2 className="font-semibold text-foreground">Contas Mensais</h2>
@@ -487,7 +330,6 @@ const Accounts = () => {
             </Button>
           </div>
 
-          {/* Contas únicas */}
           <div className="glass-card p-4 mb-4">
             <div className="mb-3 flex items-center justify-between">
               <div>
@@ -503,10 +345,10 @@ const Accounts = () => {
                   <div key={account.id} className="rounded-2xl border border-border p-4">
                     <div className="flex items-center justify-between gap-3 mb-2">
                       <div>
-                        <p className="font-semibold text-foreground">{account.name}</p>
-                        <p className="text-xs text-muted-foreground">Dia {account.due_day}</p>
+                        <p className="font-semibold text-foreground">{account.nome}</p>
+                        <p className="text-xs text-muted-foreground">Vencimento: {account.vencimento}</p>
                       </div>
-                      <p className="text-sm font-semibold">{formatCurrency(Number(account.amount))}</p>
+                      <p className="text-sm font-semibold">{formatCurrency(account.valor)}</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs">
                       <Button variant="outline" size="sm" onClick={() => openEditAccountDialog(account)}>
@@ -525,7 +367,6 @@ const Accounts = () => {
             )}
           </div>
 
-          {/* Dívidas e Parcelamentos */}
           <div className="glass-card p-4 mb-4 border-destructive/20">
             <div className="mb-3 flex items-center justify-between">
               <div>
@@ -541,18 +382,10 @@ const Accounts = () => {
                   <div key={account.id} className="rounded-2xl border border-destructive/30 p-4 bg-destructive/5">
                     <div className="flex items-center justify-between gap-3 mb-2">
                       <div>
-                        <p className="font-semibold text-foreground">{account.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {account.bank} • Vence dia {account.due_day}
-                          {account.remaining_months && ` • Restam ${account.remaining_months}x`}
-                        </p>
+                        <p className="font-semibold text-foreground">{account.nome}</p>
+                        <p className="text-xs text-muted-foreground">Vencimento: {account.vencimento}</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-destructive">{formatCurrency(Number(account.amount))}</p>
-                        {account.total_debt_amount && (
-                          <p className="text-[10px] text-muted-foreground">Total: {formatCurrency(Number(account.total_debt_amount))}</p>
-                        )}
-                      </div>
+                      <p className="text-sm font-semibold text-destructive">{formatCurrency(account.valor)}</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs">
                       <Button variant="outline" size="sm" onClick={() => openEditAccountDialog(account)}>
@@ -571,60 +404,39 @@ const Accounts = () => {
             )}
           </div>
 
-      <div className="glass-card p-4 mb-4">
-        <h2 className="font-semibold text-foreground mb-3">Histórico (6 meses)</h2>
-        {paymentsHistory.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum pagamento registrado nos últimos 6 meses.</p>
-        ) : (
-          <div className="space-y-4">
-            {/* Group by month_year */}
-            {Array.from(new Set(paymentsHistory.map(p => p.month_year))).sort().reverse().map(monthYear => (
-              <div key={monthYear} className="rounded-2xl border border-border p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="font-medium text-foreground">{formatMonthYear(monthYear)}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Total: {formatCurrency(paymentsHistory.filter(p => p.month_year === monthYear).reduce((sum, p) => sum + Number(p.amount), 0))}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  {paymentsHistory.filter(p => p.month_year === monthYear).map((payment) => {
-                    const account = accounts.find(a => a.id === payment.account_id);
-                    return (
-                      <div key={payment.id} className="flex items-center justify-between gap-3 text-sm">
-                        <div className="flex-1">
-                          <p className="font-medium text-foreground">{account?.name || "Conta removida"}</p>
-                          <p className="text-xs text-muted-foreground">Pago em {new Date(payment.paid_at || "").toLocaleDateString("pt-BR")}</p>
+          <div className="glass-card p-4 mb-4">
+            <h2 className="font-semibold text-foreground mb-3">Histórico de Pagamentos</h2>
+            {paymentsHistory.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum pagamento registrado recentemente.</p>
+            ) : (
+              <div className="space-y-4">
+                {Object.keys(paymentsHistoryGrouped).sort().reverse().map(my => (
+                  <div key={my}>
+                    <p className="text-xs font-bold text-muted-foreground uppercase mb-2">{formatMonthYear(my)}</p>
+                    <div className="space-y-2">
+                      {paymentsHistoryGrouped[my].map((p: any) => (
+                        <div key={p.id} className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                          <div>
+                            <p className="text-foreground font-medium">Pagamento Realizado</p>
+                            <p className="text-[10px] text-muted-foreground">{new Date(p.paid_at).toLocaleDateString()}</p>
+                          </div>
+                          <p className="font-semibold text-emerald-accent">{formatCurrency(p.amount)}</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold">{formatCurrency(Number(payment.amount))}</p>
-                          {payment.receipt_url && (
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-8 w-8 p-0" 
-                              onClick={() => window.open(payment.receipt_url, "_blank")}
-                              title="Ver comprovante"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        )}
-      </div>
-      </TabsContent>
+        </TabsContent>
 
-      <TabsContent value="planejador" className="space-y-4">
-        <Planner />
-      </TabsContent>
-    </Tabs>
+        <TabsContent value="planejador" className="space-y-4">
+          <Planner />
+        </TabsContent>
+      </Tabs>
 
+      {/* Dialogs */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)]">
           <DialogHeader>
@@ -636,13 +448,7 @@ const Accounts = () => {
               <select
                 title="Tipo de Conta"
                 value={billingType}
-                onChange={(e) => {
-                  const type = e.target.value as "monthly" | "single" | "debt";
-                  setBillingType(type);
-                  if (type === "single") setAccountType("Única");
-                  if (type === "debt") setAccountType("Dívida");
-                  if (type === "monthly") setAccountType("Internet");
-                }}
+                onChange={(e) => setBillingType(e.target.value as any)}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
               >
                 {accountCategories.map((category) => (
@@ -653,65 +459,22 @@ const Accounts = () => {
 
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Nome da conta</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Internet, Aluguel, Nubank..." className="bg-muted border-border" />
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Internet, Nubank..." className="bg-muted border-border" />
             </div>
-
-            {billingType === "debt" && (
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Banco / Instituição</label>
-                <Input value={bank} onChange={(e) => setBank(e.target.value)} placeholder="Ex: Nubank, Itaú..." className="bg-muted border-border" />
-              </div>
-            )}
-
-            {billingType === "monthly" && (
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Categoria</label>
-                <select
-                  title="Categoria da despesa"
-                  value={accountType}
-                  onChange={(e) => setAccountType(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-gold"
-                >
-                  {expenseTypes.map((type) => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">
-                  {billingType === "debt" ? "Valor da Parcela" : "Valor"}
-                </label>
-                <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="120" className="bg-muted border-border" step="0.01" min="0" />
+                <label className="text-xs text-muted-foreground mb-1 block">Valor</label>
+                <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="120" className="bg-muted border-border" />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Vencimento (dia)</label>
-                <Input type="number" value={dueDay} onChange={(e) => setDueDay(e.target.value)} placeholder="5" className="bg-muted border-border" min="1" max="31" />
+                <label className="text-xs text-muted-foreground mb-1 block">Dia Vencimento</label>
+                <Input type="number" value={dueDay} onChange={(e) => setDueDay(e.target.value)} placeholder="5" className="bg-muted border-border" />
               </div>
-            </div>
-
-            {billingType === "debt" && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Meses Restantes (Opcional)</label>
-                  <Input type="number" value={remainingMonths} onChange={(e) => setRemainingMonths(e.target.value)} placeholder="12" className="bg-muted border-border" min="1" />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Valor Total (Opcional)</label>
-                  <Input type="number" value={totalDebtAmount} onChange={(e) => setTotalDebtAmount(e.target.value)} placeholder="1500" className="bg-muted border-border" step="0.01" min="0" />
-                </div>
-              </div>
-            )}
-
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Data de início</label>
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-muted border-border" />
             </div>
 
             <Button className="w-full" onClick={saveAccount} disabled={saving}>
-              {saving ? "Salvando..." : editingAccount ? "Salvar alterações" : "Salvar conta"}
+              {saving ? "Salvando..." : "Salvar Conta"}
             </Button>
           </div>
         </DialogContent>
@@ -723,64 +486,16 @@ const Accounts = () => {
             <DialogTitle>Confirmar Pagamento</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-3">
-            <div className="p-4 rounded-xl bg-muted border border-border">
-              <p className="text-sm text-muted-foreground mb-1">Conta</p>
-              <p className="font-semibold text-foreground">{selectedAccountForPayment?.name}</p>
-              <div className="flex justify-between mt-2">
-                <p className="text-sm text-foreground">{formatCurrency(Number(selectedAccountForPayment?.amount || 0))}</p>
-                <p className="text-xs text-muted-foreground">Vencimento: Dia {selectedAccountForPayment?.due_day}</p>
-              </div>
+            <div className="p-4 rounded-xl bg-muted border border-border text-center">
+              <p className="text-sm text-muted-foreground mb-1">{selectedAccountForPayment?.nome}</p>
+              <p className="text-xl font-bold text-foreground">{formatCurrency(selectedAccountForPayment?.valor || 0)}</p>
             </div>
-
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Comprovante (Opcional)</label>
-              <div className="relative">
-                <input
-                  type="file"
-                  id="receipt-upload"
-                  className="hidden"
-                  onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
-                  accept="image/*,application/pdf"
-                />
-                <label
-                  htmlFor="receipt-upload"
-                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-xl hover:border-gold transition-colors cursor-pointer bg-muted"
-                >
-                  {receiptFile ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <Check className="w-8 h-8 text-emerald-accent" />
-                      <p className="text-xs text-foreground font-medium truncate max-w-[200px]">{receiptFile.name}</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2">
-                      <FileUp className="w-8 h-8 text-muted-foreground" />
-                      <p className="text-xs text-muted-foreground text-center px-4">
-                        Toque para selecionar imagem ou PDF do comprovante
-                      </p>
-                    </div>
-                  )}
-                </label>
-              </div>
-            </div>
-
-            <Button 
-              className="w-full" 
-              onClick={confirmPayment} 
-              disabled={isUploading}
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                "Confirmar Pagamento"
-              )}
+            <Button className="w-full" onClick={confirmPayment} disabled={isUploading}>
+              {isUploading ? "Processando..." : "Confirmar Pagamento"}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
-    </div>
   );
 };
 
