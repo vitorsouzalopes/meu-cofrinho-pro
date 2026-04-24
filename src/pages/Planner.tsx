@@ -22,7 +22,7 @@ const Planner = () => {
       const [instancesRes, templatesRes, salaryResponse, extraResponse] = await Promise.all([
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
-        supabase.from("salary" as never).select("amount").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
+        supabase.from("salary" as any).select("amount").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
         supabase.from("extra_income").select("amount").eq("user_id", user.id).eq("month_year", currentMonthYear)
       ]);
 
