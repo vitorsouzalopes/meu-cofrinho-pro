@@ -60,28 +60,35 @@ const Today = () => {
     try {
       setLoading(true);
 
-      // 1. CARREGAR (Carga bruta de dados)
+      // 1. CARREGAR (Carga bruta de dados) com resiliência
       if (!hasGenerated.current) {
         hasGenerated.current = true;
-        await ensureMonthlyInstances(user.id, currentMonthYear);
+        try {
+          await ensureMonthlyInstances(user.id, currentMonthYear);
+        } catch (e) {
+          console.error("Erro ao gerar instâncias:", e);
+        }
       }
 
-      const [instancesRes, templatesRes, investmentsRes, salaryRes, extraRes, challengeRes] = await Promise.all([
-        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
-        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
-        supabase.from("investments").select("*").eq("user_id", user.id),
-        supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
-        supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear),
-        supabase.from("user_challenges" as any).select("*").eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle()
+      // Consultas individuais para evitar que um erro 404 trave tudo
+      const getInstances = supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear);
+      const getTemplates = supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true);
+      const getInvestments = supabase.from("investments").select("*").eq("user_id", user.id);
+      const getSalary = supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle();
+      const getExtra = supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear);
+      const getChallenge = supabase.from("user_challenges" as any).select("*").eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle();
+
+      const [resInst, resTemp, resInv, resSal, resExtra, resChall] = await Promise.all([
+        getInstances, getTemplates, getInvestments, getSalary, getExtra, getChallenge
       ]);
 
-      const rawAccounts = (instancesRes.data ?? []) as any[];
-      const rawTemplates = (templatesRes.data ?? []) as any[];
+      const rawAccounts = resInst.data || [];
+      const rawTemplates = resTemp.data || [];
 
-      // 2. RESOLVER (Instâncias + Templates Virtuais) - SEM DUPLICAÇÃO
+      // 2. RESOLVER (Instâncias + Templates Virtuais)
       const resolved = resolverContasDoMes(rawAccounts, rawTemplates, currentMonthYear);
 
-      // 3. MAPEAR PARA ESTRUTURA ÚNICA
+      // 3. MAPEAR
       const mappedAccounts = resolved.map(a => ({
         id: a.id,
         nome: a.name || a.nome,
@@ -96,11 +103,11 @@ const Today = () => {
 
       setAccounts(mappedAccounts);
       setTemplates(rawTemplates);
-      setInvestments((investmentsRes.data ?? []) as Investment[]);
-      setExtraIncomes(extraRes.data || []);
+      setInvestments((resInv.data ?? []) as Investment[]);
+      setExtraIncomes(resExtra.data || []);
       
-      if (salaryRes.data) {
-        const s = salaryRes.data as any;
+      if (resSal.data) {
+        const s = resSal.data as any;
         setSalary(Number(s.amount));
         setSalaryReceived(!!s.received);
         setSalaryId(s.id);
@@ -110,8 +117,8 @@ const Today = () => {
         setSalaryId(null);
       }
 
-      if (challengeRes.data) {
-        setActiveChallenge(challengeRes.data);
+      if (resChall.data) {
+        setActiveChallenge(resChall.data);
       }
 
     } catch (error: any) {

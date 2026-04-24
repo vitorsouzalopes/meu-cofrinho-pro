@@ -183,14 +183,28 @@ const Accounts = () => {
     const isVirtual = String(id).startsWith('virtual-');
     const realId = isVirtual ? id.replace('virtual-', '').replace('debt-', '') : id;
     
+    // Busca informações da conta antes de deletar
+    const { data: accountToDelete } = await supabase.from("accounts").select("name, is_template").eq("id", realId).single();
+
     const confirmDelete = window.confirm(
-      isVirtual 
-        ? "Esta é uma conta recorrente. Deseja excluir o MODELO dela para todos os meses futuros?" 
+      isVirtual || accountToDelete?.is_template
+        ? "Esta é uma conta recorrente. Deseja excluir o MODELO e todas as contas geradas por ele neste mês?" 
         : "Deseja excluir este registro permanentemente?"
     );
 
     if (!confirmDelete) return;
 
+    // Se for template, deleta instâncias do mês com mesmo nome também
+    if (isVirtual || accountToDelete?.is_template) {
+      await supabase
+        .from("accounts")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("name", accountToDelete?.name || "")
+        .eq("month_year", currentMonthYear);
+    }
+
+    // Deleta o registro principal (seja instância única ou template)
     const { error } = await supabase.from("accounts").delete().eq("id", realId);
     
     if (error) {
