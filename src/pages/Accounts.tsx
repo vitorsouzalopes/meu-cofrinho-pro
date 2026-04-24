@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { ensureMonthlyInstances } from "@/lib/account-utils";
-import { calcularTotaisFinanceiros, sincronizarDividas } from "@/lib/finance-utils";
+import { calcularTotaisFinanceiros, sincronizarDividas, resolverContasDoMes } from "@/lib/finance-utils";
 import Planner from "./Planner";
 import type { Account, AccountPayment } from "@/integrations/supabase/types";
 
@@ -496,6 +496,7 @@ const Accounts = () => {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
   );
 };
 

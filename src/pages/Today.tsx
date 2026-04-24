@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { ensureMonthlyInstances } from "@/lib/account-utils";
-import { calcularTotaisFinanceiros, sincronizarDividas } from "@/lib/finance-utils";
+import { calcularTotaisFinanceiros, sincronizarDividas, resolverContasDoMes } from "@/lib/finance-utils";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Account = Tables<"accounts">;
