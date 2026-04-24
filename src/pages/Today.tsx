@@ -118,8 +118,9 @@ const Today = () => {
     fetchData();
   }, [fetchData]);
 
-  // LÓGICA DE CÁLCULO MENSAL (CONFORME REGRAS) - Refinada para priorizar instâncias
   const calcularTotalMes = (monthYear: string) => {
+    const [currYear, currMonth] = monthYear.split('-').map(Number);
+    
     // 1. Filtrar instâncias do mês específico
     const instancesDoMes = accounts.filter(a => a.month_year === monthYear);
 
@@ -127,8 +128,14 @@ const Today = () => {
     const contasPontuais = instancesDoMes.filter(a => a.billing_type === 'single');
     const totalPontuais = contasPontuais.reduce((s, c) => s + Number(c.amount), 0);
 
-    // 3. Contas Mensais - Usar instância se existir, senão template
-    const monthlyTemplates = templates.filter(t => t.billing_type === 'monthly');
+    // 3. Contas Mensais - Usar instância se existir, senão template (se já começou)
+    const monthlyTemplates = templates.filter(t => {
+      if (t.billing_type !== 'monthly') return false;
+      if (!t.start_date) return true;
+      const [sYear, sMonth] = t.start_date.split('-').map(Number);
+      return (currYear > sYear) || (currYear === sYear && currMonth >= sMonth);
+    });
+
     let totalMensais = 0;
     const resolvedMensais: Account[] = [];
 
@@ -138,8 +145,16 @@ const Today = () => {
       resolvedMensais.push(instance || t);
     });
 
-    // 4. Dívidas - Usar instância se existir, senão template (se ativa)
-    const debtTemplates = templates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0));
+    // 4. Dívidas - Usar instância se existir, senão template (se ativa e já começou)
+    const debtTemplates = templates.filter(t => {
+      if (t.billing_type !== 'debt') return false;
+      const isActive = t.remaining_months === null || t.remaining_months > 0;
+      if (!isActive) return false;
+      if (!t.start_date) return true;
+      const [sYear, sMonth] = t.start_date.split('-').map(Number);
+      return (currYear > sYear) || (currYear === sYear && currMonth >= sMonth);
+    });
+
     let totalDividas = 0;
     const resolvedDividas: Account[] = [];
 

@@ -333,34 +333,60 @@ const Accounts = () => {
   });
 
   const totalExpense = useMemo(() => {
+    const [currYear, currMonth] = currentMonthYear.split('-').map(Number);
+
     // 1. Contas Pontuais (Apenas instâncias deste mês)
     const totalPontuais = accounts.filter(a => a.billing_type === 'single').reduce((s, c) => s + Number(c.amount), 0);
 
     // 2. Contas Mensais - Priorizar instância deste mês
-    const monthlyTemplates = templates.filter(t => t.billing_type === 'monthly');
+    const monthlyTemplates = templates.filter(t => {
+      if (t.billing_type !== 'monthly') return false;
+      if (!t.start_date) return true;
+      const [sYear, sMonth] = t.start_date.split('-').map(Number);
+      return (currYear > sYear) || (currYear === sYear && currMonth >= sMonth);
+    });
+
     const totalMensais = monthlyTemplates.reduce((sum, t) => {
       const instance = accounts.find(a => a.parent_id === t.id);
       return sum + Number(instance ? instance.amount : t.amount);
     }, 0);
 
     // 3. Dívidas - Priorizar instância deste mês
-    const debtTemplates = templates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0));
+    const debtTemplates = templates.filter(t => {
+      if (t.billing_type !== 'debt') return false;
+      const isActive = t.remaining_months === null || t.remaining_months > 0;
+      if (!isActive) return false;
+      if (!t.start_date) return true;
+      const [sYear, sMonth] = t.start_date.split('-').map(Number);
+      return (currYear > sYear) || (currYear === sYear && currMonth >= sMonth);
+    });
+
     const totalDividas = debtTemplates.reduce((sum, t) => {
       const instance = accounts.find(a => a.parent_id === t.id);
       return sum + Number(instance ? instance.amount : t.amount);
     }, 0);
 
     return totalMensais + totalPontuais + totalDividas;
-  }, [templates, accounts]);
+  }, [templates, accounts, currentMonthYear]);
 
   const totalDebt = useMemo(() => {
+    const [currYear, currMonth] = currentMonthYear.split('-').map(Number);
+
     // Somente as parcelas de dívidas deste mês (priorizando instâncias)
-    const debtTemplates = templates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0));
+    const debtTemplates = templates.filter(t => {
+      if (t.billing_type !== 'debt') return false;
+      const isActive = t.remaining_months === null || t.remaining_months > 0;
+      if (!isActive) return false;
+      if (!t.start_date) return true;
+      const [sYear, sMonth] = t.start_date.split('-').map(Number);
+      return (currYear > sYear) || (currYear === sYear && currMonth >= sMonth);
+    });
+
     return debtTemplates.reduce((sum, t) => {
       const instance = accounts.find(a => a.parent_id === t.id);
       return sum + Number(instance ? instance.amount : t.amount);
     }, 0);
-  }, [templates, accounts]);
+  }, [templates, accounts, currentMonthYear]);
 
   const paidHistory = accounts.filter((account) => account.paid).sort((a, b) => (a.month_year > b.month_year ? -1 : 1));
   const historyByMonth = paidHistory.reduce<Record<string, Account[]>>((acc, account) => {

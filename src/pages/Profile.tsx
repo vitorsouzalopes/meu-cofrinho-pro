@@ -63,18 +63,36 @@ const ProfilePage = () => {
   }, [user]);
 
   const summary = useMemo(() => {
+    const today = new Date();
+    const currYear = today.getFullYear();
+    const currMonth = today.getMonth() + 1;
+
     // 1. Contas Pontuais (Instâncias deste mês)
     const totalPontuais = accounts.filter(a => a.billing_type === 'single').reduce((s, c) => s + Number(c.amount), 0);
     
     // 2. Contas Mensais - Priorizar instâncias
-    const monthlyTemplates = templates.filter(t => t.billing_type === 'monthly');
+    const monthlyTemplates = templates.filter(t => {
+      if (t.billing_type !== 'monthly') return false;
+      if (!t.start_date) return true;
+      const [sYear, sMonth] = t.start_date.split('-').map(Number);
+      return (currYear > sYear) || (currYear === sYear && currMonth >= sMonth);
+    });
+
     const totalMensais = monthlyTemplates.reduce((sum, t) => {
       const instance = accounts.find(a => a.parent_id === t.id);
       return sum + Number(instance ? instance.amount : t.amount);
     }, 0);
 
     // 3. Dívidas - Priorizar instâncias
-    const debtTemplates = templates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0));
+    const debtTemplates = templates.filter(t => {
+      if (t.billing_type !== 'debt') return false;
+      const isActive = t.remaining_months === null || t.remaining_months > 0;
+      if (!isActive) return false;
+      if (!t.start_date) return true;
+      const [sYear, sMonth] = t.start_date.split('-').map(Number);
+      return (currYear > sYear) || (currYear === sYear && currMonth >= sMonth);
+    });
+
     const totalDividas = debtTemplates.reduce((sum, t) => {
       const instance = accounts.find(a => a.parent_id === t.id);
       return sum + Number(instance ? instance.amount : t.amount);

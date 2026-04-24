@@ -28,6 +28,15 @@ export const ensureMonthlyInstances = async (userId: string, currentMonthYear: s
         const hasInstance = instances?.some(instance => instance.parent_id === template.id);
         if (hasInstance) return false;
         
+        // Check start_date
+        if (template.start_date) {
+          const [startYear, startMonth] = template.start_date.split('-').map(Number);
+          const [currYear, currMonth] = currentMonthYear.split('-').map(Number);
+          
+          if (currYear < startYear) return false;
+          if (currYear === startYear && currMonth < startMonth) return false;
+        }
+
         // For debts, only generate if they still have installments left
         if (template.billing_type === 'debt') {
           return template.remaining_months === null || template.remaining_months > 0;
