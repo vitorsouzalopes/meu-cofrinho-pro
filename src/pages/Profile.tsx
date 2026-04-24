@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { User, Camera, LogOut, TrendingUp, Wallet, PiggyBank, Settings, Bell, Smartphone, ShieldCheck } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { User, Camera, LogOut, TrendingUp, Wallet, PiggyBank, Settings, Bell, Smartphone, ShieldCheck, RefreshCcw } from "lucide-react";
+import { ensureMonthlyInstances } from "@/lib/account-utils";
 import { PushNotifications } from "@capacitor/push-notifications";
 import { Capacitor } from "@capacitor/core";
 import { VAPID_PUBLIC_KEY } from "@/constants/vapid";
@@ -37,51 +38,87 @@ const ProfilePage = () => {
 
   const [templates, setTemplates] = useState<Account[]>([]);
 
-  useEffect(() => {
+  const loadData = useCallback(async () => {
     if (!user) return;
-    const fetch = async () => {
+    setLoading(true);
+    const today = new Date();
+    const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+
+    const [profRes, instancesRes, templatesRes, invRes] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", user.id).single(),
+      supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
+      supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
+      supabase.from("investments").select("*").eq("user_id", user.id),
+    ]);
+
+    if (profRes.data) {
+      setProfile(profRes.data as Profile);
+      setDisplayName(profRes.data.display_name || "");
+    }
+    
+    const rawAccounts = (instancesRes.data ?? []) as any[];
+    const rawTemplates = (templatesRes.data ?? []) as any[];
+
+    // RESOLVER (Instâncias + Templates Virtuais) - SEM DUPLICAÇÃO
+    const resolved = resolverContasDoMes(rawAccounts, rawTemplates, currentMonthYear);
+
+    // MAPEAR PARA ESTRUTURA ÚNICA
+    const mappedAccounts = resolved.map(a => ({
+      id: a.id,
+      nome: a.name || a.nome,
+      valor: Number(a.amount || a.valor || 0),
+      tipo: a.billing_type || a.tipo,
+      vencimento: a.due_day ? `${currentMonthYear}-${String(a.due_day).padStart(2, '0')}` : (a.vencimento || a.month_year),
+      status: (a.paid || a.status === "pago") ? "pago" : "pendente",
+      parcela: a.remaining_months,
+      parent_id: a.parent_id,
+      virtual: a.virtual
+    }));
+
+    setAccounts(mappedAccounts);
+    setTemplates(rawTemplates);
+    setInvestments((invRes.data ?? []) as Investment[]);
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleResetData = async () => {
+    if (!user) return;
+    try {
       setLoading(true);
       const today = new Date();
       const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-
-      const [profRes, instancesRes, templatesRes, invRes] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", user.id).single(),
-        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
-        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
-        supabase.from("investments").select("*").eq("user_id", user.id),
-      ]);
-
-      if (profRes.data) {
-        setProfile(profRes.data as Profile);
-        setDisplayName(profRes.data.display_name || "");
-      }
       
-      const rawAccounts = (instancesRes.data ?? []) as any[];
-      const rawTemplates = (templatesRes.data ?? []) as any[];
-
-      // RESOLVER (Instâncias + Templates Virtuais) - SEM DUPLICAÇÃO
-      const resolved = resolverContasDoMes(rawAccounts, rawTemplates, currentMonthYear);
-
-      // MAPEAR PARA ESTRUTURA ÚNICA
-      const mappedAccounts = resolved.map(a => ({
-        id: a.id,
-        nome: a.name || a.nome,
-        valor: Number(a.amount || a.valor || 0),
-        tipo: a.billing_type || a.tipo,
-        vencimento: a.due_day ? `${currentMonthYear}-${String(a.due_day).padStart(2, '0')}` : (a.vencimento || a.month_year),
-        status: (a.paid || a.status === "pago") ? "pago" : "pendente",
-        parcela: a.remaining_months,
-        parent_id: a.parent_id,
-        virtual: a.virtual
-      }));
-
-      setAccounts(mappedAccounts);
-      setTemplates(rawTemplates);
-      setInvestments((invRes.data ?? []) as Investment[]);
+      // 1. Limpar instâncias do mês (preserva templates e dívidas originais)
+      await supabase
+        .from("accounts")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("is_template", false)
+        .eq("month_year", currentMonthYear);
+      
+      // 2. Regerar instâncias a partir dos templates
+      await ensureMonthlyInstances(user.id, currentMonthYear);
+      
+      toast({ 
+        title: "Dados sincronizados!", 
+        description: "As contas e dívidas do mês foram regeradas com sucesso." 
+      });
+      
+      loadData();
+    } catch (error: any) {
+      toast({ 
+        title: "Erro ao resetar", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    } finally {
       setLoading(false);
-    };
-    fetch();
-  }, [user]);
+    }
+  };
 
   const summary = useMemo(() => {
     const results = calcularTotaisFinanceiros({
@@ -329,6 +366,16 @@ const ProfilePage = () => {
             ) : (
               <span className="text-muted-foreground text-sm">{registeringPush ? "..." : "→"}</span>
             )}
+          </div>
+        </Card>
+        <Card className="p-3 cursor-pointer hover:bg-muted/50 transition-colors border-gold/20" onClick={handleResetData}>
+          <div className="flex items-center gap-3">
+            <RefreshCcw className={`w-5 h-5 text-gold ${loading ? 'animate-spin' : ''}`} />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">Sincronizar Mês Atual</p>
+              <p className="text-xs text-muted-foreground">Limpa duplicados e regera contas</p>
+            </div>
+            <span className="text-muted-foreground text-sm">→</span>
           </div>
         </Card>
       </div>
