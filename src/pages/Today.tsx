@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, TrendingUp, Wallet, Clock, AlertCircle, Sparkles, Lightbulb, DollarSign, CheckCircle2, Plus, Trash2, ChevronRight, Target, BrainCircuit, ArrowLeft } from "lucide-react";
+import { AlertTriangle, TrendingUp, Wallet, Clock, AlertCircle, Sparkles, Lightbulb, DollarSign, CheckCircle2, Plus, Trash2, ChevronRight, Target, BrainCircuit, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,8 +26,10 @@ const Today = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [templates, setTemplates] = useState<Account[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showDetails, setShowDetails] = useState(true);
 
   // Salary state
   const [salary, setSalary] = useState(0);
@@ -67,17 +69,20 @@ const Today = () => {
       try {
         setLoading(true);
 
-        const [accountsResponse, investmentsResponse, salaryResponse, extraResponse, challengeResponse] = await Promise.all([
+        const [instancesResponse, templatesResponse, investmentsResponse, salaryResponse, extraResponse, challengeResponse] = await Promise.all([
           supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false),
+          supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
           supabase.from("investments").select("*").eq("user_id", user.id),
           supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
           supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear),
           supabase.from("user_challenges" as any).select("*").eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle()
         ]);
 
-        if (accountsResponse.error) throw accountsResponse.error;
+        if (instancesResponse.error) throw instancesResponse.error;
+        if (templatesResponse.error) throw templatesResponse.error;
 
-        setAccounts((accountsResponse.data ?? []) as Account[]);
+        setAccounts((instancesResponse.data ?? []) as Account[]);
+        setTemplates((templatesResponse.data ?? []) as Account[]);
         setInvestments((investmentsResponse.data ?? []) as Investment[]);
 
         if (salaryResponse.data) {
@@ -115,7 +120,40 @@ const Today = () => {
     fetchData();
   }, [user?.id, toast]);
 
-  // Contas do mês atual
+  // LÓGICA DE CÁLCULO MENSAL (CONFORME REGRAS)
+  const calcularTotalMes = (monthYear: string) => {
+    // 1. Contas Mensais (Templates) - Entram em todos os meses
+    const contasMensais = templates.filter(t => t.billing_type === 'monthly');
+    const totalMensais = contasMensais.reduce((s, c) => s + Number(c.amount), 0);
+
+    // 2. Contas Pontuais (Instâncias do mês específico)
+    const contasPontuais = accounts.filter(a => a.billing_type === 'single' && a.month_year === monthYear);
+    const totalPontuais = contasPontuais.reduce((s, c) => s + Number(c.amount), 0);
+
+    // 3. Dívidas (Templates com parcelas restantes)
+    const dividas = templates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0));
+    const totalDividas = dividas.reduce((s, d) => s + Number(d.amount), 0);
+
+    return {
+      total: totalMensais + totalPontuais + totalDividas,
+      breakdown: {
+        mensais: contasMensais,
+        pontuais: contasPontuais,
+        dividas: dividas
+      }
+    };
+  };
+
+  const getNextMonthYear = () => {
+    const nextDate = new Date();
+    nextDate.setMonth(nextDate.getMonth() + 1);
+    return `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}`;
+  };
+
+  const currentMonthData = useMemo(() => calcularTotalMes(currentMonthYear), [templates, accounts, currentMonthYear]);
+  const nextMonthData = useMemo(() => calcularTotalMes(getNextMonthYear()), [templates, accounts]);
+
+  // Contas do mês atual (para outras seções do dashboard)
   const currentMonthAccounts = useMemo(
     () => accounts.filter((account) => account.month_year === currentMonthYear),
     [accounts, currentMonthYear],
@@ -126,46 +164,19 @@ const Today = () => {
     [currentMonthAccounts],
   );
 
-  const dueToday = useMemo(
-    () => pendingAccounts.filter((account) => account.due_day === todayDay),
-    [pendingAccounts, todayDay],
-  );
-
   const overdueAccounts = useMemo(
     () => pendingAccounts.filter((account) => account.due_day < todayDay),
     [pendingAccounts, todayDay],
   );
-
-  const upcomingThisWeek = useMemo(() => {
-    return pendingAccounts.filter((account) => {
-      const diff = account.due_day - todayDay;
-      return diff > 0 && diff <= 7;
-    });
-  }, [pendingAccounts, todayDay]);
 
   const totalPending = useMemo(
     () => pendingAccounts.reduce((sum, account) => sum + Number(account.amount), 0),
     [pendingAccounts],
   );
 
-  const totalOverdue = useMemo(
-    () => overdueAccounts.reduce((sum, account) => sum + Number(account.amount), 0),
-    [overdueAccounts],
-  );
-
-  const totalCurrentMonth = useMemo(
-    () => currentMonthAccounts.reduce((sum, account) => sum + Number(account.amount), 0),
-    [currentMonthAccounts],
-  );
-
   const totalPaid = useMemo(
     () => currentMonthAccounts.filter(a => a.paid).reduce((sum, a) => sum + Number(a.amount), 0),
     [currentMonthAccounts],
-  );
-
-  const investmentTotal = useMemo(
-    () => investments.reduce((sum, inv) => sum + Number(inv.current_amount ?? inv.amount), 0),
-    [investments],
   );
 
   const totalExtraIncome = useMemo(
@@ -174,8 +185,7 @@ const Today = () => {
   );
 
   const totalIncome = salary + totalExtraIncome;
-  const remainingBalance = totalIncome - totalCurrentMonth;
-  const balanceAfterPending = totalIncome - totalPaid - totalPending;
+  const remainingBalance = totalIncome - currentMonthData.total;
 
   const saveSalary = async () => {
     if (!user || !salaryInput) return;
@@ -207,20 +217,6 @@ const Today = () => {
     setSalary(amount);
     setSalaryDialogOpen(false);
     toast({ title: "💰 Salário atualizado!" });
-  };
-
-  const markSalaryReceived = async () => {
-    if (!salaryId) return;
-    const { error } = await supabase
-      .from("salary" as any)
-      .update({ received: true, received_at: new Date().toISOString() } as any)
-      .eq("id", salaryId);
-    if (error) {
-      toast({ title: "Erro", variant: "destructive" });
-      return;
-    }
-    setSalaryReceived(true);
-    toast({ title: "🎉 Salário recebido! Bora organizar as contas!" });
   };
 
   const saveExtraIncome = async () => {
@@ -276,20 +272,6 @@ const Today = () => {
     toast({ title: "💰 Ganho extra registrado!" });
   };
 
-  const deleteExtraIncome = async (id: string) => {
-    const { error } = await supabase
-      .from("extra_income")
-      .delete()
-      .eq("id", id);
-    
-    if (error) {
-      toast({ title: "Erro ao excluir", variant: "destructive" });
-      return;
-    }
-    setExtraIncomes(prev => prev.filter(item => item.id !== id));
-    toast({ title: "Removido com sucesso!" });
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -309,8 +291,28 @@ const Today = () => {
         </div>
       </div>
 
+      {/* 📊 RESUMO MENSAL (NOVO) */}
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <Card className="p-4 border-gold/30 bg-gold/5 animate-slide-up" style={{ animationDelay: "0.1s" }}>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Total Mês Atual</p>
+          <p className="font-bold text-xl text-gold">{formatCurrency(currentMonthData.total)}</p>
+          <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
+            <Clock className="w-3 h-3" />
+            <span>Vence este mês</span>
+          </div>
+        </Card>
+        <Card className="p-4 border-sky-accent/30 bg-sky-accent/5 animate-slide-up" style={{ animationDelay: "0.2s" }}>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Próximo Mês</p>
+          <p className="font-bold text-xl text-sky-accent">{formatCurrency(nextMonthData.total)}</p>
+          <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
+            <TrendingUp className="w-3 h-3" />
+            <span>Previsão estimada</span>
+          </div>
+        </Card>
+      </div>
+
       {/* 🔝 Status geral */}
-      <Card className={`p-4 mb-4 flex items-center justify-between ${status === "ATRASO" ? "border-destructive/40 bg-destructive/5" : "border-emerald-accent/40 bg-emerald-accent/5"}`}>
+      <Card className={`p-4 mb-4 flex items-center justify-between animate-slide-up ${status === "ATRASO" ? "border-destructive/40 bg-destructive/5" : "border-emerald-accent/40 bg-emerald-accent/5"}`} style={{ animationDelay: "0.3s" }}>
         <div className="flex items-center gap-3">
           {status === "ATRASO" ? (
             <AlertCircle className="w-8 h-8 text-destructive" />
@@ -328,24 +330,78 @@ const Today = () => {
         </div>
       </Card>
 
-      {/* 📊 Cards principais */}
-      <div className="grid grid-cols-3 gap-2 mb-6">
-        <Card className="p-3 border-gold/30 text-center cursor-pointer hover:bg-gold/5 transition-colors" onClick={() => navigate("/accounts")}>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Contas</p>
-          <p className="font-bold text-gold">{currentMonthAccounts.length}</p>
-        </Card>
-        <Card className={`p-3 text-center cursor-pointer transition-colors ${overdueAccounts.length > 0 ? "border-destructive/30 hover:bg-destructive/5" : "border-border hover:bg-muted"}`} onClick={() => navigate("/accounts")}>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Atrasadas</p>
-          <p className={`font-bold ${overdueAccounts.length > 0 ? "text-destructive" : "text-foreground"}`}>{overdueAccounts.length}</p>
-        </Card>
-        <Card className="p-3 border-sky-accent/30 text-center cursor-pointer hover:bg-sky-accent/5 transition-colors" onClick={() => navigate("/investments")}>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Investidos</p>
-          <p className="font-bold text-sky-accent">{investments.length}</p>
-        </Card>
-      </div>
+      {/* 📂 DETALHAMENTO (NOVO) */}
+      <Card className="p-4 mb-4 border-border animate-slide-up" style={{ animationDelay: "0.4s" }}>
+        <div className="flex items-center justify-between mb-3 border-b border-border pb-2">
+          <h2 className="font-bold text-foreground flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-gold" /> Detalhamento Mensal
+          </h2>
+          <Button variant="ghost" size="sm" onClick={() => setShowDetails(!showDetails)} className="h-7 w-7 p-0">
+            {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </Button>
+        </div>
+        
+        {showDetails && (
+          <div className="space-y-4 pt-2">
+            {/* Contas Mensais */}
+            <div>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-2 flex justify-between">
+                <span>Contas Mensais</span>
+                <span>{formatCurrency(currentMonthData.breakdown.mensais.reduce((s, c) => s + Number(c.amount), 0))}</span>
+              </p>
+              <div className="space-y-1.5">
+                {currentMonthData.breakdown.mensais.map(c => (
+                  <div key={c.id} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{c.name}</span>
+                    <span className="font-medium text-foreground">{formatCurrency(Number(c.amount))}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Contas do Mês */}
+            <div>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-2 flex justify-between">
+                <span>Contas deste mês</span>
+                <span>{formatCurrency(currentMonthData.breakdown.pontuais.reduce((s, c) => s + Number(c.amount), 0))}</span>
+              </p>
+              {currentMonthData.breakdown.pontuais.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">Nenhuma conta pontual.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {currentMonthData.breakdown.pontuais.map(c => (
+                    <div key={c.id} className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">{c.name}</span>
+                      <span className="font-medium text-foreground">{formatCurrency(Number(c.amount))}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Dívidas */}
+            <div>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-2 flex justify-between">
+                <span>Dívidas</span>
+                <span>{formatCurrency(currentMonthData.breakdown.dividas.reduce((s, d) => s + Number(d.amount), 0))}</span>
+              </p>
+              <div className="space-y-1.5">
+                {currentMonthData.breakdown.dividas.map(d => (
+                  <div key={d.id} className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {d.name} {d.remaining_months ? `(${d.remaining_months}x)` : ''}
+                    </span>
+                    <span className="font-medium text-destructive">{formatCurrency(Number(d.amount))}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
 
       {/* 💰 Renda do mês */}
-      <Card className="p-4 mb-4 border-emerald-accent/20">
+      <Card className="p-4 mb-4 border-emerald-accent/20 animate-slide-up" style={{ animationDelay: "0.5s" }}>
         <div className="flex items-center justify-between mb-3 border-b border-border pb-2">
           <h2 className="font-bold text-foreground flex items-center gap-2">
             <TrendingUp className="w-4 h-4 text-emerald-accent" /> Renda do mês
@@ -377,35 +433,19 @@ const Today = () => {
         </div>
       </Card>
 
-      {/* 📉 Despesas */}
-      <Card className="p-4 mb-4 border-destructive/20">
-        <div className="flex items-center justify-between mb-3 border-b border-border pb-2">
-          <h2 className="font-bold text-foreground flex items-center gap-2">
-            <Wallet className="w-4 h-4 text-destructive" /> Despesas
-          </h2>
-          <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => navigate("/accounts")}>
-            Ver contas
-          </Button>
-        </div>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Total contas</span>
-            <span className="font-medium text-foreground">{formatCurrency(totalCurrentMonth)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Já pago</span>
-            <span className="font-medium text-emerald-accent">{formatCurrency(totalPaid)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Em andamento</span>
-            <span className="font-medium text-gold">{formatCurrency(totalPending)}</span>
-          </div>
-        </div>
+      {/* 💵 Saldo restante */}
+      <Card className={`p-5 mb-6 text-center border animate-slide-up ${remainingBalance >= 0 ? "border-sky-accent/40 bg-sky-accent/5" : "border-destructive/40 bg-destructive/5"}`} style={{ animationDelay: "0.6s" }}>
+        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Saldo Restante</p>
+        <p className={`text-3xl font-bold ${remainingBalance >= 0 ? "text-sky-accent" : "text-destructive"}`}>
+          {formatCurrency(remainingBalance)}
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">disponível no mês</p>
       </Card>
 
       {/* 🎯 Objetivos e Metas */}
       <Card 
-        className="p-5 mb-4 border-gold/20 bg-gold/5 cursor-pointer hover:bg-gold/10 transition-colors group"
+        className="p-5 mb-4 border-gold/20 bg-gold/5 cursor-pointer hover:bg-gold/10 transition-colors group animate-slide-up"
+        style={{ animationDelay: "0.7s" }}
         onClick={() => navigate("/goals")}
       >
         <div className="flex items-center justify-between">
@@ -420,15 +460,6 @@ const Today = () => {
           </div>
           <ArrowLeft className="w-5 h-5 text-gold rotate-180" />
         </div>
-      </Card>
-
-      {/* 💵 Saldo restante */}
-      <Card className={`p-5 mb-6 text-center border ${remainingBalance >= 0 ? "border-sky-accent/40 bg-sky-accent/5" : "border-destructive/40 bg-destructive/5"}`}>
-        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Saldo Restante</p>
-        <p className={`text-3xl font-bold ${remainingBalance >= 0 ? "text-sky-accent" : "text-destructive"}`}>
-          {formatCurrency(remainingBalance)}
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">disponível no mês</p>
       </Card>
 
       {/* Salary Dialog */}
