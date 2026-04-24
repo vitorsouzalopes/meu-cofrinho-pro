@@ -63,13 +63,26 @@ const ProfilePage = () => {
   }, [user]);
 
   const summary = useMemo(() => {
-    const totalMensais = templates.filter(t => t.billing_type === 'monthly').reduce((s, c) => s + Number(c.amount), 0);
+    // 1. Contas Pontuais (Instâncias deste mês)
     const totalPontuais = accounts.filter(a => a.billing_type === 'single').reduce((s, c) => s + Number(c.amount), 0);
-    const totalDividas = templates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0)).reduce((s, d) => s + Number(d.amount), 0);
     
+    // 2. Contas Mensais - Priorizar instâncias
+    const monthlyTemplates = templates.filter(t => t.billing_type === 'monthly');
+    const totalMensais = monthlyTemplates.reduce((sum, t) => {
+      const instance = accounts.find(a => a.parent_id === t.id);
+      return sum + Number(instance ? instance.amount : t.amount);
+    }, 0);
+
+    // 3. Dívidas - Priorizar instâncias
+    const debtTemplates = templates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0));
+    const totalDividas = debtTemplates.reduce((sum, t) => {
+      const instance = accounts.find(a => a.parent_id === t.id);
+      return sum + Number(instance ? instance.amount : t.amount);
+    }, 0);
+
     const totalAccounts = totalMensais + totalPontuais + totalDividas;
     
-    // For paid/pending, we still look at instances because templates don't have 'paid' status
+    // Para pago/pendente, olhamos apenas as instâncias existentes
     const totalPaid = accounts.filter(a => a.paid).reduce((s, a) => s + Number(a.amount), 0);
     const totalPending = totalAccounts - totalPaid;
     

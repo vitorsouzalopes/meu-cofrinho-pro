@@ -120,26 +120,43 @@ const Today = () => {
     fetchData();
   }, [user?.id, toast]);
 
-  // LÓGICA DE CÁLCULO MENSAL (CONFORME REGRAS)
+  // LÓGICA DE CÁLCULO MENSAL (CONFORME REGRAS) - Refinada para priorizar instâncias
   const calcularTotalMes = (monthYear: string) => {
-    // 1. Contas Mensais (Templates) - Entram em todos os meses
-    const contasMensais = templates.filter(t => t.billing_type === 'monthly');
-    const totalMensais = contasMensais.reduce((s, c) => s + Number(c.amount), 0);
+    // 1. Filtrar instâncias do mês específico
+    const instancesDoMes = accounts.filter(a => a.month_year === monthYear);
 
-    // 2. Contas Pontuais (Instâncias do mês específico)
-    const contasPontuais = accounts.filter(a => a.billing_type === 'single' && a.month_year === monthYear);
+    // 2. Contas Pontuais (Sempre instâncias)
+    const contasPontuais = instancesDoMes.filter(a => a.billing_type === 'single');
     const totalPontuais = contasPontuais.reduce((s, c) => s + Number(c.amount), 0);
 
-    // 3. Dívidas (Templates com parcelas restantes)
-    const dividas = templates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0));
-    const totalDividas = dividas.reduce((s, d) => s + Number(d.amount), 0);
+    // 3. Contas Mensais - Usar instância se existir, senão template
+    const monthlyTemplates = templates.filter(t => t.billing_type === 'monthly');
+    let totalMensais = 0;
+    const resolvedMensais: Account[] = [];
+
+    monthlyTemplates.forEach(t => {
+      const instance = instancesDoMes.find(a => a.parent_id === t.id);
+      totalMensais += Number(instance ? instance.amount : t.amount);
+      resolvedMensais.push(instance || t);
+    });
+
+    // 4. Dívidas - Usar instância se existir, senão template (se ativa)
+    const debtTemplates = templates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0));
+    let totalDividas = 0;
+    const resolvedDividas: Account[] = [];
+
+    debtTemplates.forEach(t => {
+      const instance = instancesDoMes.find(a => a.parent_id === t.id);
+      totalDividas += Number(instance ? instance.amount : t.amount);
+      resolvedDividas.push(instance || t);
+    });
 
     return {
       total: totalMensais + totalPontuais + totalDividas,
       breakdown: {
-        mensais: contasMensais,
+        mensais: resolvedMensais,
         pontuais: contasPontuais,
-        dividas: dividas
+        dividas: resolvedDividas
       }
     };
   };
