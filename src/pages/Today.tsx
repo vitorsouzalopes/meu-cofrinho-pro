@@ -78,12 +78,11 @@ const Today = () => {
       const rawAccounts = (instancesRes.data ?? []) as any[];
       const rawTemplates = (templatesRes.data ?? []) as any[];
 
-      // 2. SINCRONIZAR (Dívidas ➔ Contas)
-      const debtTemplates = rawTemplates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0));
-      const syncAccounts = sincronizarDividas(rawAccounts, debtTemplates);
+      // 2. RESOLVER (Instâncias + Templates Virtuais) - SEM DUPLICAÇÃO
+      const resolved = resolverContasDoMes(rawAccounts, rawTemplates, currentMonthYear);
 
       // 3. MAPEAR PARA ESTRUTURA ÚNICA
-      const mappedAccounts = syncAccounts.map(a => ({
+      const mappedAccounts = resolved.map(a => ({
         id: a.id,
         nome: a.name || a.nome,
         valor: Number(a.amount || a.valor || 0),
@@ -91,7 +90,8 @@ const Today = () => {
         vencimento: a.due_day ? `${currentMonthYear}-${String(a.due_day).padStart(2, '0')}` : (a.vencimento || a.month_year),
         status: (a.paid || a.status === "pago") ? "pago" : "pendente",
         parcela: a.remaining_months,
-        parent_id: a.parent_id
+        parent_id: a.parent_id,
+        virtual: a.virtual
       }));
 
       setAccounts(mappedAccounts);

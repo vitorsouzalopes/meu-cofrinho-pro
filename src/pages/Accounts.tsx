@@ -209,15 +209,24 @@ const Accounts = () => {
   };
 
   const deleteAccount = async (id: string) => {
-    const { error } = await supabase.from("accounts").delete().eq("id", id);
+    if (!user) return;
+    
+    // Se for virtual, precisamos deletar o template pai
+    const isVirtual = typeof id === 'string' && id.startsWith('virtual-');
+    const realId = isVirtual ? id.replace('virtual-', '').replace('debt-', '') : id;
+
+    const { error } = await supabase.from("accounts").delete().eq("id", realId);
     if (error) {
       toast({ title: "Erro ao remover conta", description: error.message, variant: "destructive" });
       return;
     }
+    
     setAccounts((prev) => prev.filter((account) => account.id !== id));
+    toast({ title: isVirtual ? "Modelo de conta removido" : "Conta removida" });
+    loadData();
   };
 
-  const markAsPaid = async (account: Account) => {
+  const markAsPaid = async (account: any) => {
     setSelectedAccountForPayment(account);
     setReceiptFile(null);
     setPaymentDialogOpen(true);
@@ -228,10 +237,39 @@ const Accounts = () => {
     setIsUploading(true);
 
     let receipt_url = null;
+    let targetId = selectedAccountForPayment.id;
+    const isVirtual = typeof targetId === 'string' && targetId.startsWith('virtual-');
+
+    // Se for virtual, precisamos criar a instância primeiro
+    if (isVirtual) {
+      const templateId = targetId.replace('virtual-', '').replace('debt-', '');
+      const { data: newInstance, error: createError } = await supabase
+        .from("accounts")
+        .insert({
+          user_id: user.id,
+          parent_id: templateId,
+          name: selectedAccountForPayment.nome,
+          amount: selectedAccountForPayment.valor,
+          billing_type: selectedAccountForPayment.tipo,
+          month_year: currentMonthYear,
+          is_template: false,
+          due_day: new Date(selectedAccountForPayment.vencimento).getDate(),
+          paid: false
+        })
+        .select("*")
+        .single();
+
+      if (createError) {
+        toast({ title: "Erro ao gerar instância", description: createError.message, variant: "destructive" });
+        setIsUploading(false);
+        return;
+      }
+      targetId = newInstance.id;
+    }
 
     if (receiptFile) {
       const fileExt = receiptFile.name.split(".").pop();
-      const fileName = `${user.id}/${selectedAccountForPayment.id}-${Date.now()}.${fileExt}`;
+      const fileName = `${user.id}/${targetId}-${Date.now()}.${fileExt}`;
       
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("receipts")
@@ -250,7 +288,7 @@ const Accounts = () => {
     const { data: updatedAccount, error: updateError } = await supabase
       .from("accounts")
       .update({ paid: true, paid_at: new Date().toISOString() })
-      .eq("id", selectedAccountForPayment.id)
+      .eq("id", targetId)
       .select("*")
       .single();
 
@@ -258,47 +296,25 @@ const Accounts = () => {
       toast({ title: "Erro ao marcar como pago", description: updateError.message, variant: "destructive" });
     } else {
       // Record payment in history
-      const { data: paymentRecord, error: paymentError } = await supabase
+      await supabase
         .from("account_payments")
         .insert({
           user_id: user.id,
-          account_id: selectedAccountForPayment.id,
+          account_id: targetId,
           month_year: currentMonthYear,
-          amount: selectedAccountForPayment.amount,
+          amount: selectedAccountForPayment.valor,
           paid_at: new Date().toISOString(),
           receipt_url: receipt_url
-        })
-        .select("*")
-        .single();
+        });
 
-      if (!paymentError && paymentRecord) {
-        setPaymentsHistory(prev => [paymentRecord as AccountPayment, ...prev]);
-      }
-
-      setAccounts((prev) => prev.map((item) => (item.id === updatedAccount.id ? (updatedAccount as Account) : item)));
       toast({ title: "Conta marcada como paga" });
-
-      // If it's a debt instance, decrement remaining_months on the template
-      if (selectedAccountForPayment.billing_type === "debt" && selectedAccountForPayment.parent_id) {
-        const { data: template } = await supabase
-          .from("accounts")
-          .select("remaining_months")
-          .eq("id", selectedAccountForPayment.parent_id)
-          .single();
-        
-        if (template && template.remaining_months && template.remaining_months > 0) {
-          await supabase
-            .from("accounts")
-            .update({ remaining_months: template.remaining_months - 1 })
-            .eq("id", selectedAccountForPayment.parent_id);
-        }
-      }
+      loadData(); // Recarrega tudo para refletir a mudança
     }
 
     setIsUploading(false);
     setPaymentDialogOpen(false);
     setSelectedAccountForPayment(null);
-    setReceiptFile(null);
+  };
 
     // Run cleanup for records > 6 months
     runCleanup();
@@ -333,12 +349,11 @@ const Accounts = () => {
       const rawAccounts = (instancesRes.data ?? []) as any[];
       const rawTemplates = (templatesRes.data ?? []) as any[];
 
-      // SINCRONIZAR (Dívidas ➔ Contas)
-      const debtTemplates = rawTemplates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0));
-      const syncAccounts = sincronizarDividas(rawAccounts, debtTemplates);
+      // RESOLVER (Instâncias + Templates Virtuais) - SEM DUPLICAÇÃO
+      const resolved = resolverContasDoMes(rawAccounts, rawTemplates, currentMonthYear);
 
       // MAPEAR PARA ESTRUTURA ÚNICA
-      const mappedAccounts = syncAccounts.map(a => ({
+      const mappedAccounts = resolved.map(a => ({
         id: a.id,
         nome: a.name || a.nome,
         valor: Number(a.amount || a.valor || 0),
@@ -347,7 +362,8 @@ const Accounts = () => {
         status: (a.paid || a.status === "pago") ? "pago" : "pendente",
         parcela: a.remaining_months,
         parent_id: a.parent_id,
-        account_category: a.account_category || "expense"
+        account_category: a.account_category || "expense",
+        virtual: a.virtual
       }));
 
       setAccounts(mappedAccounts);
