@@ -19,18 +19,38 @@ const Planner = () => {
       const today = new Date();
       const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 
-      const [accountsResponse, salaryResponse, extraResponse] = await Promise.all([
-        supabase.from("accounts").select("amount, month_year").eq("user_id", user.id).eq("month_year", currentMonthYear),
+      const [instancesRes, templatesRes, salaryResponse, extraResponse] = await Promise.all([
+        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
+        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
         supabase.from("salary" as never).select("amount").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
         supabase.from("extra_income").select("amount").eq("user_id", user.id).eq("month_year", currentMonthYear)
       ]);
 
       const salary = salaryResponse.data ? Number((salaryResponse.data as { amount: number }).amount) : 0;
       const extra = extraResponse.data ? extraResponse.data.reduce((acc: number, curr: { amount: number }) => acc + Number(curr.amount), 0) : 0;
-      const expenses = accountsResponse.data ? accountsResponse.data.reduce((acc: number, curr: { amount: number }) => acc + Number(curr.amount), 0) : 0;
+      
+      const instances = (instancesRes.data ?? []) as any[];
+      const templates = (templatesRes.data ?? []) as any[];
+
+      // LÓGICA DE CÁLCULO MENSAL (CONFORME REGRAS) - Instance-First
+      const totalPontuais = instances.filter(a => a.billing_type === 'single').reduce((s, c) => s + Number(c.amount), 0);
+      
+      const monthlyTemplates = templates.filter(t => t.billing_type === 'monthly');
+      const totalMensais = monthlyTemplates.reduce((sum, t) => {
+        const instance = instances.find(a => a.parent_id === t.id);
+        return sum + Number(instance ? instance.amount : t.amount);
+      }, 0);
+
+      const debtTemplates = templates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0));
+      const totalDividas = debtTemplates.reduce((sum, t) => {
+        const instance = instances.find(a => a.parent_id === t.id);
+        return sum + Number(instance ? instance.amount : t.amount);
+      }, 0);
+
+      const totalExpenses = totalMensais + totalPontuais + totalDividas;
 
       setInitialIncome(salary + extra);
-      setInitialExpenses(expenses);
+      setInitialExpenses(totalExpenses);
       setLoading(false);
     };
     fetchData();

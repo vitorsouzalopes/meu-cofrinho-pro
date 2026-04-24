@@ -50,75 +50,73 @@ const Today = () => {
   const [challengeDoneToday, setChallengeDoneToday] = useState(false);
   const hasGenerated = useRef(false);
 
-  // Generate instances once on mount
-  useEffect(() => {
-    if (!user?.id || hasGenerated.current) return;
-    hasGenerated.current = true;
+  const fetchData = useCallback(async () => {
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
     
-    ensureMonthlyInstances(user.id, currentMonthYear)
-      .catch(err => console.error("Erro na geração automática:", err));
-  }, [user?.id]);
+    try {
+      setLoading(true);
+
+      // 1. First ensure instances are generated for the current month
+      if (!hasGenerated.current) {
+        hasGenerated.current = true;
+        await ensureMonthlyInstances(user.id, currentMonthYear);
+      }
+
+      // 2. Fetch all data in parallel
+      const [instancesResponse, templatesResponse, investmentsResponse, salaryResponse, extraResponse, challengeResponse] = await Promise.all([
+        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false),
+        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
+        supabase.from("investments").select("*").eq("user_id", user.id),
+        supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
+        supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear),
+        supabase.from("user_challenges" as any).select("*").eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle()
+      ]);
+
+      if (instancesResponse.error) throw instancesResponse.error;
+      if (templatesResponse.error) throw templatesResponse.error;
+
+      setAccounts((instancesResponse.data ?? []) as Account[]);
+      setTemplates((templatesResponse.data ?? []) as Account[]);
+      setInvestments((investmentsResponse.data ?? []) as Investment[]);
+
+      if (salaryResponse.data) {
+        const s = salaryResponse.data as any;
+        setSalary(Number(s.amount));
+        setSalaryReceived(!!s.received);
+        setSalaryId(s.id);
+      }
+
+      if (extraResponse.data) {
+        setExtraIncomes(extraResponse.data);
+      }
+
+      const activeUC = challengeResponse?.data as any;
+      if (activeUC) {
+        setActiveChallenge(activeUC);
+        const { data: progressToday } = await supabase
+          .from("challenge_progress" as any)
+          .select("*")
+          .eq("user_challenge_id", activeUC.id)
+          .eq("status_date", new Date().toISOString().split("T")[0])
+          .maybeSingle();
+        
+        setChallengeDoneToday(!!progressToday);
+      }
+
+    } catch (error: any) {
+      console.error("Erro no Today fetchData:", error);
+      toast({ title: "Erro ao carregar dados", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, toast]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!user?.id) {
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        setLoading(true);
-
-        const [instancesResponse, templatesResponse, investmentsResponse, salaryResponse, extraResponse, challengeResponse] = await Promise.all([
-          supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false),
-          supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
-          supabase.from("investments").select("*").eq("user_id", user.id),
-          supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
-          supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear),
-          supabase.from("user_challenges" as any).select("*").eq("user_id", user.id).eq("status", "active").limit(1).maybeSingle()
-        ]);
-
-        if (instancesResponse.error) throw instancesResponse.error;
-        if (templatesResponse.error) throw templatesResponse.error;
-
-        setAccounts((instancesResponse.data ?? []) as Account[]);
-        setTemplates((templatesResponse.data ?? []) as Account[]);
-        setInvestments((investmentsResponse.data ?? []) as Investment[]);
-
-        if (salaryResponse.data) {
-          const s = salaryResponse.data as any;
-          setSalary(Number(s.amount));
-          setSalaryReceived(!!s.received);
-          setSalaryId(s.id);
-        }
-
-        if (extraResponse.data) {
-          setExtraIncomes(extraResponse.data);
-        }
-
-        const activeUC = challengeResponse?.data as any;
-        if (activeUC) {
-          setActiveChallenge(activeUC);
-          const { data: progressToday } = await supabase
-            .from("challenge_progress" as any)
-            .select("*")
-            .eq("user_challenge_id", activeUC.id)
-            .eq("status_date", new Date().toISOString().split("T")[0])
-            .maybeSingle();
-          
-          setChallengeDoneToday(!!progressToday);
-        }
-
-      } catch (error: any) {
-        console.error("Erro no Today fetchData:", error);
-        toast({ title: "Erro ao carregar dados", description: error.message, variant: "destructive" });
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
-  }, [user?.id, toast]);
+  }, [fetchData]);
 
   // LÓGICA DE CÁLCULO MENSAL (CONFORME REGRAS) - Refinada para priorizar instâncias
   const calcularTotalMes = (monthYear: string) => {
