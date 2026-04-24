@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { User, LogOut, Settings, HelpCircle, RefreshCcw, Target, ChevronRight, FileDown, Plus, Trash2 } from "lucide-react";
+import { User, LogOut, Settings, HelpCircle, RefreshCcw, Target, ChevronRight, FileDown, Plus, Trash2, MessageCircle, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,7 @@ const ProfilePage = () => {
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -58,10 +60,7 @@ const ProfilePage = () => {
 
     setAccounts(resolved);
     setInvestments((invRes.data ?? []) as Investment[]);
-    setGoals(goalsRes.data || [
-      { name: "Viagem para a Praia", current_amount: 1500, target_amount: 2000 },
-      { name: "Novo Notebook", current_amount: 800, target_amount: 2000 }
-    ]);
+    setGoals(goalsRes.data || []);
     setLoading(false);
   }, [user]);
 
@@ -98,6 +97,48 @@ const ProfilePage = () => {
   const handleSignOut = async () => {
     await signOut();
     navigate("/auth");
+  };
+
+  // ── Exportar dados como CSV ────────────────────────────────────────────────
+  const exportData = async () => {
+    if (!user) return;
+    toast({ title: "Preparando exportação..." });
+
+    const today = new Date();
+    const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+
+    const { data: accs } = await supabase
+      .from("accounts")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("month_year", currentMonthYear);
+
+    if (!accs || accs.length === 0) {
+      toast({ title: "Sem dados para exportar", variant: "destructive" });
+      return;
+    }
+
+    const header = ["Nome", "Tipo", "Valor", "Vencimento", "Status", "Mês"].join(",");
+    const rows = accs.map(a =>
+      [
+        `"${a.name}"`,
+        a.billing_type || "",
+        Number(a.amount).toFixed(2),
+        a.due_day || "",
+        a.paid ? "Pago" : "Pendente",
+        a.month_year || "",
+      ].join(",")
+    );
+
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `cofrinho-${currentMonthYear}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "✅ CSV exportado com sucesso!" });
   };
 
   const limparDadosAutoGerados = async () => {

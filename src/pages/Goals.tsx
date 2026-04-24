@@ -43,15 +43,21 @@ const Goals = () => {
   const loadGoals = useCallback(async () => {
     if (!user) return;
     try {
-      const { data, error } = await supabase.from("goals").select("*").order("priority", { ascending: true });
+      const { data, error } = await supabase
+        .from("goals" as any)
+        .select("*")
+        .eq("user_id", user.id)
+        .order("priority", { ascending: true });
       if (error) throw error;
       setGoals(data || []);
     } catch (error: any) {
-      toast({ title: "Erro ao carregar objetivos", variant: "destructive" });
+      // Se a tabela ainda não tem todas as colunas, mostra lista vazia
+      console.warn("Goals:", error.message);
+      setGoals([]);
     } finally {
       setLoading(false);
     }
-  }, [user, toast]);
+  }, [user]);
 
   useEffect(() => {
     loadGoals();
@@ -67,35 +73,36 @@ const Goals = () => {
 
   const saveGoal = async () => {
     if (!user || !name || !targetAmount || !monthlyAmount) return;
-    const goalData = {
+    const goalData: any = {
       user_id: user.id,
       name,
       target_amount: parseFloat(targetAmount),
       monthly_amount: parseFloat(monthlyAmount),
       priority: parseInt(priority),
       current_amount: 0,
-      is_auto: true,
     };
 
     try {
       if (editingGoal) {
-        await supabase.from("goals").update(goalData).eq("id", editingGoal.id);
+        const { error } = await supabase.from("goals" as any).update(goalData).eq("id", editingGoal.id);
+        if (error) throw error;
         toast({ title: "Objetivo atualizado!" });
       } else {
-        await supabase.from("goals").insert([goalData]);
+        const { error } = await supabase.from("goals" as any).insert([goalData]);
+        if (error) throw error;
         toast({ title: "Objetivo criado!" });
       }
       setIsDialogOpen(false);
       resetForm();
       loadGoals();
     } catch (error: any) {
-      toast({ title: "Erro ao salvar", variant: "destructive" });
+      toast({ title: "Erro ao salvar objetivo", description: error.message, variant: "destructive" });
     }
   };
 
   const deleteGoal = async (id: string) => {
     if (!window.confirm("Deseja realmente remover este objetivo?")) return;
-    await supabase.from("goals").delete().eq("id", id);
+    await supabase.from("goals" as any).delete().eq("id", id);
     toast({ title: "Objetivo removido" });
     loadGoals();
   };

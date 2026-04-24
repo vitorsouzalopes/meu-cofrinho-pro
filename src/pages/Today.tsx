@@ -72,6 +72,10 @@ const Today = () => {
   const [salaryDialogOpen, setSalaryDialogOpen] = useState(false);
   const [salaryInput, setSalaryInput] = useState("");
   const [extraIncomes, setExtraIncomes] = useState<any[]>([]);
+  const [extraDialogOpen, setExtraDialogOpen] = useState(false);
+  const [extraInput, setExtraInput] = useState("");
+  const [extraDesc, setExtraDesc] = useState("");
+  const [savingExtra, setSavingExtra] = useState(false);
   
   const hasGenerated = useRef(false);
   const currentMonthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(today).toUpperCase();
@@ -160,6 +164,29 @@ const Today = () => {
     toast({ title: "Salário atualizado!" });
   };
 
+  const saveExtra = async () => {
+    if (!user || !extraInput) return;
+    setSavingExtra(true);
+    const { error } = await supabase.from("extra_income").insert({
+      user_id: user.id,
+      description: extraDesc.trim() || "Renda extra",
+      amount: parseFloat(extraInput),
+      month_year: currentMonthYear,
+      date: new Date().toISOString().split("T")[0],
+    });
+    setSavingExtra(false);
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Renda extra adicionada!" });
+      setExtraInput("");
+      setExtraDesc("");
+      setExtraDialogOpen(false);
+      fetchData();
+      window.dispatchEvent(new CustomEvent("finance-data-updated"));
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -198,9 +225,26 @@ const Today = () => {
             onClick={() => { setSalaryInput(String(salary || "")); setSalaryDialogOpen(true); }}
           >
             <div className="relative z-10">
-              <p className="text-white/70 text-[10px] uppercase font-bold mb-1">Renda do Mês</p>
-              <p className="text-[9px] text-white/50 mb-4 tracking-tight">Salário + Extra:</p>
+              <div className="flex justify-between items-start mb-1">
+                <p className="text-white/70 text-[10px] uppercase font-bold">Renda do Mês</p>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setExtraInput(""); setExtraDesc(""); setExtraDialogOpen(true); }}
+                  className="text-[9px] bg-white/20 hover:bg-white/30 text-white font-bold px-2 py-0.5 rounded-full transition-colors"
+                >
+                  + Extra
+                </button>
+              </div>
+              <p className="text-[9px] text-white/50 mb-2 tracking-tight">Salário + Extra:</p>
               <p className="text-xl font-bold text-white leading-none">{formatCurrency(totais.renda)}</p>
+              {extraIncomes.length > 0 && (
+                <div className="mt-3 space-y-1">
+                  {extraIncomes.slice(0, 2).map((e: any) => (
+                    <p key={e.id} className="text-[9px] text-white/60 truncate">
+                      + {formatCurrency(Number(e.amount))} {e.description && `(${e.description})`}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="absolute -right-2 -bottom-2 opacity-10 group-hover:scale-110 transition-transform">
               <Wallet className="w-16 h-16 text-white" />
@@ -319,6 +363,42 @@ const Today = () => {
           );
         })()}
       </div>
+
+      {/* Extra Income Dialog */}
+      <Dialog open={extraDialogOpen} onOpenChange={setExtraDialogOpen}>
+        <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-primary" /> Adicionar Renda Extra
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-3">
+            <div>
+              <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1.5 block tracking-widest">Descrição</label>
+              <Input
+                value={extraDesc}
+                onChange={(e) => setExtraDesc(e.target.value)}
+                placeholder="Ex: Freelance, Venda, Presente..."
+                className="bg-muted border-border h-12 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1.5 block tracking-widest">Valor (R$)</label>
+              <Input
+                type="number"
+                value={extraInput}
+                onChange={(e) => setExtraInput(e.target.value)}
+                placeholder="0,00"
+                className="bg-muted border-border h-12 rounded-xl"
+                step="0.01"
+              />
+            </div>
+            <Button className="w-full h-14 rounded-2xl text-base font-bold" onClick={saveExtra} disabled={savingExtra}>
+              {savingExtra ? "Salvando..." : "Adicionar Renda Extra"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Salary Dialog */}
       <Dialog open={salaryDialogOpen} onOpenChange={setSalaryDialogOpen}>
