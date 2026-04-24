@@ -152,7 +152,7 @@ const Accounts = () => {
       billing_type: billingType,
       amount: parseFloat(amount),
       due_day: parseInt(dueDay, 10),
-      month_year: (billingType === "monthly" || billingType === "debt") ? null : currentMonthYear,
+      month_year: currentMonthYear, // Sempre envia o mês atual para satisfazer o banco
       is_template: billingType === "monthly" || billingType === "debt",
       paid: false,
       start_date: startDate,
