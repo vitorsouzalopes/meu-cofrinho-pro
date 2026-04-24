@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { calcularTotaisFinanceiros, sincronizarDividas } from "@/lib/finance-utils";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Profile = Tables<"profiles">;
@@ -54,8 +55,28 @@ const ProfilePage = () => {
         setProfile(profRes.data as Profile);
         setDisplayName(profRes.data.display_name || "");
       }
-      setAccounts((instancesRes.data ?? []) as Account[]);
-      setTemplates((templatesRes.data ?? []) as Account[]);
+      
+      const rawAccounts = (instancesRes.data ?? []) as any[];
+      const rawTemplates = (templatesRes.data ?? []) as any[];
+
+      // SINCRONIZAR (Dívidas ➔ Contas)
+      const debtTemplates = rawTemplates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0));
+      const syncAccounts = sincronizarDividas(rawAccounts, debtTemplates);
+
+      // MAPEAR PARA ESTRUTURA ÚNICA
+      const mappedAccounts = syncAccounts.map(a => ({
+        id: a.id,
+        nome: a.name || a.nome,
+        valor: Number(a.amount || a.valor || 0),
+        tipo: a.billing_type || a.tipo,
+        vencimento: a.due_day ? `${currentMonthYear}-${String(a.due_day).padStart(2, '0')}` : (a.vencimento || a.month_year),
+        status: (a.paid || a.status === "pago") ? "pago" : "pendente",
+        parcela: a.remaining_months,
+        parent_id: a.parent_id
+      }));
+
+      setAccounts(mappedAccounts);
+      setTemplates(rawTemplates);
       setInvestments((invRes.data ?? []) as Investment[]);
       setLoading(false);
     };
@@ -63,50 +84,22 @@ const ProfilePage = () => {
   }, [user]);
 
   const summary = useMemo(() => {
-    const today = new Date();
-    const currYear = today.getFullYear();
-    const currMonth = today.getMonth() + 1;
-
-    // 1. Contas Pontuais (Instâncias deste mês)
-    const totalPontuais = accounts.filter(a => a.billing_type === 'single').reduce((s, c) => s + Number(c.amount), 0);
-    
-    // 2. Contas Mensais - Priorizar instâncias
-    const monthlyTemplates = templates.filter(t => {
-      if (t.billing_type !== 'monthly') return false;
-      if (!t.start_date) return true;
-      const [sYear, sMonth] = t.start_date.split('-').map(Number);
-      return (currYear > sYear) || (currYear === sYear && currMonth >= sMonth);
+    const results = calcularTotaisFinanceiros({
+      contas: accounts.filter(a => a.tipo !== 'divida' && a.tipo !== 'debt'),
+      dividas: accounts.filter(a => a.tipo === 'divida' || a.tipo === 'debt')
     });
 
-    const totalMensais = monthlyTemplates.reduce((sum, t) => {
-      const instance = accounts.find(a => a.parent_id === t.id);
-      return sum + Number(instance ? instance.amount : t.amount);
-    }, 0);
+    const totalPaid = accounts.filter(a => a.status === "pago").reduce((s, a) => s + a.valor, 0);
+    const totalPending = accounts.filter(a => a.status === "pendente").reduce((s, a) => s + a.valor, 0);
+    const totalInv = investments.reduce((s, i) => s + Number(i.amount), 0);
 
-    // 3. Dívidas - Priorizar instâncias
-    const debtTemplates = templates.filter(t => {
-      if (t.billing_type !== 'debt') return false;
-      const isActive = t.remaining_months === null || t.remaining_months > 0;
-      if (!isActive) return false;
-      if (!t.start_date) return true;
-      const [sYear, sMonth] = t.start_date.split('-').map(Number);
-      return (currYear > sYear) || (currYear === sYear && currMonth >= sMonth);
-    });
-
-    const totalDividas = debtTemplates.reduce((sum, t) => {
-      const instance = accounts.find(a => a.parent_id === t.id);
-      return sum + Number(instance ? instance.amount : t.amount);
-    }, 0);
-
-    const totalAccounts = totalMensais + totalPontuais + totalDividas;
-    
-    // Para pago/pendente, olhamos apenas as instâncias existentes
-    const totalPaid = accounts.filter(a => a.paid).reduce((s, a) => s + Number(a.amount), 0);
-    const totalPending = totalAccounts - totalPaid;
-    
-    const totalInvested = investments.reduce((s, i) => s + Number(i.current_amount ?? i.amount), 0);
-    return { totalAccounts, totalPaid, totalPending, totalInvested };
-  }, [accounts, templates, investments]);
+    return {
+      totalPaid,
+      totalPending,
+      totalInv,
+      totalGeral: results.gastos
+    };
+  }, [accounts, investments]);
 
   const handleSave = async () => {
     if (!user) return;
@@ -284,14 +277,14 @@ const ProfilePage = () => {
             <Wallet className="w-4 h-4 text-gold" />
             <p className="text-[10px] text-muted-foreground uppercase">Total mês</p>
           </div>
-          <p className="font-semibold text-foreground">{formatCurrency(summary.totalAccounts)}</p>
+          <p className="font-semibold text-foreground">{formatCurrency(summary.totalGeral)}</p>
         </Card>
         <Card className="p-4 border-emerald-accent/30">
           <div className="flex items-center gap-2 mb-1">
             <TrendingUp className="w-4 h-4 text-emerald-accent" />
             <p className="text-[10px] text-muted-foreground uppercase">Investido</p>
           </div>
-          <p className="font-semibold text-emerald-accent">{formatCurrency(summary.totalInvested)}</p>
+          <p className="font-semibold text-emerald-accent">{formatCurrency(summary.totalInv)}</p>
         </Card>
         <Card className="p-4 border-sky-accent/30">
           <div className="flex items-center gap-2 mb-1">

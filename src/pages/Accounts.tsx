@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { ensureMonthlyInstances } from "@/lib/account-utils";
+import { calcularTotaisFinanceiros, sincronizarDividas } from "@/lib/finance-utils";
 import Planner from "./Planner";
 import type { Account, AccountPayment } from "@/integrations/supabase/types";
 
@@ -318,75 +319,56 @@ const Accounts = () => {
       .eq("user_id", user.id);
   };
 
-  const currentMonthExpenseAccounts = accounts.filter(
-    (account) => account.month_year === currentMonthYear && account.account_category === "expense"
-  );
-  const monthlyAccounts = currentMonthExpenseAccounts.filter((account) => account.billing_type === "monthly" && !account.paid);
-  const singleAccounts = currentMonthExpenseAccounts.filter((account) => account.billing_type === "single" && !account.paid);
-  const debtAccounts = currentMonthExpenseAccounts.filter((account) => account.billing_type === "debt" && !account.paid);
-  const overdueAccounts = currentMonthExpenseAccounts.filter((account) => !account.paid && account.due_day < todayDay);
-  const dueTodayAccounts = currentMonthExpenseAccounts.filter((account) => !account.paid && account.due_day === todayDay);
-  const weekAccounts = currentMonthExpenseAccounts.filter((account) => {
-    if (account.paid) return false;
-    const diff = account.due_day - todayDay;
-    return diff >= 0 && diff <= 7;
-  });
 
-  const totalExpense = useMemo(() => {
-    const [currYear, currMonth] = currentMonthYear.split('-').map(Number);
+  const loadData = async () => {
+    if (!user) return;
+    try {
+      setLoading(true);
+      
+      const [instancesRes, templatesRes] = await Promise.all([
+        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
+        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true)
+      ]);
 
-    // 1. Contas Pontuais (Apenas instâncias deste mês)
-    const totalPontuais = accounts.filter(a => a.billing_type === 'single').reduce((s, c) => s + Number(c.amount), 0);
+      const rawAccounts = (instancesRes.data ?? []) as any[];
+      const rawTemplates = (templatesRes.data ?? []) as any[];
 
-    // 2. Contas Mensais - Priorizar instância deste mês
-    const monthlyTemplates = templates.filter(t => {
-      if (t.billing_type !== 'monthly') return false;
-      if (!t.start_date) return true;
-      const [sYear, sMonth] = t.start_date.split('-').map(Number);
-      return (currYear > sYear) || (currYear === sYear && currMonth >= sMonth);
+      // SINCRONIZAR (Dívidas ➔ Contas)
+      const debtTemplates = rawTemplates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0));
+      const syncAccounts = sincronizarDividas(rawAccounts, debtTemplates);
+
+      // MAPEAR PARA ESTRUTURA ÚNICA
+      const mappedAccounts = syncAccounts.map(a => ({
+        id: a.id,
+        nome: a.name || a.nome,
+        valor: Number(a.amount || a.valor || 0),
+        tipo: a.billing_type || a.tipo,
+        vencimento: a.due_day ? `${currentMonthYear}-${String(a.due_day).padStart(2, '0')}` : (a.vencimento || a.month_year),
+        status: (a.paid || a.status === "pago") ? "pago" : "pendente",
+        parcela: a.remaining_months,
+        parent_id: a.parent_id,
+        account_category: a.account_category || "expense"
+      }));
+
+      setAccounts(mappedAccounts);
+      setTemplates(rawTemplates);
+    } catch (error: any) {
+      toast({ title: "Erro ao carregar contas", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totais = useMemo(() => {
+    return calcularTotaisFinanceiros({
+      contas: accounts.filter(a => a.tipo !== 'divida' && a.tipo !== 'debt'),
+      dividas: accounts.filter(a => a.tipo === 'divida' || a.tipo === 'debt')
     });
+  }, [accounts]);
 
-    const totalMensais = monthlyTemplates.reduce((sum, t) => {
-      const instance = accounts.find(a => a.parent_id === t.id);
-      return sum + Number(instance ? instance.amount : t.amount);
-    }, 0);
+  const totalExpense = totais.gastos;
+  const totalDebt = totais.totalDividas;
 
-    // 3. Dívidas - Priorizar instância deste mês
-    const debtTemplates = templates.filter(t => {
-      if (t.billing_type !== 'debt') return false;
-      const isActive = t.remaining_months === null || t.remaining_months > 0;
-      if (!isActive) return false;
-      if (!t.start_date) return true;
-      const [sYear, sMonth] = t.start_date.split('-').map(Number);
-      return (currYear > sYear) || (currYear === sYear && currMonth >= sMonth);
-    });
-
-    const totalDividas = debtTemplates.reduce((sum, t) => {
-      const instance = accounts.find(a => a.parent_id === t.id);
-      return sum + Number(instance ? instance.amount : t.amount);
-    }, 0);
-
-    return totalMensais + totalPontuais + totalDividas;
-  }, [templates, accounts, currentMonthYear]);
-
-  const totalDebt = useMemo(() => {
-    const [currYear, currMonth] = currentMonthYear.split('-').map(Number);
-
-    // Somente as parcelas de dívidas deste mês (priorizando instâncias)
-    const debtTemplates = templates.filter(t => {
-      if (t.billing_type !== 'debt') return false;
-      const isActive = t.remaining_months === null || t.remaining_months > 0;
-      if (!isActive) return false;
-      if (!t.start_date) return true;
-      const [sYear, sMonth] = t.start_date.split('-').map(Number);
-      return (currYear > sYear) || (currYear === sYear && currMonth >= sMonth);
-    });
-
-    return debtTemplates.reduce((sum, t) => {
-      const instance = accounts.find(a => a.parent_id === t.id);
-      return sum + Number(instance ? instance.amount : t.amount);
-    }, 0);
-  }, [templates, accounts, currentMonthYear]);
 
   const paidHistory = accounts.filter((account) => account.paid).sort((a, b) => (a.month_year > b.month_year ? -1 : 1));
   const historyByMonth = paidHistory.reduce<Record<string, Account[]>>((acc, account) => {

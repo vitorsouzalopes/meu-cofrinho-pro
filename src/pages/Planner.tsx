@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from "@/components/ui/card";
 import { Calculator, Target, BrainCircuit } from "lucide-react";
 import DebtPayoff from "@/components/planner/DebtPayoff";
 import FinancialGoals from "@/components/planner/FinancialGoals";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { calcularTotaisFinanceiros, sincronizarDividas } from "@/lib/finance-utils";
 
 const Planner = () => {
   const { user } = useAuth();
@@ -19,39 +19,39 @@ const Planner = () => {
       const today = new Date();
       const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 
-      const [instancesRes, templatesRes, salaryResponse, extraResponse] = await Promise.all([
-        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
-        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
-        supabase.from("salary" as any).select("amount").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
-        supabase.from("extra_income").select("amount").eq("user_id", user.id).eq("month_year", currentMonthYear)
-      ]);
+      try {
+        const [instancesRes, templatesRes, salaryResponse, extraResponse] = await Promise.all([
+          supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
+          supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
+          supabase.from("salary" as any).select("amount").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
+          supabase.from("extra_income").select("amount").eq("user_id", user.id).eq("month_year", currentMonthYear)
+        ]);
 
-      const salary = salaryResponse.data ? Number((salaryResponse.data as { amount: number }).amount) : 0;
-      const extra = extraResponse.data ? extraResponse.data.reduce((acc: number, curr: { amount: number }) => acc + Number(curr.amount), 0) : 0;
-      
-      const instances = (instancesRes.data ?? []) as any[];
-      const templates = (templatesRes.data ?? []) as any[];
+        const salary = salaryResponse.data ? Number((salaryResponse.data as any).amount) : 0;
+        const extra = extraResponse.data ? extraResponse.data.reduce((acc: number, curr: any) => acc + Number(curr.amount), 0) : 0;
+        
+        const rawAccounts = (instancesRes.data ?? []) as any[];
+        const rawTemplates = (templatesRes.data ?? []) as any[];
 
-      // LÓGICA DE CÁLCULO MENSAL (CONFORME REGRAS) - Instance-First
-      const totalPontuais = instances.filter(a => a.billing_type === 'single').reduce((s, c) => s + Number(c.amount), 0);
-      
-      const monthlyTemplates = templates.filter(t => t.billing_type === 'monthly');
-      const totalMensais = monthlyTemplates.reduce((sum, t) => {
-        const instance = instances.find(a => a.parent_id === t.id);
-        return sum + Number(instance ? instance.amount : t.amount);
-      }, 0);
+        // SINCRONIZAR (Dívidas ➔ Contas)
+        const debtTemplates = rawTemplates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0));
+        const syncAccounts = sincronizarDividas(rawAccounts, debtTemplates);
 
-      const debtTemplates = templates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0));
-      const totalDividas = debtTemplates.reduce((sum, t) => {
-        const instance = instances.find(a => a.parent_id === t.id);
-        return sum + Number(instance ? instance.amount : t.amount);
-      }, 0);
+        // CALCULAR TOTAIS
+        const results = calcularTotaisFinanceiros({
+          salario: salary,
+          extra: extra,
+          contas: syncAccounts.filter(a => a.billing_type !== 'debt' && a.tipo !== 'divida'),
+          dividas: syncAccounts.filter(a => a.billing_type === 'debt' || a.tipo === 'divida')
+        });
 
-      const totalExpenses = totalMensais + totalPontuais + totalDividas;
-
-      setInitialIncome(salary + extra);
-      setInitialExpenses(totalExpenses);
-      setLoading(false);
+        setInitialIncome(results.renda);
+        setInitialExpenses(results.gastos);
+      } catch (error) {
+        console.error("Erro no Planner:", error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchData();
   }, [user]);
