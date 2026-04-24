@@ -124,7 +124,7 @@ const Today = () => {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [user?.id]); // Refresh on mount or user change
 
   // 4. CALCULAR TOTAIS (Usando o motor central)
   const totais = useMemo(() => {

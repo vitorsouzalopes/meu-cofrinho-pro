@@ -57,10 +57,11 @@ export function sincronizarDividas(contas: any[], dividas: any[]) {
 export function resolverContasDoMes(instancias: any[], templates: any[], currentMonthYear: string) {
   const [currYear, currMonth] = currentMonthYear.split('-').map(Number);
   
-  // 1. Filtrar templates que já começaram e estão ativos
+  // 1. Filtrar templates que estão ativos
   const templatesAtivos = templates.filter(t => {
     if (!t.start_date) return true;
     const [sYear, sMonth] = t.start_date.split('-').map(Number);
+    // Verifica se o template já deveria ter começado
     const jaComecou = (currYear > sYear) || (currYear === sYear && currMonth >= sMonth);
     const aindaAtivo = t.billing_type !== 'debt' || (t.remaining_months === null || t.remaining_months > 0);
     return jaComecou && aindaAtivo;
@@ -70,9 +71,15 @@ export function resolverContasDoMes(instancias: any[], templates: any[], current
 
   // 2. Para cada template, se não houver instância, adiciona como virtual
   templatesAtivos.forEach(t => {
-    const temInstancia = instancias.some(i => i.parent_id === t.id || (i.name === t.name && i.billing_type === t.billing_type));
+    // Verifica se já existe uma instância real para este template neste mês
+    const temInstancia = instancias.some(i => i.parent_id === t.id);
     
-    if (!temInstancia) {
+    // IMPORTANTE: Se o usuário deletou a instância real, ela não está em 'instancias'.
+    // No momento, não temos uma tabela de 'exclusões', então ele reapareceria como virtual.
+    // Para evitar confusão, se for uma conta mensal/dívida, só mostramos o virtual se não houver NADA com aquele nome também.
+    const temNomeIgual = instancias.some(i => i.name === t.name);
+
+    if (!temInstancia && !temNomeIgual) {
       listaFinal.push({
         ...t,
         id: `virtual-${t.id}`,

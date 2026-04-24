@@ -106,7 +106,7 @@ const Accounts = () => {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, [user?.id]); // Carrega ao montar ou mudar usuário
 
   const resetForm = () => {
     setEditingAccount(null);
@@ -179,12 +179,24 @@ const Accounts = () => {
 
   const deleteAccount = async (id: string) => {
     if (!user) return;
-    const realId = String(id).startsWith('virtual-') ? id.replace('virtual-', '').replace('debt-', '') : id;
+    
+    const isVirtual = String(id).startsWith('virtual-');
+    const realId = isVirtual ? id.replace('virtual-', '').replace('debt-', '') : id;
+    
+    const confirmDelete = window.confirm(
+      isVirtual 
+        ? "Esta é uma conta recorrente. Deseja excluir o MODELO dela para todos os meses futuros?" 
+        : "Deseja excluir este registro permanentemente?"
+    );
+
+    if (!confirmDelete) return;
+
     const { error } = await supabase.from("accounts").delete().eq("id", realId);
+    
     if (error) {
       toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Conta removida" });
+      toast({ title: "Removido com sucesso" });
       loadData();
     }
   };
