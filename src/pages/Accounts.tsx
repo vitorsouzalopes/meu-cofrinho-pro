@@ -354,8 +354,8 @@ const Accounts = () => {
   const { toast } = useToast();
 
   const [selectedMonth, setSelectedMonth] = useState(TODAY_MY);
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [templates, setTemplates] = useState<any[]>([]);
+  // Lista final mesclada: templates + instâncias (sem duplicar)
+  const [displayAccounts, setDisplayAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -365,7 +365,7 @@ const Accounts = () => {
   const [payingAccount, setPayingAccount] = useState<any>(null);
   const [paying, setPaying] = useState(false);
 
-  // ── Carrega dados do mês selecionado ────────────────────────────────────────
+  // ── Carrega e mescla templates + instâncias ──────────────────────────────────
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -385,8 +385,22 @@ const Accounts = () => {
           .eq("is_template", true)
           .order("name", { ascending: true }),
       ]);
-      setAccounts(instRes.data ?? []);
-      setTemplates(tmplRes.data ?? []);
+
+      const instances: any[] = instRes.data ?? [];
+      const templates: any[] = tmplRes.data ?? [];
+
+      // 1. Para cada template, verifica se já há instância no mês
+      //    Se sim, usa a instância (tem status de pagamento correto)
+      //    Se não, usa o template diretamente
+      const merged: any[] = templates.map((t) => {
+        const inst = instances.find((i) => i.parent_id === t.id);
+        return inst ?? t;
+      });
+
+      // 2. Adiciona instâncias SEM parent_id (contas únicas criadas diretamente)
+      const orphans = instances.filter((i) => !i.parent_id);
+
+      setDisplayAccounts([...merged, ...orphans]);
     } catch (e: any) {
       toast({ title: "Erro ao carregar", description: e.message, variant: "destructive" });
     } finally {
@@ -403,38 +417,75 @@ const Accounts = () => {
 
   // ── Exclusão ────────────────────────────────────────────────────────────────
   const deleteAccount = async (account: any) => {
-    if (!window.confirm(`Excluir "${account.name}"? Esta ação não pode ser desfeita.`)) return;
+    const isTemplate = account.is_template === true;
 
-    // Deleta a instância (ou template se for mensal/dívida)
-    const { error } = await supabase.from("accounts").delete().eq("id", account.id);
+    if (isTemplate) {
+      // Conta recorrente (mensal/dívida): oferece escolha
+      const deleteAll = window.confirm(
+        `"${account.name}" é uma conta recorrente.\n\nClique OK para excluir PERMANENTEMENTE (remove de todos os meses).\nClique Cancelar para manter — ou use a opção de exclusão do mês específico.`
+      );
+      if (!deleteAll) return;
 
-    // Se for template, limpa também as instâncias do mês atual
-    if (!error && account.is_template) {
+      // Apaga todas as instâncias filhas primeiro
       await supabase
         .from("accounts")
         .delete()
         .eq("user_id", user!.id)
-        .eq("parent_id", account.id)
-        .eq("month_year", selectedMonth);
+        .eq("parent_id", account.id);
+
+      // Apaga o template
+      const { error } = await supabase.from("accounts").delete().eq("id", account.id);
+      if (error) {
+        toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+        return;
+      }
+    } else {
+      // Conta única / instância pontual: exclui diretamente
+      if (!window.confirm(`Excluir "${account.name}"?`)) return;
+      const { error } = await supabase.from("accounts").delete().eq("id", account.id);
+      if (error) {
+        toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+        return;
+      }
     }
 
-    if (error) {
-      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Conta excluída!" });
-      window.dispatchEvent(new CustomEvent("finance-data-updated"));
-      load();
-    }
+    toast({ title: "Conta excluída!" });
+    window.dispatchEvent(new CustomEvent("finance-data-updated"));
+    load();
   };
 
   // ── Pagamento ───────────────────────────────────────────────────────────────
   const confirmPay = async () => {
     if (!payingAccount || !user) return;
     setPaying(true);
-    const { error } = await supabase
-      .from("accounts")
-      .update({ paid: true, paid_at: new Date().toISOString() })
-      .eq("id", payingAccount.id);
+
+    let error: any = null;
+
+    if (payingAccount.is_template) {
+      // Cria instância real para o mês e já marca como paga
+      const { error: insertError } = await supabase.from("accounts").insert({
+        user_id: user.id,
+        parent_id: payingAccount.id,
+        name: payingAccount.name,
+        amount: payingAccount.amount,
+        billing_type: payingAccount.billing_type,
+        due_day: payingAccount.due_day,
+        account_type: payingAccount.account_type || "Outros",
+        month_year: selectedMonth,
+        is_template: false,
+        paid: true,
+        paid_at: new Date().toISOString(),
+      });
+      error = insertError;
+    } else {
+      // Já é instância real — atualiza diretamente
+      const { error: updateError } = await supabase
+        .from("accounts")
+        .update({ paid: true, paid_at: new Date().toISOString() })
+        .eq("id", payingAccount.id);
+      error = updateError;
+    }
+
     setPaying(false);
     if (error) {
       toast({ title: "Erro ao pagar", variant: "destructive" });
@@ -447,9 +498,9 @@ const Accounts = () => {
   };
 
   // ── Derivações ──────────────────────────────────────────────────────────────
-  const monthly = accounts.filter((a) => a.billing_type === "monthly");
-  const debts = accounts.filter((a) => a.billing_type === "debt");
-  const singles = accounts.filter((a) => a.billing_type === "single");
+  const monthly = displayAccounts.filter((a) => a.billing_type === "monthly");
+  const debts = displayAccounts.filter((a) => a.billing_type === "debt");
+  const singles = displayAccounts.filter((a) => a.billing_type === "single");
 
   const totalMonthly = monthly.reduce((s, a) => s + Number(a.amount), 0);
   const totalDebts = debts.reduce((s, a) => s + Number(a.amount), 0);
