@@ -34,6 +34,8 @@ const ProfilePage = () => {
   const [pushEnabled, setPushEnabled] = useState(false);
   const [registeringPush, setRegisteringPush] = useState(false);
 
+  const [templates, setTemplates] = useState<Account[]>([]);
+
   useEffect(() => {
     if (!user) return;
     const fetch = async () => {
@@ -41,9 +43,10 @@ const ProfilePage = () => {
       const today = new Date();
       const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 
-      const [profRes, accRes, invRes] = await Promise.all([
+      const [profRes, instancesRes, templatesRes, invRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).single(),
-        supabase.from("accounts").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear),
+        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
+        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
         supabase.from("investments").select("*").eq("user_id", user.id),
       ]);
 
@@ -51,7 +54,8 @@ const ProfilePage = () => {
         setProfile(profRes.data as Profile);
         setDisplayName(profRes.data.display_name || "");
       }
-      setAccounts((accRes.data ?? []) as Account[]);
+      setAccounts((instancesRes.data ?? []) as Account[]);
+      setTemplates((templatesRes.data ?? []) as Account[]);
       setInvestments((invRes.data ?? []) as Investment[]);
       setLoading(false);
     };
@@ -59,12 +63,19 @@ const ProfilePage = () => {
   }, [user]);
 
   const summary = useMemo(() => {
-    const totalAccounts = accounts.reduce((s, a) => s + Number(a.amount), 0);
+    const totalMensais = templates.filter(t => t.billing_type === 'monthly').reduce((s, c) => s + Number(c.amount), 0);
+    const totalPontuais = accounts.filter(a => a.billing_type === 'single').reduce((s, c) => s + Number(c.amount), 0);
+    const totalDividas = templates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0)).reduce((s, d) => s + Number(d.amount), 0);
+    
+    const totalAccounts = totalMensais + totalPontuais + totalDividas;
+    
+    // For paid/pending, we still look at instances because templates don't have 'paid' status
     const totalPaid = accounts.filter(a => a.paid).reduce((s, a) => s + Number(a.amount), 0);
-    const totalPending = accounts.filter(a => !a.paid).reduce((s, a) => s + Number(a.amount), 0);
+    const totalPending = totalAccounts - totalPaid;
+    
     const totalInvested = investments.reduce((s, i) => s + Number(i.current_amount ?? i.amount), 0);
     return { totalAccounts, totalPaid, totalPending, totalInvested };
-  }, [accounts, investments]);
+  }, [accounts, templates, investments]);
 
   const handleSave = async () => {
     if (!user) return;

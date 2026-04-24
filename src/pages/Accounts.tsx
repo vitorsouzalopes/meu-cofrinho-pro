@@ -58,6 +58,8 @@ const Accounts = () => {
   const [remainingMonths, setRemainingMonths] = useState("");
   const [totalDebtAmount, setTotalDebtAmount] = useState("");
 
+  const [templates, setTemplates] = useState<Account[]>([]);
+
   const loadAccounts = useCallback(async () => {
     if (!user) {
       setLoading(false);
@@ -66,30 +68,36 @@ const Accounts = () => {
     setLoading(true);
 
     try {
-      // Load all current accounts (non-templates for this month)
-      const { data, error } = await supabase
-        .from("accounts")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("is_template", false)
-        .eq("month_year", currentMonthYear)
-        .order("due_day", { ascending: true });
+      // Load all current accounts (non-templates for this month) and all templates
+      const [instancesResponse, templatesResponse, paymentsResponse] = await Promise.all([
+        supabase
+          .from("accounts")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("is_template", false)
+          .eq("month_year", currentMonthYear)
+          .order("due_day", { ascending: true }),
+        supabase
+          .from("accounts")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("is_template", true),
+        // Load payments history for the last 6 months
+        supabase
+          .from("account_payments")
+          .select("*")
+          .gte("created_at", new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString())
+          .order("paid_at", { ascending: false })
+      ]);
 
-      if (error) throw error;
-      setAccounts((data ?? []) as Account[]);
+      if (instancesResponse.error) throw instancesResponse.error;
+      if (templatesResponse.error) throw templatesResponse.error;
 
-      // Load payments history for the last 6 months
-      const sixMonthsAgo = new Date();
-      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-      
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from("account_payments")
-        .select("*")
-        .gte("created_at", sixMonthsAgo.toISOString())
-        .order("paid_at", { ascending: false });
+      setAccounts((instancesResponse.data ?? []) as Account[]);
+      setTemplates((templatesResponse.data ?? []) as Account[]);
 
-      if (!paymentsError && paymentsData) {
-        setPaymentsHistory(paymentsData as AccountPayment[]);
+      if (!paymentsResponse.error && paymentsResponse.data) {
+        setPaymentsHistory(paymentsResponse.data as AccountPayment[]);
       }
 
     } catch (error: any) {
@@ -324,8 +332,16 @@ const Accounts = () => {
     return diff >= 0 && diff <= 7;
   });
 
-  const totalExpense = currentMonthExpenseAccounts.filter(a => !a.paid).reduce((sum, account) => sum + Number(account.amount), 0);
-  const totalDebt = debtAccounts.reduce((sum, account) => sum + Number(account.amount), 0);
+  const totalExpense = useMemo(() => {
+    const totalMensais = templates.filter(t => t.billing_type === 'monthly').reduce((s, c) => s + Number(c.amount), 0);
+    const totalPontuais = accounts.filter(a => a.billing_type === 'single').reduce((s, c) => s + Number(c.amount), 0);
+    const totalDividas = templates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0)).reduce((s, d) => s + Number(d.amount), 0);
+    return totalMensais + totalPontuais + totalDividas;
+  }, [templates, accounts]);
+
+  const totalDebt = useMemo(() => {
+    return templates.filter(t => t.billing_type === 'debt' && (t.remaining_months === null || t.remaining_months > 0)).reduce((s, d) => s + Number(d.amount), 0);
+  }, [templates]);
 
   const paidHistory = accounts.filter((account) => account.paid).sort((a, b) => (a.month_year > b.month_year ? -1 : 1));
   const historyByMonth = paidHistory.reduce<Record<string, Account[]>>((acc, account) => {
