@@ -129,22 +129,64 @@ export type Database = {
       }
       extra_income: {
         Row: {
-          data: string | null
-          descricao: string | null
+          amount: number
+          created_at: string
+          date: string
+          description: string
           id: string
-          valor: number | null
+          month_year: string
+          user_id: string
         }
         Insert: {
-          data?: string | null
-          descricao?: string | null
+          amount: number
+          created_at?: string
+          date?: string
+          description: string
           id?: string
-          valor?: number | null
+          month_year: string
+          user_id: string
         }
         Update: {
-          data?: string | null
-          descricao?: string | null
+          amount?: number
+          created_at?: string
+          date?: string
+          description?: string
           id?: string
-          valor?: number | null
+          month_year?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      goals: {
+        Row: {
+          created_at: string
+          id: string
+          is_auto: boolean
+          monthly_amount: number
+          name: string
+          priority: number
+          target_amount: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_auto?: boolean
+          monthly_amount?: number
+          name: string
+          priority?: number
+          target_amount: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_auto?: boolean
+          monthly_amount?: number
+          name?: string
+          priority?: number
+          target_amount?: number
+          user_id?: string
         }
         Relationships: []
       }
