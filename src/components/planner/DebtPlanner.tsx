@@ -48,7 +48,7 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
   const [valorTotal, setValorTotal] = useState("");
   const [valorRestante, setValorRestante] = useState("");
   const [parcelaMensal, setParcelaMensal] = useState("");
-  const [totalParcelas, setTotalParcelas] = useState("");
+  const [totalParcelasInput, setTotalParcelasInput] = useState("");
   const [parcelasRestantes, setParcelasRestantes] = useState("");
   const [jurosMensal, setJurosMensal] = useState(""); // em %
   const [diaVencimento, setDiaVencimento] = useState("10");
@@ -79,7 +79,7 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
   const reset = () => {
     setEditing(null);
     setNome(""); setTipo("credito"); setValorTotal(""); setValorRestante("");
-    setParcelaMensal(""); setTotalParcelas(""); setParcelasRestantes("");
+    setParcelaMensal(""); setTotalParcelasInput(""); setParcelasRestantes("");
     setJurosMensal(""); setDiaVencimento("10");
   };
 
@@ -89,7 +89,7 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
     setValorTotal(String(d.valor_total));
     setValorRestante(String(d.valor_restante));
     setParcelaMensal(String(d.parcela_mensal));
-    setTotalParcelas(d.total_parcelas ? String(d.total_parcelas) : "");
+    setTotalParcelasInput(d.total_parcelas ? String(d.total_parcelas) : "");
     setParcelasRestantes(d.parcelas_restantes ? String(d.parcelas_restantes) : "");
     setJurosMensal(String((d.juros_mensal || 0) * 100));
     setDiaVencimento(String(d.dia_vencimento));
@@ -108,7 +108,7 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
       valor_total: parseFloat(valorTotal || valorRestante),
       valor_restante: parseFloat(valorRestante),
       parcela_mensal: parseFloat(parcelaMensal),
-      total_parcelas: totalParcelas ? parseInt(totalParcelas) : null,
+      total_parcelas: totalParcelasInput ? parseInt(totalParcelasInput) : null,
       parcelas_restantes: parcelasRestantes ? parseInt(parcelasRestantes) : null,
       juros_mensal: parseFloat(jurosMensal || "0") / 100,
       dia_vencimento: parseInt(diaVencimento || "1"),
@@ -144,7 +144,7 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
 
   // Totais agregados
   const totalRestante = debts.reduce((s, d) => s + Number(d.valor_restante || 0), 0);
-  const totalParcelas = debts.reduce((s, d) => s + Number(d.parcela_mensal || 0), 0);
+  const totalParcelasMes = debts.reduce((s, d) => s + Number(d.parcela_mensal || 0), 0);
   const dividasOrdenadas = ordenarDividasPorJuros(debts);
 
   if (loading) {
@@ -165,7 +165,7 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
         </Card>
         <Card className="p-4 bg-card border-border/50">
           <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Parcelas/mês</p>
-          <p className="text-lg font-bold text-foreground">{formatBRL(totalParcelas)}</p>
+          <p className="text-lg font-bold text-foreground">{formatBRL(totalParcelasMes)}</p>
         </Card>
       </div>
 
@@ -374,7 +374,7 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Total Parc.</label>
-                <Input type="number" value={totalParcelas} onChange={(e) => setTotalParcelas(e.target.value)} placeholder="—" className="bg-muted h-12 rounded-xl mt-1" />
+                <Input type="number" value={totalParcelasInput} onChange={(e) => setTotalParcelasInput(e.target.value)} placeholder="—" className="bg-muted h-12 rounded-xl mt-1" />
               </div>
               <div>
                 <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Restantes</label>
