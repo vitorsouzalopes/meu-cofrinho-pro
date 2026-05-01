@@ -1,0 +1,1 @@
+ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS current_amount numeric NOT NULL DEFAULT 0;

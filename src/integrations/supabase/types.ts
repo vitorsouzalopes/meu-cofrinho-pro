@@ -30,6 +30,7 @@ export type Database = {
           paid: boolean
           paid_at: string | null
           parent_id: string | null
+          receipt_url: string | null
           remaining_months: number | null
           start_date: string
           total_debt_amount: number | null
@@ -50,6 +51,7 @@ export type Database = {
           paid?: boolean
           paid_at?: string | null
           parent_id?: string | null
+          receipt_url?: string | null
           remaining_months?: number | null
           start_date?: string
           total_debt_amount?: number | null
@@ -70,6 +72,7 @@ export type Database = {
           paid?: boolean
           paid_at?: string | null
           parent_id?: string | null
+          receipt_url?: string | null
           remaining_months?: number | null
           start_date?: string
           total_debt_amount?: number | null
@@ -85,6 +88,65 @@ export type Database = {
           },
         ]
       }
+      app_config: {
+        Row: {
+          created_at: string
+          download_url: string
+          id: string
+          message: string
+          min_version: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          download_url?: string
+          id?: string
+          message?: string
+          min_version?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          download_url?: string
+          id?: string
+          message?: string
+          min_version?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      challenge_progress: {
+        Row: {
+          amount_saved: number
+          created_at: string
+          id: string
+          status_date: string
+          user_challenge_id: string
+        }
+        Insert: {
+          amount_saved?: number
+          created_at?: string
+          id?: string
+          status_date: string
+          user_challenge_id: string
+        }
+        Update: {
+          amount_saved?: number
+          created_at?: string
+          id?: string
+          status_date?: string
+          user_challenge_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "challenge_progress_user_challenge_id_fkey"
+            columns: ["user_challenge_id"]
+            isOneToOne: false
+            referencedRelation: "user_challenges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
@@ -96,6 +158,7 @@ export type Database = {
           frequency: string | null
           id: string
           next_due_date: string | null
+          receipt_url: string | null
           type: string | null
           user_id: string
         }
@@ -109,6 +172,7 @@ export type Database = {
           frequency?: string | null
           id?: string
           next_due_date?: string | null
+          receipt_url?: string | null
           type?: string | null
           user_id: string
         }
@@ -122,6 +186,7 @@ export type Database = {
           frequency?: string | null
           id?: string
           next_due_date?: string | null
+          receipt_url?: string | null
           type?: string | null
           user_id?: string
         }
@@ -160,6 +225,7 @@ export type Database = {
       goals: {
         Row: {
           created_at: string
+          current_amount: number
           id: string
           is_auto: boolean
           monthly_amount: number
@@ -170,6 +236,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          current_amount?: number
           id?: string
           is_auto?: boolean
           monthly_amount?: number
@@ -180,6 +247,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          current_amount?: number
           id?: string
           is_auto?: boolean
           monthly_amount?: number
@@ -312,6 +380,33 @@ export type Database = {
           telegram_chat_id?: number | null
           telegram_user_id?: number | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_challenges: {
+        Row: {
+          challenge_id: string
+          created_at: string
+          id: string
+          start_date: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          challenge_id: string
+          created_at?: string
+          id?: string
+          start_date?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          challenge_id?: string
+          created_at?: string
+          id?: string
+          start_date?: string
+          status?: string
           user_id?: string
         }
         Relationships: []
