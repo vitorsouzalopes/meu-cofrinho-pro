@@ -177,8 +177,19 @@ const Goals = () => {
         <h1 className="text-2xl font-bold text-foreground">Objetivos e Metas</h1>
       </div>
 
-      {/* Summary Section */}
-      <div className="grid grid-cols-2 gap-4 mb-8 animate-slide-up">
+      <Tabs defaultValue="metas" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6 bg-card border border-border">
+          <TabsTrigger value="metas" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+            <Target className="w-4 h-4 mr-1.5" /> Metas
+          </TabsTrigger>
+          <TabsTrigger value="dividas" className="data-[state=active]:bg-destructive/20 data-[state=active]:text-destructive">
+            <TrendingDown className="w-4 h-4 mr-1.5" /> Planejamento de Dívidas
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="metas" className="space-y-6 animate-in fade-in-50">
+          {/* Summary Section */}
+          <div className="grid grid-cols-2 gap-4 mb-2 animate-slide-up">
         <Card className="p-5 bg-primary shadow-xl shadow-primary/20 border-none">
           <p className="text-white/70 text-[10px] uppercase font-bold mb-1">Total Metas</p>
           <p className="text-xl font-bold text-white">{formatCurrency(goals.reduce((s, g) => s + g.target_amount, 0))}</p>
