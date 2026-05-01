@@ -1,14 +1,17 @@
 import { useEffect, useState, useCallback } from "react";
-import { ArrowLeft, Plus, Target, TrendingUp, Edit2, PlusCircle, Trash2, Info, ChevronRight } from "lucide-react";
+import { ArrowLeft, Plus, Target, TrendingUp, Edit2, PlusCircle, Trash2, ChevronRight, Wallet, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import DebtPlanner from "@/components/planner/DebtPlanner";
+import { calcularTotaisFinanceiros } from "@/lib/finance-utils";
 
 const DEFAULT_INTEREST = 0.008; // 0.8% a.m.
 
