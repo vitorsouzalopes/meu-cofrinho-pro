@@ -6,69 +6,6 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Expense {
-  id: string
-  user_id: string
-  description: string
-  amount: number
-  category: string
-  date: string
-  type: 'unique' | 'recurring'
-  frequency?: 'monthly' | 'weekly' | 'daily'
-  due_date?: number
-  next_due_date?: string
-  created_at: string
-}
-
-export interface TelegramConfig {
-  id: string
-  user_id: string
-  telegram_user_id: number
-  telegram_chat_id: number
-  telegram_username?: string
-  bot_token: string
-  reminder_days_before: number
-  enabled: boolean
-  created_at: string
-  updated_at: string
-}
-
-export interface ExpenseChecklist {
-  id: string
-  user_id: string
-  expense_id: string
-  month_year: string
-  paid: boolean
-  proof_url?: string
-  paid_at?: string
-  created_at: string
-}
-
-export type Account = Database["public"]["Tables"]["accounts"]["Row"]
-
-export type Investment = Database["public"]["Tables"]["investments"]["Row"]
-
-export interface ReminderLog {
-  id: string
-  user_id: string
-  expense_id: string
-  month_year: string
-  reminder_sent_at?: string
-  reminder_type: 'two_days' | 'one_day' | 'due_date'
-  created_at: string
-}
-
-export interface AccountPayment {
-  id: string
-  user_id: string
-  account_id: string
-  month_year: string
-  amount: number
-  paid_at?: string
-  receipt_url?: string
-  created_at: string
-}
-
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
@@ -87,14 +24,16 @@ export type Database = {
           created_at: string
           due_day: number
           id: string
+          is_template: boolean | null
           month_year: string
           name: string
           paid: boolean
           paid_at: string | null
-          start_date: string
-          user_id: string
+          parent_id: string | null
           remaining_months: number | null
+          start_date: string
           total_debt_amount: number | null
+          user_id: string
         }
         Insert: {
           account_category?: string
@@ -105,14 +44,16 @@ export type Database = {
           created_at?: string
           due_day?: number
           id?: string
+          is_template?: boolean | null
           month_year: string
           name: string
           paid?: boolean
           paid_at?: string | null
-          start_date?: string
-          user_id: string
+          parent_id?: string | null
           remaining_months?: number | null
+          start_date?: string
           total_debt_amount?: number | null
+          user_id: string
         }
         Update: {
           account_category?: string
@@ -123,91 +64,26 @@ export type Database = {
           created_at?: string
           due_day?: number
           id?: string
+          is_template?: boolean | null
           month_year?: string
           name?: string
           paid?: boolean
           paid_at?: string | null
-          start_date?: string
-          user_id?: string
-          remaining_months?: number | null
-          total_debt_amount?: number | null
-          is_template?: boolean
           parent_id?: string | null
+          remaining_months?: number | null
+          start_date?: string
+          total_debt_amount?: number | null
+          user_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "accounts_parent_id_fkey"
             columns: ["parent_id"]
+            isOneToOne: false
             referencedRelation: "accounts"
             referencedColumns: ["id"]
-          }
+          },
         ]
-      }
-      account_payments: {
-        Row: {
-          id: string
-          user_id: string
-          account_id: string
-          month_year: string
-          amount: number
-          paid_at: string | null
-          receipt_url: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          account_id: string
-          month_year: string
-          amount: number
-          paid_at?: string | null
-          receipt_url?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          account_id?: string
-          month_year?: string
-          amount?: number
-          paid_at?: string | null
-          receipt_url?: string | null
-          created_at?: string
-        }
-        Relationships: []
-      }
-      goals: {
-        Row: {
-          id: string
-          user_id: string
-          name: string
-          target_amount: number
-          monthly_amount: number
-          priority: number
-          is_auto: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          name: string
-          target_amount: number
-          monthly_amount?: number
-          priority?: number
-          is_auto?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          name?: string
-          target_amount?: number
-          monthly_amount?: number
-          priority?: number
-          is_auto?: boolean
-          created_at?: string
-        }
-        Relationships: []
       }
       expenses: {
         Row: {
@@ -248,6 +124,27 @@ export type Database = {
           next_due_date?: string | null
           type?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      extra_income: {
+        Row: {
+          data: string | null
+          descricao: string | null
+          id: string
+          valor: number | null
+        }
+        Insert: {
+          data?: string | null
+          descricao?: string | null
+          id?: string
+          valor?: number | null
+        }
+        Update: {
+          data?: string | null
+          descricao?: string | null
+          id?: string
+          valor?: number | null
         }
         Relationships: []
       }
@@ -294,7 +191,6 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
-          phone: string | null
           updated_at: string
         }
         Insert: {
@@ -303,7 +199,6 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id: string
-          phone?: string | null
           updated_at?: string
         }
         Update: {
@@ -312,11 +207,10 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
-          phone?: string | null
           updated_at?: string
         }
         Relationships: []
-      },
+      }
       salary: {
         Row: {
           amount: number
@@ -394,60 +288,6 @@ export type Database = {
         Update: {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
-        }
-        Relationships: []
-      },
-      extra_income: {
-        Row: {
-          amount: number
-          created_at: string
-          date: string
-          description: string
-          id: string
-          month_year: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          date?: string
-          description: string
-          id?: string
-          month_year: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          date?: string
-          description?: string
-          id?: string
-          month_year?: string
-          user_id?: string
-        }
-        Relationships: []
-      },
-      push_tokens: {
-        Row: {
-          created_at: string
-          id: string
-          platform: string | null
-          token: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          platform?: string | null
-          token: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          platform?: string | null
-          token?: string
           user_id?: string
         }
         Relationships: []
