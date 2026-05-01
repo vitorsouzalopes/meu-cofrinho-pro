@@ -74,7 +74,7 @@ const History = () => {
           date: e.date,
           type: "expense",
           category: e.category,
-          receipt_url: e.receipt_url || undefined,
+          receipt_url: undefined,
           month_year: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
         });
       });
@@ -91,7 +91,7 @@ const History = () => {
           amount: Number(a.amount),
           date: dateStr,
           type: "bill",
-          receipt_url: a.receipt_url || undefined,
+          receipt_url: undefined,
           month_year: my,
         });
       });
