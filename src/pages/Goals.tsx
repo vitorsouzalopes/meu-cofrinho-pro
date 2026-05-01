@@ -282,15 +282,21 @@ const Goals = () => {
             );
           })
         )}
-      </div>
+          </div>
 
-      {/* FAB */}
-      <Button 
-        className="fixed bottom-24 right-8 w-14 h-14 rounded-full bg-primary shadow-2xl shadow-primary/40 p-0 flex items-center justify-center animate-bounce-slow"
-        onClick={() => { resetForm(); setIsDialogOpen(true); }}
-      >
-        <Plus className="w-7 h-7 text-white" />
-      </Button>
+          {/* FAB Metas */}
+          <Button
+            className="fixed bottom-24 right-8 w-14 h-14 rounded-full bg-primary shadow-2xl shadow-primary/40 p-0 flex items-center justify-center animate-bounce-slow z-10"
+            onClick={() => { resetForm(); setIsDialogOpen(true); }}
+          >
+            <Plus className="w-7 h-7 text-white" />
+          </Button>
+        </TabsContent>
+
+        <TabsContent value="dividas" className="animate-in fade-in-50">
+          <DebtPlanner initialIncome={income} initialExpenses={expenses} />
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)] rounded-3xl">
