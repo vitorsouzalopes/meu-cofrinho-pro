@@ -37,6 +37,8 @@ const Goals = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<any>(null);
+  const [income, setIncome] = useState(0);
+  const [expenses, setExpenses] = useState(0);
 
   const [name, setName] = useState("");
   const [targetAmount, setTargetAmount] = useState("");
