@@ -7,6 +7,7 @@
       "dependencies": {
         "@capacitor/app": "^4.1.0",
         "@capacitor/core": "^4.8.2",
+        "@capacitor/push-notifications": "^4.0.0",
         "@hookform/resolvers": "^3.10.0",
         "@radix-ui/react-accordion": "^1.2.11",
         "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -109,6 +110,8 @@
     "@capacitor/cli": ["@capacitor/cli@4.8.2", "", { "dependencies": { "@ionic/cli-framework-output": "2.2.5", "@ionic/utils-fs": "3.1.6", "@ionic/utils-subprocess": "2.1.11", "@ionic/utils-terminal": "2.3.3", "commander": "^9.3.0", "debug": "^4.3.4", "env-paths": "^2.2.0", "kleur": "^4.1.4", "native-run": "^1.6.0", "open": "^8.4.0", "plist": "^3.0.5", "prompts": "^2.4.2", "rimraf": "^3.0.2", "semver": "^7.3.7", "tar": "^6.1.11", "tslib": "^2.4.0", "xml2js": "^0.5.0" }, "bin": { "cap": "bin/capacitor", "capacitor": "bin/capacitor" } }, "sha512-jOpuajj8Qp5XgWEEC5vxEJcs9HkwSceW8fpvFIFssA/JuS9HeKCurGgpsAWiEHSfpqQevhxISg0l0MEwTpr/JA=="],
 
     "@capacitor/core": ["@capacitor/core@4.8.2", "", { "dependencies": { "tslib": "^2.1.0" } }, "sha512-lrDvHyQu3LWWWXkCkHATY8D3GCBIWyqnmQUiGxlTJfu9BEdmfflq+OZuDKIy4H+KYChaXM1QnymNIuWrDFXgXw=="],
+
+    "@capacitor/push-notifications": ["@capacitor/push-notifications@4.1.2", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@capacitor/push-notifications/-/push-notifications-4.1.2.tgz", { "peerDependencies": { "@capacitor/core": "^4.0.0" } }, "sha512-ok6CGvedwK1azmf8VWhrNlg6jhi4PFz3HoyS0GNE2ew7+JGnxN77sgK5q1TVzdkge+vkqipO6uu5bD1xfj/pWQ=="],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.21.5", "", { "os": "aix", "cpu": "ppc64" }, "sha512-1SDgH6ZSPTlggy1yI6+Dbkiz8xzpHJEVAlF/AM1tHPLsf5STom9rwtjE4hKAF20FfXXNTFqEYXyJNWh1GiZedQ=="],
 

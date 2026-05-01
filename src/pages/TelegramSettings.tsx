@@ -50,7 +50,7 @@ const TelegramSettings = () => {
       
       if (prof) {
         setProfile(prof);
-        setPhone(prof.phone || "");
+        setPhone((prof as any).phone || "");
       }
       setLoading(false);
     };

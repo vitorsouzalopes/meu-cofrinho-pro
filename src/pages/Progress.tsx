@@ -258,7 +258,7 @@ const Progress = () => {
       {/* Calendar */}
       <div className="animate-slide-up" style={{ animationDelay: "0.3s" }}>
         <h3 className="font-heading text-sm font-semibold mb-3">Histórico de Conclusão</h3>
-        <CalendarGrid totalDays={totalDays} completedDays={completedDates} />
+        <CalendarGrid totalDays={totalDays} completedDays={completedDates.map((d) => Number(d)).filter((n) => !isNaN(n))} />
       </div>
     </div>
   );

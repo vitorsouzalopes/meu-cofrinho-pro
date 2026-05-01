@@ -1,4 +1,6 @@
-import { Account } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Account = Tables<"accounts">;
 
 export interface FinanceSummary {
   totalRenda: number;
