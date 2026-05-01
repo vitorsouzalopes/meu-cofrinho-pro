@@ -160,6 +160,7 @@ export type Database = {
       goals: {
         Row: {
           created_at: string
+          current_amount: number
           id: string
           is_auto: boolean
           monthly_amount: number
@@ -170,6 +171,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          current_amount?: number
           id?: string
           is_auto?: boolean
           monthly_amount?: number
@@ -180,6 +182,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          current_amount?: number
           id?: string
           is_auto?: boolean
           monthly_amount?: number
