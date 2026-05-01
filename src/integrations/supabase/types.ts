@@ -147,6 +147,151 @@ export type Database = {
           },
         ]
       }
+      debt_payments: {
+        Row: {
+          created_at: string
+          data_pagamento: string
+          debt_id: string
+          id: string
+          parcelas_quitadas: number
+          tipo_pagamento: string
+          user_id: string
+          valor_pago: number
+        }
+        Insert: {
+          created_at?: string
+          data_pagamento?: string
+          debt_id: string
+          id?: string
+          parcelas_quitadas?: number
+          tipo_pagamento?: string
+          user_id: string
+          valor_pago?: number
+        }
+        Update: {
+          created_at?: string
+          data_pagamento?: string
+          debt_id?: string
+          id?: string
+          parcelas_quitadas?: number
+          tipo_pagamento?: string
+          user_id?: string
+          valor_pago?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debt_payments_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debt_simulations: {
+        Row: {
+          created_at: string
+          debt_id: string
+          economia_juros: number
+          estrategia: string
+          id: string
+          meses_estimados: number
+          sobra_mensal: number
+          total_pago: number
+          user_id: string
+          valor_mensal: number
+        }
+        Insert: {
+          created_at?: string
+          debt_id: string
+          economia_juros?: number
+          estrategia?: string
+          id?: string
+          meses_estimados?: number
+          sobra_mensal?: number
+          total_pago?: number
+          user_id: string
+          valor_mensal?: number
+        }
+        Update: {
+          created_at?: string
+          debt_id?: string
+          economia_juros?: number
+          estrategia?: string
+          id?: string
+          meses_estimados?: number
+          sobra_mensal?: number
+          total_pago?: number
+          user_id?: string
+          valor_mensal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debt_simulations_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debts: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          dia_vencimento: number
+          id: string
+          juros_mensal: number
+          nome: string
+          parcela_mensal: number
+          parcelas_restantes: number | null
+          permite_amortizacao: boolean
+          permite_antecipacao: boolean
+          tipo: string
+          total_parcelas: number | null
+          updated_at: string
+          user_id: string
+          valor_restante: number
+          valor_total: number
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          dia_vencimento?: number
+          id?: string
+          juros_mensal?: number
+          nome: string
+          parcela_mensal?: number
+          parcelas_restantes?: number | null
+          permite_amortizacao?: boolean
+          permite_antecipacao?: boolean
+          tipo?: string
+          total_parcelas?: number | null
+          updated_at?: string
+          user_id: string
+          valor_restante?: number
+          valor_total?: number
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          dia_vencimento?: number
+          id?: string
+          juros_mensal?: number
+          nome?: string
+          parcela_mensal?: number
+          parcelas_restantes?: number | null
+          permite_amortizacao?: boolean
+          permite_antecipacao?: boolean
+          tipo?: string
+          total_parcelas?: number | null
+          updated_at?: string
+          user_id?: string
+          valor_restante?: number
+          valor_total?: number
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           amount: number

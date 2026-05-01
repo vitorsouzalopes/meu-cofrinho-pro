@@ -1,14 +1,17 @@
 import { useEffect, useState, useCallback } from "react";
-import { ArrowLeft, Plus, Target, TrendingUp, Edit2, PlusCircle, Trash2, Info, ChevronRight } from "lucide-react";
+import { ArrowLeft, Plus, Target, TrendingUp, Edit2, PlusCircle, Trash2, ChevronRight, Wallet, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import DebtPlanner from "@/components/planner/DebtPlanner";
+import { calcularTotaisFinanceiros } from "@/lib/finance-utils";
 
 const DEFAULT_INTEREST = 0.008; // 0.8% a.m.
 
@@ -34,6 +37,8 @@ const Goals = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<any>(null);
+  const [income, setIncome] = useState(0);
+  const [expenses, setExpenses] = useState(0);
 
   const [name, setName] = useState("");
   const [targetAmount, setTargetAmount] = useState("");
@@ -59,9 +64,36 @@ const Goals = () => {
     }
   }, [user]);
 
+  const loadFinance = useCallback(async () => {
+    if (!user) return;
+    const today = new Date();
+    const monthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+    try {
+      const [accountsRes, salaryRes, extraRes] = await Promise.all([
+        supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", monthYear),
+        supabase.from("salary" as any).select("amount").eq("user_id", user.id).eq("month_year", monthYear).maybeSingle(),
+        supabase.from("extra_income").select("amount").eq("user_id", user.id).eq("month_year", monthYear),
+      ]);
+      const salary = salaryRes.data ? Number((salaryRes.data as any).amount) : 0;
+      const extra = (extraRes.data || []).reduce((s: number, c: any) => s + Number(c.amount), 0);
+      const accounts = (accountsRes.data || []) as any[];
+      const r = calcularTotaisFinanceiros({
+        salario: salary,
+        extra,
+        contas: accounts.filter(a => a.billing_type !== "debt"),
+        dividas: accounts.filter(a => a.billing_type === "debt"),
+      });
+      setIncome(r.renda);
+      setExpenses(r.gastos);
+    } catch (e) {
+      console.warn("loadFinance:", e);
+    }
+  }, [user]);
+
   useEffect(() => {
     loadGoals();
-  }, [loadGoals]);
+    loadFinance();
+  }, [loadGoals, loadFinance]);
 
   const resetForm = () => {
     setName("");
@@ -145,8 +177,19 @@ const Goals = () => {
         <h1 className="text-2xl font-bold text-foreground">Objetivos e Metas</h1>
       </div>
 
-      {/* Summary Section */}
-      <div className="grid grid-cols-2 gap-4 mb-8 animate-slide-up">
+      <Tabs defaultValue="metas" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6 bg-card border border-border">
+          <TabsTrigger value="metas" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
+            <Target className="w-4 h-4 mr-1.5" /> Metas
+          </TabsTrigger>
+          <TabsTrigger value="dividas" className="data-[state=active]:bg-destructive/20 data-[state=active]:text-destructive">
+            <TrendingDown className="w-4 h-4 mr-1.5" /> Planejamento de Dívidas
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="metas" className="space-y-6 animate-in fade-in-50">
+          {/* Summary Section */}
+          <div className="grid grid-cols-2 gap-4 mb-2 animate-slide-up">
         <Card className="p-5 bg-primary shadow-xl shadow-primary/20 border-none">
           <p className="text-white/70 text-[10px] uppercase font-bold mb-1">Total Metas</p>
           <p className="text-xl font-bold text-white">{formatCurrency(goals.reduce((s, g) => s + g.target_amount, 0))}</p>
@@ -239,15 +282,21 @@ const Goals = () => {
             );
           })
         )}
-      </div>
+          </div>
 
-      {/* FAB */}
-      <Button 
-        className="fixed bottom-24 right-8 w-14 h-14 rounded-full bg-primary shadow-2xl shadow-primary/40 p-0 flex items-center justify-center animate-bounce-slow"
-        onClick={() => { resetForm(); setIsDialogOpen(true); }}
-      >
-        <Plus className="w-7 h-7 text-white" />
-      </Button>
+          {/* FAB Metas */}
+          <Button
+            className="fixed bottom-24 right-8 w-14 h-14 rounded-full bg-primary shadow-2xl shadow-primary/40 p-0 flex items-center justify-center animate-bounce-slow z-10"
+            onClick={() => { resetForm(); setIsDialogOpen(true); }}
+          >
+            <Plus className="w-7 h-7 text-white" />
+          </Button>
+        </TabsContent>
+
+        <TabsContent value="dividas" className="animate-in fade-in-50">
+          <DebtPlanner initialIncome={income} initialExpenses={expenses} />
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)] rounded-3xl">
