@@ -76,6 +76,9 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
 
   useEffect(() => {
     load();
+    const sync = () => load();
+    window.addEventListener("finance-data-updated", sync);
+    return () => window.removeEventListener("finance-data-updated", sync);
   }, [load]);
 
   const reset = () => {
