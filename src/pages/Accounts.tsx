@@ -408,9 +408,10 @@ const AccountCard = ({
 const Accounts = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const invalidate = useInvalidateFinance();
 
   const [selectedMonth, setSelectedMonth] = useState(TODAY_MY);
-  // Lista final mesclada: templates + instâncias (sem duplicar)
   const [displayAccounts, setDisplayAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -421,7 +422,10 @@ const Accounts = () => {
   const [payingAccount, setPayingAccount] = useState<any>(null);
   const [paying, setPaying] = useState(false);
 
-  // ── Carrega e mescla templates + instâncias ──────────────────────────────────
+  // Dívidas (fonte única: tabela `debts`)
+  const { data: debtsData = [] } = useDebts();
+
+  // ── Carrega contas (mensais + únicas, sem dívidas) ──
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -445,15 +449,11 @@ const Accounts = () => {
       const instances: any[] = instRes.data ?? [];
       const templates: any[] = tmplRes.data ?? [];
 
-      // 1. Para cada template, verifica se já há instância no mês
-      //    Se sim, usa a instância (tem status de pagamento correto)
-      //    Se não, usa o template diretamente
       const merged: any[] = templates.map((t) => {
         const inst = instances.find((i) => i.parent_id === t.id);
         return inst ?? t;
       });
 
-      // 2. Adiciona instâncias SEM parent_id (contas únicas criadas diretamente)
       const orphans = instances.filter((i) => !i.parent_id);
 
       setDisplayAccounts([...merged, ...orphans]);
