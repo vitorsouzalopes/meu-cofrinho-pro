@@ -143,6 +143,7 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
     }
     toast({ title: "Dívida removida" });
     load();
+    invalidate();
   };
 
   // Totais agregados
