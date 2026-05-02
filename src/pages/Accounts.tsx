@@ -138,8 +138,7 @@ const AccountForm = ({ open, onClose, onSaved, editing, userId, monthYear }: Acc
 
     if (isDebt) {
       // Dívidas vão para a tabela `debts` (fonte única para Planejamento + Dashboard)
-      const parcelas = parcelas ? null : null; // placeholder; usamos `parcelasInt` abaixo
-      const parcelasInt = parcelas !== "" ? parseInt(parcelas as any, 10) : null;
+      const parcelasInt = parcelas !== "" ? parseInt(parcelas, 10) : null;
       const valorParcela = parseFloat(valor);
       const debtPayload: any = {
         user_id: userId,
