@@ -93,12 +93,13 @@ const Today = () => {
       setLoading(true);
 
       // Consultas individuais para evitar que um erro 404 trave tudo
-      const [resInst, resTemp, resSal, resExtra, resGoals] = await Promise.all([
+      const [resInst, resTemp, resSal, resExtra, resGoals, resDebts] = await Promise.all([
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
         supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
         supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear),
-        supabase.from("goals" as any).select("*").eq("user_id", user.id).limit(2)
+        supabase.from("goals" as any).select("*").eq("user_id", user.id).limit(2),
+        supabase.from("debts" as any).select("*").eq("user_id", user.id),
       ]);
 
       const rawAccounts = resInst.data || [];
@@ -118,6 +119,7 @@ const Today = () => {
       setTemplates(rawTemplates);
       setExtraIncomes(resExtra.data || []);
       setGoals(resGoals.data || []);
+      setDebts((resDebts.data as any[]) || []);
       
       if (resSal.data) {
         const s = resSal.data as any;
