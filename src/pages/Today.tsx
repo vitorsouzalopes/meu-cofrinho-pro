@@ -341,14 +341,18 @@ const Today = () => {
           </Card>
         )}
 
-        {/* Dívidas Ativas */}
+        {/* Dívidas Ativas (vem da tabela `debts`) */}
         {(() => {
-          const debts = accounts.filter(a => a.tipo === 'debt' || a.tipo === 'divida');
-          const totalDebt = debts.reduce((s: number, d: any) => s + d.valor, 0);
-          const paid = debts.filter((d: any) => d.status === 'pago').reduce((s: number, d: any) => s + d.valor, 0);
+          const totalDebt = debts.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
+          const restante = debts.reduce((s: number, d: any) => s + Number(d.valor_restante || 0), 0);
+          const paid = Math.max(0, totalDebt - restante);
           const pct = totalDebt > 0 ? Math.min(100, Math.round((paid / totalDebt) * 100)) : 0;
           return debts.length > 0 ? (
-            <Card className="p-5 bg-card border border-border/50 flex flex-col items-center animate-slide-up hover:border-primary/30 transition-colors" style={{ animationDelay: "0.5s" }}>
+            <Card
+              className="p-5 bg-card border border-border/50 flex flex-col items-center animate-slide-up hover:border-primary/30 transition-colors cursor-pointer"
+              style={{ animationDelay: "0.5s" }}
+              onClick={() => navigate("/goals")}
+            >
               <p className="text-[10px] font-bold uppercase text-muted-foreground self-start mb-6">Dívidas Ativas</p>
               <DonutChart
                 percentage={pct}
