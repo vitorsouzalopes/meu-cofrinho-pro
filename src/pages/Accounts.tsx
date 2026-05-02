@@ -473,30 +473,39 @@ const Accounts = () => {
 
   // ── Exclusão ────────────────────────────────────────────────────────────────
   const deleteAccount = async (account: any) => {
+    // Dívida (vem da tabela `debts`)
+    if (account.__source === "debt") {
+      if (!window.confirm(`Excluir a dívida "${account.nome}" e seu histórico?`)) return;
+      const { error } = await supabase.from("debts" as any).delete().eq("id", account.id);
+      if (error) {
+        toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+        return;
+      }
+      toast({ title: "Dívida excluída!" });
+      invalidate();
+      return;
+    }
+
     const isTemplate = account.is_template === true;
 
     if (isTemplate) {
-      // Conta recorrente (mensal/dívida): oferece escolha
       const deleteAll = window.confirm(
         `"${account.name}" é uma conta recorrente.\n\nClique OK para excluir PERMANENTEMENTE (remove de todos os meses).\nClique Cancelar para manter — ou use a opção de exclusão do mês específico.`
       );
       if (!deleteAll) return;
 
-      // Apaga todas as instâncias filhas primeiro
       await supabase
         .from("accounts")
         .delete()
         .eq("user_id", user!.id)
         .eq("parent_id", account.id);
 
-      // Apaga o template
       const { error } = await supabase.from("accounts").delete().eq("id", account.id);
       if (error) {
         toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
         return;
       }
     } else {
-      // Conta única / instância pontual: exclui diretamente
       if (!window.confirm(`Excluir "${account.name}"?`)) return;
       const { error } = await supabase.from("accounts").delete().eq("id", account.id);
       if (error) {
@@ -506,19 +515,46 @@ const Accounts = () => {
     }
 
     toast({ title: "Conta excluída!" });
-    window.dispatchEvent(new CustomEvent("finance-data-updated"));
+    invalidate();
     load();
   };
 
   // ── Pagamento ───────────────────────────────────────────────────────────────
   const confirmPay = async () => {
     if (!payingAccount || !user) return;
+
+    // Dívida: registra pagamento na tabela debt_payments e abate parcela
+    if (payingAccount.__source === "debt") {
+      setPaying(true);
+      const novoSaldo = Math.max(0, Number(payingAccount.valor_restante) - Number(payingAccount.parcela_mensal));
+      const novasParcelas = payingAccount.parcelas_restantes ? Math.max(0, payingAccount.parcelas_restantes - 1) : null;
+      const [{ error: e1 }, { error: e2 }] = await Promise.all([
+        supabase.from("debt_payments" as any).insert({
+          user_id: user.id,
+          debt_id: payingAccount.id,
+          valor_pago: Number(payingAccount.parcela_mensal),
+          tipo_pagamento: "parcela",
+          parcelas_quitadas: 1,
+        }),
+        supabase.from("debts" as any).update({
+          valor_restante: novoSaldo,
+          parcelas_restantes: novasParcelas,
+        }).eq("id", payingAccount.id),
+      ]);
+      setPaying(false);
+      if (e1 || e2) {
+        toast({ title: "Erro ao pagar", description: (e1 || e2)?.message, variant: "destructive" });
+      } else {
+        toast({ title: "Parcela quitada!" });
+        invalidate();
+        setPayDialogOpen(false);
+      }
+      return;
+    }
+
     setPaying(true);
-
     let error: any = null;
-
     if (payingAccount.is_template) {
-      // Cria instância real para o mês e já marca como paga
       const { error: insertError } = await supabase.from("accounts").insert({
         user_id: user.id,
         parent_id: payingAccount.id,
@@ -534,7 +570,6 @@ const Accounts = () => {
       });
       error = insertError;
     } else {
-      // Já é instância real — atualiza diretamente
       const { error: updateError } = await supabase
         .from("accounts")
         .update({ paid: true, paid_at: new Date().toISOString() })
@@ -547,7 +582,7 @@ const Accounts = () => {
       toast({ title: "Erro ao pagar", variant: "destructive" });
     } else {
       toast({ title: "Marcado como pago!" });
-      window.dispatchEvent(new CustomEvent("finance-data-updated"));
+      invalidate();
       setPayDialogOpen(false);
       load();
     }
@@ -555,11 +590,22 @@ const Accounts = () => {
 
   // ── Derivações ──────────────────────────────────────────────────────────────
   const monthly = displayAccounts.filter((a) => a.billing_type === "monthly");
-  const debts = displayAccounts.filter((a) => a.billing_type === "debt");
   const singles = displayAccounts.filter((a) => a.billing_type === "single");
 
+  // Dívidas vêm da tabela `debts` — adapta pro AccountCard
+  const debts = (debtsData || []).map((d: any) => ({
+    ...d,
+    __source: "debt",
+    name: d.nome,
+    amount: d.parcela_mensal,
+    due_day: d.dia_vencimento,
+    billing_type: "debt",
+    paid: false,
+    remaining_months: d.parcelas_restantes,
+  }));
+
   const totalMonthly = monthly.reduce((s, a) => s + Number(a.amount), 0);
-  const totalDebts = debts.reduce((s, a) => s + Number(a.amount), 0);
+  const totalDebts = debts.reduce((s, a) => s + Number(a.amount || 0), 0);
   const totalSingles = singles.reduce((s, a) => s + Number(a.amount), 0);
 
   // ── Navegação de meses ──────────────────────────────────────────────────────
