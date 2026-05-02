@@ -108,12 +108,21 @@ const AccountForm = ({ open, onClose, onSaved, editing, userId, monthYear }: Acc
   // Preenche ao editar
   useEffect(() => {
     if (editing) {
-      setTipo(editing.billing_type || "monthly");
-      setNome(editing.name || "");
-      setValor(String(editing.amount || ""));
-      setDueDay(String(editing.due_day || ""));
-      setStartDate(editing.start_date || "");
-      setParcelas(String(editing.remaining_months || ""));
+      if (editing.__source === "debt") {
+        setTipo("debt");
+        setNome(editing.nome || "");
+        setValor(String(editing.parcela_mensal || ""));
+        setDueDay(String(editing.dia_vencimento || ""));
+        setStartDate("");
+        setParcelas(String(editing.parcelas_restantes || ""));
+      } else {
+        setTipo(editing.billing_type || "monthly");
+        setNome(editing.name || "");
+        setValor(String(editing.amount || ""));
+        setDueDay(String(editing.due_day || ""));
+        setStartDate(editing.start_date || "");
+        setParcelas(String(editing.remaining_months || ""));
+      }
     } else {
       setTipo("monthly");
       setNome("");
