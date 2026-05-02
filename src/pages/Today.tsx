@@ -145,13 +145,14 @@ const Today = () => {
 
   const totais = useMemo(() => {
     const totalExtra = extraIncomes.reduce((s, e) => s + Number(e.amount), 0);
+    const dividasParaSoma = debts.map((d: any) => ({ amount: d.parcela_mensal }));
     return calcularTotaisFinanceiros({
       salario: salary,
       extra: totalExtra,
-      contas: accounts.filter(a => a.tipo !== 'divida' && a.tipo !== 'debt'),
-      dividas: accounts.filter(a => a.tipo === 'divida' || a.tipo === 'debt')
+      contas: accounts,
+      dividas: dividasParaSoma,
     });
-  }, [accounts, salary, extraIncomes]);
+  }, [accounts, salary, extraIncomes, debts]);
 
   const saveSalary = async () => {
     if (!user) return;
