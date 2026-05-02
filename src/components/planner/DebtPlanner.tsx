@@ -37,6 +37,7 @@ const TIPOS = [
 export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const invalidate = useInvalidateFinance();
   const [debts, setDebts] = useState<Debt[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
