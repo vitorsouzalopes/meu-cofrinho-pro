@@ -65,6 +65,7 @@ const Today = () => {
   const navigate = useNavigate();
   const [accounts, setAccounts] = useState<any[]>([]);
   const [templates, setTemplates] = useState<Account[]>([]);
+  const [debts, setDebts] = useState<any[]>([]);
   const [goals, setGoals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [salary, setSalary] = useState(0);
