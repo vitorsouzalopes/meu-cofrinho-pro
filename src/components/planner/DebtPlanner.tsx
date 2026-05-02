@@ -7,6 +7,7 @@ import { Plus, Trash2, Edit2, Flame, Scale, AlertTriangle, TrendingDown, Sparkle
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useInvalidateFinance } from "@/hooks/use-finance-data";
 import {
   type Debt,
   simular,
