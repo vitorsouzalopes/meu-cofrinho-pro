@@ -134,28 +134,47 @@ const AccountForm = ({ open, onClose, onSaved, editing, userId, monthYear }: Acc
 
     setSaving(true);
 
-    const payload: any = {
-      user_id: userId,
-      name: nome.trim(),
-      billing_type: tipo,
-      amount: parseFloat(valor),
-      due_day: dueDay ? parseInt(dueDay, 10) : null,
-      month_year: monthYear,
-      is_template: tipo === "monthly" || tipo === "debt",
-      paid: false,
-      account_type: "Outros",
-    };
+    let error: any = null;
 
     if (isDebt) {
-      payload.start_date = startDate || null;
-      payload.remaining_months = parcelas ? parseInt(parcelas, 10) : null;
-    }
-
-    let error;
-    if (editing) {
-      ({ error } = await supabase.from("accounts").update(payload).eq("id", editing.id));
+      // Dívidas vão para a tabela `debts` (fonte única para Planejamento + Dashboard)
+      const parcelas = parcelas ? null : null; // placeholder; usamos `parcelasInt` abaixo
+      const parcelasInt = parcelas !== "" ? parseInt(parcelas as any, 10) : null;
+      const valorParcela = parseFloat(valor);
+      const debtPayload: any = {
+        user_id: userId,
+        nome: nome.trim(),
+        tipo: "credito",
+        valor_total: valorParcela * (parcelasInt || 1),
+        valor_restante: valorParcela * (parcelasInt || 1),
+        parcela_mensal: valorParcela,
+        total_parcelas: parcelasInt,
+        parcelas_restantes: parcelasInt,
+        juros_mensal: 0,
+        dia_vencimento: dueDay ? parseInt(dueDay, 10) : 1,
+      };
+      if (editing?.__source === "debt") {
+        ({ error } = await supabase.from("debts" as any).update(debtPayload).eq("id", editing.id));
+      } else {
+        ({ error } = await supabase.from("debts" as any).insert(debtPayload));
+      }
     } else {
-      ({ error } = await supabase.from("accounts").insert(payload));
+      const payload: any = {
+        user_id: userId,
+        name: nome.trim(),
+        billing_type: tipo,
+        amount: parseFloat(valor),
+        due_day: dueDay ? parseInt(dueDay, 10) : null,
+        month_year: monthYear,
+        is_template: tipo === "monthly",
+        paid: false,
+        account_type: "Outros",
+      };
+      if (editing && editing.__source !== "debt") {
+        ({ error } = await supabase.from("accounts").update(payload).eq("id", editing.id));
+      } else {
+        ({ error } = await supabase.from("accounts").insert(payload));
+      }
     }
 
     setSaving(false);
@@ -163,7 +182,7 @@ const AccountForm = ({ open, onClose, onSaved, editing, userId, monthYear }: Acc
     if (error) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: editing ? "Conta atualizada!" : "Conta criada!" });
+      toast({ title: editing ? "Atualizado!" : "Criado!" });
       window.dispatchEvent(new CustomEvent("finance-data-updated"));
       onSaved();
       onClose();
