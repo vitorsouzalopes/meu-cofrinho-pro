@@ -69,19 +69,21 @@ const Goals = () => {
     const today = new Date();
     const monthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
     try {
-      const [accountsRes, salaryRes, extraRes] = await Promise.all([
+      const [accountsRes, salaryRes, extraRes, debtsRes] = await Promise.all([
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", monthYear),
         supabase.from("salary" as any).select("amount").eq("user_id", user.id).eq("month_year", monthYear).maybeSingle(),
         supabase.from("extra_income").select("amount").eq("user_id", user.id).eq("month_year", monthYear),
+        supabase.from("debts" as any).select("parcela_mensal").eq("user_id", user.id),
       ]);
       const salary = salaryRes.data ? Number((salaryRes.data as any).amount) : 0;
       const extra = (extraRes.data || []).reduce((s: number, c: any) => s + Number(c.amount), 0);
       const accounts = (accountsRes.data || []) as any[];
+      const dividas = ((debtsRes.data as any[]) || []).map(d => ({ amount: d.parcela_mensal }));
       const r = calcularTotaisFinanceiros({
         salario: salary,
         extra,
-        contas: accounts.filter(a => a.billing_type !== "debt"),
-        dividas: accounts.filter(a => a.billing_type === "debt"),
+        contas: accounts,
+        dividas,
       });
       setIncome(r.renda);
       setExpenses(r.gastos);

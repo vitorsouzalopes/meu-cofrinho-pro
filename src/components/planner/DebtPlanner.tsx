@@ -7,6 +7,7 @@ import { Plus, Trash2, Edit2, Flame, Scale, AlertTriangle, TrendingDown, Sparkle
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useInvalidateFinance } from "@/hooks/use-finance-data";
 import {
   type Debt,
   simular,
@@ -36,6 +37,7 @@ const TIPOS = [
 export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const invalidate = useInvalidateFinance();
   const [debts, setDebts] = useState<Debt[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
@@ -74,6 +76,9 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
 
   useEffect(() => {
     load();
+    const sync = () => load();
+    window.addEventListener("finance-data-updated", sync);
+    return () => window.removeEventListener("finance-data-updated", sync);
   }, [load]);
 
   const reset = () => {
@@ -126,6 +131,7 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
       setOpenDialog(false);
       reset();
       load();
+      invalidate();
     } catch (e: any) {
       toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" });
     }
@@ -140,6 +146,7 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
     }
     toast({ title: "Dívida removida" });
     load();
+    invalidate();
   };
 
   // Totais agregados

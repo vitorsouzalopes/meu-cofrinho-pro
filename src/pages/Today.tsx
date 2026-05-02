@@ -65,6 +65,7 @@ const Today = () => {
   const navigate = useNavigate();
   const [accounts, setAccounts] = useState<any[]>([]);
   const [templates, setTemplates] = useState<Account[]>([]);
+  const [debts, setDebts] = useState<any[]>([]);
   const [goals, setGoals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [salary, setSalary] = useState(0);
@@ -92,12 +93,13 @@ const Today = () => {
       setLoading(true);
 
       // Consultas individuais para evitar que um erro 404 trave tudo
-      const [resInst, resTemp, resSal, resExtra, resGoals] = await Promise.all([
+      const [resInst, resTemp, resSal, resExtra, resGoals, resDebts] = await Promise.all([
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
         supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
         supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear),
-        supabase.from("goals" as any).select("*").eq("user_id", user.id).limit(2)
+        supabase.from("goals" as any).select("*").eq("user_id", user.id).limit(2),
+        supabase.from("debts" as any).select("*").eq("user_id", user.id),
       ]);
 
       const rawAccounts = resInst.data || [];
@@ -117,6 +119,7 @@ const Today = () => {
       setTemplates(rawTemplates);
       setExtraIncomes(resExtra.data || []);
       setGoals(resGoals.data || []);
+      setDebts((resDebts.data as any[]) || []);
       
       if (resSal.data) {
         const s = resSal.data as any;
@@ -142,13 +145,14 @@ const Today = () => {
 
   const totais = useMemo(() => {
     const totalExtra = extraIncomes.reduce((s, e) => s + Number(e.amount), 0);
+    const dividasParaSoma = debts.map((d: any) => ({ amount: d.parcela_mensal }));
     return calcularTotaisFinanceiros({
       salario: salary,
       extra: totalExtra,
-      contas: accounts.filter(a => a.tipo !== 'divida' && a.tipo !== 'debt'),
-      dividas: accounts.filter(a => a.tipo === 'divida' || a.tipo === 'debt')
+      contas: accounts,
+      dividas: dividasParaSoma,
     });
-  }, [accounts, salary, extraIncomes]);
+  }, [accounts, salary, extraIncomes, debts]);
 
   const saveSalary = async () => {
     if (!user) return;
@@ -337,14 +341,18 @@ const Today = () => {
           </Card>
         )}
 
-        {/* Dívidas Ativas */}
+        {/* Dívidas Ativas (vem da tabela `debts`) */}
         {(() => {
-          const debts = accounts.filter(a => a.tipo === 'debt' || a.tipo === 'divida');
-          const totalDebt = debts.reduce((s: number, d: any) => s + d.valor, 0);
-          const paid = debts.filter((d: any) => d.status === 'pago').reduce((s: number, d: any) => s + d.valor, 0);
+          const totalDebt = debts.reduce((s: number, d: any) => s + Number(d.valor_total || 0), 0);
+          const restante = debts.reduce((s: number, d: any) => s + Number(d.valor_restante || 0), 0);
+          const paid = Math.max(0, totalDebt - restante);
           const pct = totalDebt > 0 ? Math.min(100, Math.round((paid / totalDebt) * 100)) : 0;
           return debts.length > 0 ? (
-            <Card className="p-5 bg-card border border-border/50 flex flex-col items-center animate-slide-up hover:border-primary/30 transition-colors" style={{ animationDelay: "0.5s" }}>
+            <Card
+              className="p-5 bg-card border border-border/50 flex flex-col items-center animate-slide-up hover:border-primary/30 transition-colors cursor-pointer"
+              style={{ animationDelay: "0.5s" }}
+              onClick={() => navigate("/goals")}
+            >
               <p className="text-[10px] font-bold uppercase text-muted-foreground self-start mb-6">Dívidas Ativas</p>
               <DonutChart
                 percentage={pct}
