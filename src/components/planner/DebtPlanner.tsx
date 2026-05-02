@@ -128,6 +128,7 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
       setOpenDialog(false);
       reset();
       load();
+      invalidate();
     } catch (e: any) {
       toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" });
     }
