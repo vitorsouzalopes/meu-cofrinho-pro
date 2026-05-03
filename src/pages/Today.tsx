@@ -173,21 +173,47 @@ const Today = () => {
   const saveExtra = async () => {
     if (!user || !extraInput) return;
     setSavingExtra(true);
-    const { error } = await supabase.from("extra_income").insert({
-      user_id: user.id,
+    const payload = {
       description: extraDesc.trim() || "Renda extra",
       amount: parseFloat(extraInput),
-      month_year: currentMonthYear,
-      date: new Date().toISOString().split("T")[0],
-    });
+    };
+    const { error } = editingExtraId
+      ? await supabase.from("extra_income").update(payload).eq("id", editingExtraId)
+      : await supabase.from("extra_income").insert({
+          ...payload,
+          user_id: user.id,
+          month_year: currentMonthYear,
+          date: new Date().toISOString().split("T")[0],
+        });
     setSavingExtra(false);
     if (error) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Renda extra adicionada!" });
+      toast({ title: editingExtraId ? "Renda extra atualizada!" : "Renda extra adicionada!" });
       setExtraInput("");
       setExtraDesc("");
+      setEditingExtraId(null);
       setExtraDialogOpen(false);
+      fetchData();
+      window.dispatchEvent(new CustomEvent("finance-data-updated"));
+    }
+  };
+
+  const startEditExtra = (e: any) => {
+    setEditingExtraId(e.id);
+    setExtraInput(String(e.amount));
+    setExtraDesc(e.description || "");
+    setExtraListOpen(false);
+    setExtraDialogOpen(true);
+  };
+
+  const deleteExtra = async (id: string) => {
+    if (!window.confirm("Excluir esta renda extra?")) return;
+    const { error } = await supabase.from("extra_income").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Renda extra removida" });
       fetchData();
       window.dispatchEvent(new CustomEvent("finance-data-updated"));
     }
