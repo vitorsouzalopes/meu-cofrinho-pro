@@ -475,7 +475,6 @@ const Today = () => {
               </div>
             ))}
           </div>
-          </div>
         </DialogContent>
       </Dialog>
 
