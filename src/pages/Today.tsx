@@ -415,7 +415,7 @@ const Today = () => {
         <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)] rounded-3xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" /> Adicionar Renda Extra
+              <TrendingUp className="w-5 h-5 text-primary" /> {editingExtraId ? "Editar Renda Extra" : "Adicionar Renda Extra"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-3">
