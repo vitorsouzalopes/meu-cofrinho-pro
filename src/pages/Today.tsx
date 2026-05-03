@@ -76,6 +76,8 @@ const Today = () => {
   const [extraDialogOpen, setExtraDialogOpen] = useState(false);
   const [extraInput, setExtraInput] = useState("");
   const [extraDesc, setExtraDesc] = useState("");
+  const [editingExtraId, setEditingExtraId] = useState<string | null>(null);
+  const [extraListOpen, setExtraListOpen] = useState(false);
   const [savingExtra, setSavingExtra] = useState(false);
   
   const hasGenerated = useRef(false);
