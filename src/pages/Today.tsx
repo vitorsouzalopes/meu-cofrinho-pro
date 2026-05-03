@@ -259,12 +259,22 @@ const Today = () => {
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-1">
                 <p className="text-white/70 text-[10px] uppercase font-bold">Renda do Mês</p>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setExtraInput(""); setExtraDesc(""); setExtraDialogOpen(true); }}
-                  className="text-[9px] bg-white/20 hover:bg-white/30 text-white font-bold px-2 py-0.5 rounded-full transition-colors"
-                >
-                  + Extra
-                </button>
+                <div className="flex gap-1">
+                  {extraIncomes.length > 0 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setExtraListOpen(true); }}
+                      className="text-[9px] bg-white/20 hover:bg-white/30 text-white font-bold px-2 py-0.5 rounded-full transition-colors"
+                    >
+                      Gerenciar
+                    </button>
+                  )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditingExtraId(null); setExtraInput(""); setExtraDesc(""); setExtraDialogOpen(true); }}
+                    className="text-[9px] bg-white/20 hover:bg-white/30 text-white font-bold px-2 py-0.5 rounded-full transition-colors"
+                  >
+                    + Extra
+                  </button>
+                </div>
               </div>
               <p className="text-[9px] text-white/50 mb-2 tracking-tight">Salário + Extra:</p>
               <p className="text-xl font-bold text-white leading-none">{formatCurrency(totais.renda)}</p>
