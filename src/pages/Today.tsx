@@ -440,8 +440,41 @@ const Today = () => {
               />
             </div>
             <Button className="w-full h-14 rounded-2xl text-base font-bold" onClick={saveExtra} disabled={savingExtra}>
-              {savingExtra ? "Salvando..." : "Adicionar Renda Extra"}
+              {savingExtra ? "Salvando..." : editingExtraId ? "Salvar Alterações" : "Adicionar Renda Extra"}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Extra Income List / Manage */}
+      <Dialog open={extraListOpen} onOpenChange={setExtraListOpen}>
+        <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-primary" /> Rendas Extras do Mês
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 mt-3 max-h-[60vh] overflow-y-auto">
+            {extraIncomes.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-6">Nenhuma renda extra cadastrada.</p>
+            )}
+            {extraIncomes.map((e: any) => (
+              <div key={e.id} className="flex items-center justify-between p-3 bg-muted rounded-xl">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{e.description || "Renda extra"}</p>
+                  <p className="text-xs text-primary font-bold">{formatCurrency(Number(e.amount))}</p>
+                </div>
+                <div className="flex gap-1">
+                  <Button size="icon" variant="ghost" onClick={() => startEditExtra(e)} className="h-9 w-9">
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={() => deleteExtra(e.id)} className="h-9 w-9 text-destructive">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
           </div>
         </DialogContent>
       </Dialog>
