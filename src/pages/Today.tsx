@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { TrendingUp, Wallet, Clock, AlertCircle, Sparkles, CheckCircle2, Target, Menu, Settings } from "lucide-react";
+import { TrendingUp, Wallet, Clock, AlertCircle, Sparkles, CheckCircle2, Target, Menu, Settings, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -76,6 +76,8 @@ const Today = () => {
   const [extraDialogOpen, setExtraDialogOpen] = useState(false);
   const [extraInput, setExtraInput] = useState("");
   const [extraDesc, setExtraDesc] = useState("");
+  const [editingExtraId, setEditingExtraId] = useState<string | null>(null);
+  const [extraListOpen, setExtraListOpen] = useState(false);
   const [savingExtra, setSavingExtra] = useState(false);
   
   const hasGenerated = useRef(false);
@@ -171,21 +173,47 @@ const Today = () => {
   const saveExtra = async () => {
     if (!user || !extraInput) return;
     setSavingExtra(true);
-    const { error } = await supabase.from("extra_income").insert({
-      user_id: user.id,
+    const payload = {
       description: extraDesc.trim() || "Renda extra",
       amount: parseFloat(extraInput),
-      month_year: currentMonthYear,
-      date: new Date().toISOString().split("T")[0],
-    });
+    };
+    const { error } = editingExtraId
+      ? await supabase.from("extra_income").update(payload).eq("id", editingExtraId)
+      : await supabase.from("extra_income").insert({
+          ...payload,
+          user_id: user.id,
+          month_year: currentMonthYear,
+          date: new Date().toISOString().split("T")[0],
+        });
     setSavingExtra(false);
     if (error) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Renda extra adicionada!" });
+      toast({ title: editingExtraId ? "Renda extra atualizada!" : "Renda extra adicionada!" });
       setExtraInput("");
       setExtraDesc("");
+      setEditingExtraId(null);
       setExtraDialogOpen(false);
+      fetchData();
+      window.dispatchEvent(new CustomEvent("finance-data-updated"));
+    }
+  };
+
+  const startEditExtra = (e: any) => {
+    setEditingExtraId(e.id);
+    setExtraInput(String(e.amount));
+    setExtraDesc(e.description || "");
+    setExtraListOpen(false);
+    setExtraDialogOpen(true);
+  };
+
+  const deleteExtra = async (id: string) => {
+    if (!window.confirm("Excluir esta renda extra?")) return;
+    const { error } = await supabase.from("extra_income").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Renda extra removida" });
       fetchData();
       window.dispatchEvent(new CustomEvent("finance-data-updated"));
     }
@@ -231,12 +259,22 @@ const Today = () => {
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-1">
                 <p className="text-white/70 text-[10px] uppercase font-bold">Renda do Mês</p>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setExtraInput(""); setExtraDesc(""); setExtraDialogOpen(true); }}
-                  className="text-[9px] bg-white/20 hover:bg-white/30 text-white font-bold px-2 py-0.5 rounded-full transition-colors"
-                >
-                  + Extra
-                </button>
+                <div className="flex gap-1">
+                  {extraIncomes.length > 0 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setExtraListOpen(true); }}
+                      className="text-[9px] bg-white/20 hover:bg-white/30 text-white font-bold px-2 py-0.5 rounded-full transition-colors"
+                    >
+                      Gerenciar
+                    </button>
+                  )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setEditingExtraId(null); setExtraInput(""); setExtraDesc(""); setExtraDialogOpen(true); }}
+                    className="text-[9px] bg-white/20 hover:bg-white/30 text-white font-bold px-2 py-0.5 rounded-full transition-colors"
+                  >
+                    + Extra
+                  </button>
+                </div>
               </div>
               <p className="text-[9px] text-white/50 mb-2 tracking-tight">Salário + Extra:</p>
               <p className="text-xl font-bold text-white leading-none">{formatCurrency(totais.renda)}</p>
@@ -377,7 +415,7 @@ const Today = () => {
         <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)] rounded-3xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" /> Adicionar Renda Extra
+              <TrendingUp className="w-5 h-5 text-primary" /> {editingExtraId ? "Editar Renda Extra" : "Adicionar Renda Extra"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-3">
@@ -402,8 +440,40 @@ const Today = () => {
               />
             </div>
             <Button className="w-full h-14 rounded-2xl text-base font-bold" onClick={saveExtra} disabled={savingExtra}>
-              {savingExtra ? "Salvando..." : "Adicionar Renda Extra"}
+              {savingExtra ? "Salvando..." : editingExtraId ? "Salvar Alterações" : "Adicionar Renda Extra"}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Extra Income List / Manage */}
+      <Dialog open={extraListOpen} onOpenChange={setExtraListOpen}>
+        <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-primary" /> Rendas Extras do Mês
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 mt-3 max-h-[60vh] overflow-y-auto">
+            {extraIncomes.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-6">Nenhuma renda extra cadastrada.</p>
+            )}
+            {extraIncomes.map((e: any) => (
+              <div key={e.id} className="flex items-center justify-between p-3 bg-muted rounded-xl">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{e.description || "Renda extra"}</p>
+                  <p className="text-xs text-primary font-bold">{formatCurrency(Number(e.amount))}</p>
+                </div>
+                <div className="flex gap-1">
+                  <Button size="icon" variant="ghost" onClick={() => startEditExtra(e)} className="h-9 w-9">
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={() => deleteExtra(e.id)} className="h-9 w-9 text-destructive">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         </DialogContent>
       </Dialog>
