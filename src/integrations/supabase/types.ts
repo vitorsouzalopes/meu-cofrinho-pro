@@ -502,8 +502,11 @@ export type Database = {
       telegram_config: {
         Row: {
           created_at: string
+          event_notifications_enabled: boolean
           id: string
           reminder_days_before: number
+          reminder_hour: number
+          streak_reminders_enabled: boolean
           telegram_chat_id: number | null
           telegram_user_id: number | null
           updated_at: string
@@ -511,8 +514,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          event_notifications_enabled?: boolean
           id?: string
           reminder_days_before?: number
+          reminder_hour?: number
+          streak_reminders_enabled?: boolean
           telegram_chat_id?: number | null
           telegram_user_id?: number | null
           updated_at?: string
@@ -520,8 +526,11 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          event_notifications_enabled?: boolean
           id?: string
           reminder_days_before?: number
+          reminder_hour?: number
+          streak_reminders_enabled?: boolean
           telegram_chat_id?: number | null
           telegram_user_id?: number | null
           updated_at?: string
