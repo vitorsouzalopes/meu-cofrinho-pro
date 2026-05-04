@@ -148,13 +148,14 @@ const Progress = () => {
       }));
 
       // notify Telegram (non-blocking)
-      const newStreak = streak + 1;
+      const newStreak = currentStreak + 1;
       notifyEvent("challenge_progress", {
-        challenge_id: currentChallengeInfo.title || activeChallengeData.challenge_id,
+        challenge_id: (currentChallengeInfo as any).title || activeChallengeData.challenge_id,
         amount: currentChallengeInfo.dailyAmount,
         streak: newStreak,
       });
-      if (currentChallengeInfo.duration && newDates.length >= currentChallengeInfo.duration) {
+      const duration = Number((currentChallengeInfo as any).duration ?? 0);
+      if (duration && newDates.length >= duration) {
         const total = newDates.length * currentChallengeInfo.dailyAmount;
         notifyEvent("challenge_completed", {
           challenge_id: currentChallengeInfo.title || activeChallengeData.challenge_id,
