@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { ensureMonthlyInstances } from "@/lib/account-utils";
 import { calcularTotaisFinanceiros, resolverContasDoMes } from "@/lib/finance-utils";
 import type { Tables } from "@/integrations/supabase/types";
+import { generateMonthlyReport } from "@/lib/monthly-report";
 
 type Profile = Tables<"profiles">;
 type Account = Tables<"accounts">;
@@ -323,7 +324,15 @@ const ProfilePage = () => {
           { icon: <Settings className="w-5 h-5" />, label: "Configurações da conta", onClick: () => setEditing(true) },
           { icon: <Target className="w-5 h-5" />, label: "Metas Financeiras", onClick: () => navigate("/goals") },
           { icon: <Plus className="w-5 h-5" />, label: "Categorias Personalizadas" },
-          { icon: <FileDown className="w-5 h-5" />, label: "Exportar Dados" },
+          { icon: <FileDown className="w-5 h-5" />, label: "Exportar Relatório Mensal (PDF)", onClick: async () => {
+            try {
+              toast({ title: "Gerando relatório...", description: "Aguarde alguns segundos." });
+              await generateMonthlyReport();
+              toast({ title: "Relatório gerado!", description: "PDF baixado com sucesso." });
+            } catch (e: any) {
+              toast({ title: "Erro ao gerar", description: e.message, variant: "destructive" });
+            }
+          } },
           { icon: <HelpCircle className="w-5 h-5" />, label: "Ajuda e Suporte" },
           { icon: <RefreshCcw className="w-5 h-5" />, label: "Sincronizar Mês", onClick: loadData },
           { icon: <Trash2 className="w-5 h-5" />, label: "Limpar Dados Auto-Gerados do Mês", onClick: limparDadosAutoGerados, color: "text-amber-500" },
