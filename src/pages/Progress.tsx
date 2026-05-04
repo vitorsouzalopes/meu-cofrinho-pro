@@ -158,7 +158,7 @@ const Progress = () => {
       if (duration && newDates.length >= duration) {
         const total = newDates.length * currentChallengeInfo.dailyAmount;
         notifyEvent("challenge_completed", {
-          challenge_id: currentChallengeInfo.title || activeChallengeData.challenge_id,
+          challenge_id: (currentChallengeInfo as any).title || activeChallengeData.challenge_id,
           total,
         });
       }
