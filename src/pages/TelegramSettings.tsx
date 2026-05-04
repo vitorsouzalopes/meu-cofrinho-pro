@@ -266,6 +266,38 @@ const TelegramSettings = () => {
           </div>
         </div>
 
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Horário do lembrete diário de streak (Brasília)</label>
+          <select
+            value={reminderHour}
+            onChange={(e) => setReminderHour(parseInt(e.target.value))}
+            className="w-full h-10 rounded-md bg-muted border border-border px-3 text-sm"
+          >
+            {Array.from({ length: 24 }, (_, h) => (
+              <option key={h} value={h}>{String(h).padStart(2, "0")}:00</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center justify-between py-1">
+          <label className="text-xs text-foreground">Lembrete diário de streak</label>
+          <input
+            type="checkbox"
+            checked={streakEnabled}
+            onChange={(e) => setStreakEnabled(e.target.checked)}
+            className="w-4 h-4 accent-gold"
+          />
+        </div>
+        <div className="flex items-center justify-between py-1">
+          <label className="text-xs text-foreground">Notificações de eventos (desafio, salário, renda extra)</label>
+          <input
+            type="checkbox"
+            checked={eventsEnabled}
+            onChange={(e) => setEventsEnabled(e.target.checked)}
+            className="w-4 h-4 accent-gold"
+          />
+        </div>
+
         <Button
           variant="gold"
           className="w-full"
