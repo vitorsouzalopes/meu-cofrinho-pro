@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { ensureMonthlyInstances } from "@/lib/account-utils";
 import { calcularTotaisFinanceiros, resolverContasDoMes } from "@/lib/finance-utils";
 import type { Tables } from "@/integrations/supabase/types";
+import { notifyEvent } from "@/lib/notify";
 
 type Account = Tables<"accounts">;
 type Investment = Tables<"investments">;
