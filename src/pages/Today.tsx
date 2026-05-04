@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { ensureMonthlyInstances } from "@/lib/account-utils";
 import { calcularTotaisFinanceiros, resolverContasDoMes } from "@/lib/finance-utils";
 import type { Tables } from "@/integrations/supabase/types";
+import { notifyEvent } from "@/lib/notify";
 
 type Account = Tables<"accounts">;
 type Investment = Tables<"investments">;
@@ -168,6 +169,7 @@ const Today = () => {
     setSalaryDialogOpen(false);
     fetchData();
     toast({ title: "Salário atualizado!" });
+    notifyEvent("salary", { amount, month_year: currentMonthYear, received: !!salaryId });
   };
 
   const saveExtra = async () => {
@@ -190,6 +192,9 @@ const Today = () => {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     } else {
       toast({ title: editingExtraId ? "Renda extra atualizada!" : "Renda extra adicionada!" });
+      if (!editingExtraId) {
+        notifyEvent("extra_income", { description: payload.description, amount: payload.amount });
+      }
       setExtraInput("");
       setExtraDesc("");
       setEditingExtraId(null);

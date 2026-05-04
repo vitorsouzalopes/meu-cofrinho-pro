@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
+import { notifyEvent } from "@/lib/notify";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", {
@@ -140,10 +141,27 @@ const Progress = () => {
 
       if (error) throw error;
 
+      const newDates = [...(progressData[activeChallengeData.id] || []), todayStr];
       setProgressData(prev => ({
         ...prev,
-        [activeChallengeData.id]: [...(prev[activeChallengeData.id] || []), todayStr]
+        [activeChallengeData.id]: newDates,
       }));
+
+      // notify Telegram (non-blocking)
+      const newStreak = currentStreak + 1;
+      notifyEvent("challenge_progress", {
+        challenge_id: (currentChallengeInfo as any).title || activeChallengeData.challenge_id,
+        amount: currentChallengeInfo.dailyAmount,
+        streak: newStreak,
+      });
+      const duration = Number((currentChallengeInfo as any).duration ?? 0);
+      if (duration && newDates.length >= duration) {
+        const total = newDates.length * currentChallengeInfo.dailyAmount;
+        notifyEvent("challenge_completed", {
+          challenge_id: (currentChallengeInfo as any).title || activeChallengeData.challenge_id,
+          total,
+        });
+      }
 
       toast({ title: "🎉 Check-in realizado!", description: `+${formatCurrency(currentChallengeInfo.dailyAmount)} guardado hoje!` });
     } catch (error: any) {

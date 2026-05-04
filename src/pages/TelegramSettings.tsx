@@ -18,6 +18,9 @@ const TelegramSettings = () => {
   const [chatId, setChatId] = useState("");
   const [userId, setUserId] = useState("");
   const [reminderDays, setReminderDays] = useState(2);
+  const [reminderHour, setReminderHour] = useState(20);
+  const [streakEnabled, setStreakEnabled] = useState(true);
+  const [eventsEnabled, setEventsEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [phone, setPhone] = useState("");
@@ -37,6 +40,9 @@ const TelegramSettings = () => {
       if (!error && data) {
         setConfig(data);
         setReminderDays(data.reminder_days_before);
+        setReminderHour((data as any).reminder_hour ?? 20);
+        setStreakEnabled((data as any).streak_reminders_enabled ?? true);
+        setEventsEnabled((data as any).event_notifications_enabled ?? true);
         setChatId(data.telegram_chat_id?.toString() || "");
         setUserId(data.telegram_user_id?.toString() || "");
       }
@@ -76,6 +82,9 @@ const TelegramSettings = () => {
           telegram_chat_id: parseInt(chatId),
           telegram_user_id: parseInt(userId),
           reminder_days_before: reminderDays,
+          reminder_hour: reminderHour,
+          streak_reminders_enabled: streakEnabled,
+          event_notifications_enabled: eventsEnabled,
           updated_at: new Date().toISOString(),
         })
         .eq("id", config.id);
@@ -97,6 +106,9 @@ const TelegramSettings = () => {
           telegram_chat_id: parseInt(chatId),
           telegram_user_id: parseInt(userId),
           reminder_days_before: reminderDays,
+          reminder_hour: reminderHour,
+          streak_reminders_enabled: streakEnabled,
+          event_notifications_enabled: eventsEnabled,
         });
 
       if (error) {
@@ -252,6 +264,38 @@ const TelegramSettings = () => {
             />
             <span className="text-xs text-muted-foreground flex items-center">dias</span>
           </div>
+        </div>
+
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">Horário do lembrete diário de streak (Brasília)</label>
+          <select
+            value={reminderHour}
+            onChange={(e) => setReminderHour(parseInt(e.target.value))}
+            className="w-full h-10 rounded-md bg-muted border border-border px-3 text-sm"
+          >
+            {Array.from({ length: 24 }, (_, h) => (
+              <option key={h} value={h}>{String(h).padStart(2, "0")}:00</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center justify-between py-1">
+          <label className="text-xs text-foreground">Lembrete diário de streak</label>
+          <input
+            type="checkbox"
+            checked={streakEnabled}
+            onChange={(e) => setStreakEnabled(e.target.checked)}
+            className="w-4 h-4 accent-gold"
+          />
+        </div>
+        <div className="flex items-center justify-between py-1">
+          <label className="text-xs text-foreground">Notificações de eventos (desafio, salário, renda extra)</label>
+          <input
+            type="checkbox"
+            checked={eventsEnabled}
+            onChange={(e) => setEventsEnabled(e.target.checked)}
+            className="w-4 h-4 accent-gold"
+          />
         </div>
 
         <Button
