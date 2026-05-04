@@ -18,6 +18,9 @@ const TelegramSettings = () => {
   const [chatId, setChatId] = useState("");
   const [userId, setUserId] = useState("");
   const [reminderDays, setReminderDays] = useState(2);
+  const [reminderHour, setReminderHour] = useState(20);
+  const [streakEnabled, setStreakEnabled] = useState(true);
+  const [eventsEnabled, setEventsEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [phone, setPhone] = useState("");
@@ -37,6 +40,9 @@ const TelegramSettings = () => {
       if (!error && data) {
         setConfig(data);
         setReminderDays(data.reminder_days_before);
+        setReminderHour((data as any).reminder_hour ?? 20);
+        setStreakEnabled((data as any).streak_reminders_enabled ?? true);
+        setEventsEnabled((data as any).event_notifications_enabled ?? true);
         setChatId(data.telegram_chat_id?.toString() || "");
         setUserId(data.telegram_user_id?.toString() || "");
       }
@@ -76,6 +82,9 @@ const TelegramSettings = () => {
           telegram_chat_id: parseInt(chatId),
           telegram_user_id: parseInt(userId),
           reminder_days_before: reminderDays,
+          reminder_hour: reminderHour,
+          streak_reminders_enabled: streakEnabled,
+          event_notifications_enabled: eventsEnabled,
           updated_at: new Date().toISOString(),
         })
         .eq("id", config.id);
@@ -97,6 +106,9 @@ const TelegramSettings = () => {
           telegram_chat_id: parseInt(chatId),
           telegram_user_id: parseInt(userId),
           reminder_days_before: reminderDays,
+          reminder_hour: reminderHour,
+          streak_reminders_enabled: streakEnabled,
+          event_notifications_enabled: eventsEnabled,
         });
 
       if (error) {
