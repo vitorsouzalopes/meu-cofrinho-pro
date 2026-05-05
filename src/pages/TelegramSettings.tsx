@@ -217,6 +217,35 @@ const TelegramSettings = () => {
         </ul>
       </div>
 
+      {/* FCM Web Push */}
+      <div className="glass-card p-5 mb-4 animate-slide-up">
+        <h2 className="font-heading font-semibold text-foreground text-sm flex items-center gap-2 mb-2">
+          {fcmEnabled ? <Bell className="w-4 h-4 text-gold" /> : <BellOff className="w-4 h-4 text-muted-foreground" />}
+          Notificações Push (navegador / PWA)
+        </h2>
+        <p className="text-xs text-muted-foreground mb-3">
+          Recebe push direto no dispositivo para progresso de desafios, salário, renda extra e lembrete diário de streak.
+        </p>
+        {!isFirebaseConfigured() && (
+          <div className="text-[11px] bg-amber-500/10 border border-amber-500/30 rounded p-2 mb-3 text-amber-700 dark:text-amber-300">
+            ⚠️ Firebase ainda não está configurado. Atualize <code>src/constants/firebase.ts</code> e <code>public/firebase-messaging-sw.js</code> com as chaves do seu projeto Firebase.
+          </div>
+        )}
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">
+            {fcmEnabled ? `${fcmTokenCount} dispositivo(s) registrado(s)` : "Desativado"}
+          </span>
+          <Button
+            size="sm"
+            variant={fcmEnabled ? "outline" : "gold"}
+            onClick={handleToggleFcm}
+            disabled={fcmBusy || !isFirebaseConfigured()}
+          >
+            {fcmBusy ? "..." : fcmEnabled ? "Desativar push" : "Ativar push"}
+          </Button>
+        </div>
+      </div>
+
       {/* Phone and Simple Connect */}
       <div className="glass-card p-5 mb-4 space-y-4 animate-slide-up">
         <h2 className="font-heading font-semibold text-foreground text-sm flex items-center gap-2">
