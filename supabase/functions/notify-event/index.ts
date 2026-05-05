@@ -54,11 +54,30 @@ Deno.serve(async (req) => {
       .eq("user_id", targetUserId)
       .maybeSingle();
 
-    if (!cfg?.telegram_chat_id || !cfg.event_notifications_enabled) {
-      return new Response(JSON.stringify({ ok: true, skipped: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const eventsEnabled = !!cfg?.event_notifications_enabled;
+    const text = TEMPLATES[event](payload);
+    const plainText = text.replace(/\*/g, "");
+
+    // Fire FCM push in parallel (non-blocking, best-effort)
+    const SUPA_URL = Deno.env.get("SUPABASE_URL")!;
+    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const titleByEvent: Record<EventType, string> = {
+      challenge_progress: "🐷 Progresso registrado",
+      challenge_completed: "🏆 Desafio concluído!",
+      salary: "💵 Salário atualizado",
+      extra_income: "✨ Renda extra",
+    };
+    const fcmPromise = fetch(`${SUPA_URL}/functions/v1/send-fcm`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY },
+      body: JSON.stringify({ user_id: targetUserId, title: titleByEvent[event], body: plainText.slice(0, 200), url: "/" }),
+    }).catch((e) => console.warn("send-fcm failed:", e));
+
+    if (!cfg?.telegram_chat_id || !eventsEnabled) {
+      await fcmPromise;
+      return new Response(JSON.stringify({ ok: true, telegram_skipped: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const text = TEMPLATES[event](payload);
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
     const TELEGRAM_API_KEY = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
     const res = await fetch(`${GATEWAY_URL}/sendMessage`, {

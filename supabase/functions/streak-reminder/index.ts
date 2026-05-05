@@ -109,6 +109,22 @@ Deno.serve(async (req) => {
       const text = `🐷 *Cofrinho Pro — Lembrete diário*\n\n${lines.join("\n\n")}\n\n_Abra o app e marque seu progresso para manter o streak._`;
       const ok = await sendTelegram(cfg.telegram_chat_id, text);
       if (ok) sent++;
+
+      // FCM push (best-effort)
+      try {
+        const SUPA_URL = Deno.env.get("SUPABASE_URL")!;
+        const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        await fetch(`${SUPA_URL}/functions/v1/send-fcm`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY },
+          body: JSON.stringify({
+            user_id: cfg.user_id,
+            title: "🐷 Lembrete diário",
+            body: "Não esqueça de marcar seu desafio hoje para manter a sequência!",
+            url: "/progress",
+          }),
+        });
+      } catch (e) { console.warn("send-fcm failed:", e); }
     }
 
     return new Response(JSON.stringify({ ok: true, hour: targetHour, sent }), {

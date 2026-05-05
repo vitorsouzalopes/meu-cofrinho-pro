@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
-import { Settings, Send, Copy, Check, MessageSquare, Phone, ExternalLink } from "lucide-react";
+import { Settings, Send, Copy, Check, MessageSquare, Phone, ExternalLink, Bell, BellOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
+import { enableFcmPush, disableFcmPush } from "@/lib/fcm";
+import { isFirebaseConfigured } from "@/constants/firebase";
 
 type TelegramConfig = Tables<"telegram_config">;
 
@@ -25,6 +27,9 @@ const TelegramSettings = () => {
   const [copied, setCopied] = useState(false);
   const [phone, setPhone] = useState("");
   const [profile, setProfile] = useState<any>(null);
+  const [fcmEnabled, setFcmEnabled] = useState(false);
+  const [fcmBusy, setFcmBusy] = useState(false);
+  const [fcmTokenCount, setFcmTokenCount] = useState(0);
 
   // Fetch existing config
   useEffect(() => {
@@ -58,10 +63,40 @@ const TelegramSettings = () => {
         setProfile(prof);
         setPhone((prof as any).phone || "");
       }
+
+      // FCM tokens count for this user
+      const { count } = await supabase
+        .from("fcm_tokens" as any)
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      setFcmTokenCount(count || 0);
+      setFcmEnabled((count || 0) > 0);
+
       setLoading(false);
     };
     fetchConfig();
   }, [user]);
+
+  const handleToggleFcm = async () => {
+    if (!user) return;
+    setFcmBusy(true);
+    if (fcmEnabled) {
+      await disableFcmPush(user.id);
+      setFcmEnabled(false);
+      setFcmTokenCount(0);
+      toast({ title: "Push web desativado" });
+    } else {
+      const res = await enableFcmPush(user.id);
+      if (res.ok) {
+        setFcmEnabled(true);
+        setFcmTokenCount((c) => c + 1);
+        toast({ title: "✅ Push web ativado", description: "Você receberá notificações neste dispositivo." });
+      } else {
+        toast({ title: "Não foi possível ativar", description: res.reason, variant: "destructive" });
+      }
+    }
+    setFcmBusy(false);
+  };
 
   const handleSave = async () => {
     if (!user || !chatId.trim() || !userId.trim()) {
@@ -180,6 +215,35 @@ const TelegramSettings = () => {
           <li>• Preencha os dados abaixo</li>
           <li>• Receberá lembretes 2-3 dias antes do vencimento</li>
         </ul>
+      </div>
+
+      {/* FCM Web Push */}
+      <div className="glass-card p-5 mb-4 animate-slide-up">
+        <h2 className="font-heading font-semibold text-foreground text-sm flex items-center gap-2 mb-2">
+          {fcmEnabled ? <Bell className="w-4 h-4 text-gold" /> : <BellOff className="w-4 h-4 text-muted-foreground" />}
+          Notificações Push (navegador / PWA)
+        </h2>
+        <p className="text-xs text-muted-foreground mb-3">
+          Recebe push direto no dispositivo para progresso de desafios, salário, renda extra e lembrete diário de streak.
+        </p>
+        {!isFirebaseConfigured() && (
+          <div className="text-[11px] bg-amber-500/10 border border-amber-500/30 rounded p-2 mb-3 text-amber-700 dark:text-amber-300">
+            ⚠️ Firebase ainda não está configurado. Atualize <code>src/constants/firebase.ts</code> e <code>public/firebase-messaging-sw.js</code> com as chaves do seu projeto Firebase.
+          </div>
+        )}
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">
+            {fcmEnabled ? `${fcmTokenCount} dispositivo(s) registrado(s)` : "Desativado"}
+          </span>
+          <Button
+            size="sm"
+            variant={fcmEnabled ? "outline" : "gold"}
+            onClick={handleToggleFcm}
+            disabled={fcmBusy || !isFirebaseConfigured()}
+          >
+            {fcmBusy ? "..." : fcmEnabled ? "Desativar push" : "Ativar push"}
+          </Button>
+        </div>
       </div>
 
       {/* Phone and Simple Connect */}
