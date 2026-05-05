@@ -27,6 +27,9 @@ const TelegramSettings = () => {
   const [copied, setCopied] = useState(false);
   const [phone, setPhone] = useState("");
   const [profile, setProfile] = useState<any>(null);
+  const [fcmEnabled, setFcmEnabled] = useState(false);
+  const [fcmBusy, setFcmBusy] = useState(false);
+  const [fcmTokenCount, setFcmTokenCount] = useState(0);
 
   // Fetch existing config
   useEffect(() => {
