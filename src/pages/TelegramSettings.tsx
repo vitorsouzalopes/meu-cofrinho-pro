@@ -63,10 +63,40 @@ const TelegramSettings = () => {
         setProfile(prof);
         setPhone((prof as any).phone || "");
       }
+
+      // FCM tokens count for this user
+      const { count } = await supabase
+        .from("fcm_tokens" as any)
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      setFcmTokenCount(count || 0);
+      setFcmEnabled((count || 0) > 0);
+
       setLoading(false);
     };
     fetchConfig();
   }, [user]);
+
+  const handleToggleFcm = async () => {
+    if (!user) return;
+    setFcmBusy(true);
+    if (fcmEnabled) {
+      await disableFcmPush(user.id);
+      setFcmEnabled(false);
+      setFcmTokenCount(0);
+      toast({ title: "Push web desativado" });
+    } else {
+      const res = await enableFcmPush(user.id);
+      if (res.ok) {
+        setFcmEnabled(true);
+        setFcmTokenCount((c) => c + 1);
+        toast({ title: "✅ Push web ativado", description: "Você receberá notificações neste dispositivo." });
+      } else {
+        toast({ title: "Não foi possível ativar", description: res.reason, variant: "destructive" });
+      }
+    }
+    setFcmBusy(false);
+  };
 
   const handleSave = async () => {
     if (!user || !chatId.trim() || !userId.trim()) {
