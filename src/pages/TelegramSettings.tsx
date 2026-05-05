@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
-import { Settings, Send, Copy, Check, MessageSquare, Phone, ExternalLink } from "lucide-react";
+import { Settings, Send, Copy, Check, MessageSquare, Phone, ExternalLink, Bell, BellOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
+import { enableFcmPush, disableFcmPush } from "@/lib/fcm";
+import { isFirebaseConfigured } from "@/constants/firebase";
 
 type TelegramConfig = Tables<"telegram_config">;
 
