@@ -367,6 +367,36 @@ export type Database = {
         }
         Relationships: []
       }
+      fcm_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          platform: string
+          token: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform?: string
+          token: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform?: string
+          token?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           created_at: string
@@ -503,6 +533,7 @@ export type Database = {
         Row: {
           created_at: string
           event_notifications_enabled: boolean
+          fcm_notifications_enabled: boolean
           id: string
           reminder_days_before: number
           reminder_hour: number
@@ -515,6 +546,7 @@ export type Database = {
         Insert: {
           created_at?: string
           event_notifications_enabled?: boolean
+          fcm_notifications_enabled?: boolean
           id?: string
           reminder_days_before?: number
           reminder_hour?: number
@@ -527,6 +559,7 @@ export type Database = {
         Update: {
           created_at?: string
           event_notifications_enabled?: boolean
+          fcm_notifications_enabled?: boolean
           id?: string
           reminder_days_before?: number
           reminder_hour?: number
