@@ -273,12 +273,9 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
         backgroundColor: [COLORS.gold, COLORS.red, "#9CA3AF", COLORS.emerald],
       }],
     }, {}, 600, 360);
-    if (y > 200) { pdf.addPage(); addHeader(pdf, data); y = 42; }
-    pdf.setTextColor(COLORS.navy);
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(12);
-    pdf.text("💸 Distribuição da Renda", 14, y);
-    y += 4;
+    if (y > 200) { pdf.addPage(); addHeader(pdf, data); y = 46; }
+    sectionTitle(pdf, "Distribuição da Renda", y);
+    y += 6;
     pdf.addImage(doughImg, "PNG", 50, y, 110, 65);
     y += 72;
   }
@@ -286,12 +283,9 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
   // ---------- PAGE 2: Accounts + Debts ----------
   pdf.addPage();
   addHeader(pdf, data);
-  y = 42;
-  pdf.setTextColor(COLORS.navy);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(14);
-  pdf.text("🧾 Contas Mensais", 14, y);
-  y += 4;
+  y = 46;
+  sectionTitle(pdf, "Contas Mensais", y);
+  y += 6;
 
   autoTable(pdf, {
     startY: y + 2,
