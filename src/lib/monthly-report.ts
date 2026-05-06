@@ -339,12 +339,9 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
   // ---------- PAGE 3: Goals + Payment History ----------
   pdf.addPage();
   addHeader(pdf, data);
-  y = 42;
-  pdf.setTextColor(COLORS.navy);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(14);
-  pdf.text("🎯 Metas", 14, y);
-  y += 4;
+  y = 46;
+  sectionTitle(pdf, "Metas", y);
+  y += 6;
 
   autoTable(pdf, {
     startY: y + 2,
@@ -357,17 +354,17 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
           return [g.name, BRL(g.target_amount), BRL(g.current_amount), BRL(g.monthly_amount), `${pct}%`, months ? `${months} meses` : "—"];
         })
       : [["—", "—", "—", "—", "—", "—"]],
-    headStyles: { fillColor: [11, 31, 58], textColor: [212, 175, 55] },
-    styles: { fontSize: 9 },
+    headStyles: { fillColor: [11, 31, 58], textColor: [212, 175, 55], fontStyle: "bold" },
+    styles: { fontSize: 9, cellPadding: 2.5 },
+    alternateRowStyles: { fillColor: [250, 250, 252] },
+    margin: { left: 14, right: 14 },
   });
 
-  y = (pdf as any).lastAutoTable.finalY + 10;
-  if (y > 230) { pdf.addPage(); addHeader(pdf, data); y = 42; }
+  y = (pdf as any).lastAutoTable.finalY + 12;
+  if (y > 230) { pdf.addPage(); addHeader(pdf, data); y = 46; }
 
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(14);
-  pdf.text("📜 Histórico de Pagamentos", 14, y);
-  y += 4;
+  sectionTitle(pdf, "Histórico de Pagamentos", y);
+  y += 6;
 
   autoTable(pdf, {
     startY: y + 2,
@@ -375,48 +372,51 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
     body: data.payments.length
       ? data.payments.map((p) => [p.name, BRL(p.amount), new Date(p.paid_at).toLocaleDateString("pt-BR")])
       : [["—", "—", "—"]],
-    headStyles: { fillColor: [11, 31, 58], textColor: [212, 175, 55] },
-    styles: { fontSize: 9 },
+    headStyles: { fillColor: [11, 31, 58], textColor: [212, 175, 55], fontStyle: "bold" },
+    styles: { fontSize: 9, cellPadding: 2.5 },
+    alternateRowStyles: { fillColor: [250, 250, 252] },
+    margin: { left: 14, right: 14 },
   });
 
   // ---------- PAGE 4: Extras ----------
   pdf.addPage();
   addHeader(pdf, data);
-  y = 42;
-  pdf.setTextColor(COLORS.navy);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(14);
-  pdf.text("💰 Renda Extra", 14, y);
+  y = 46;
+  sectionTitle(pdf, "Renda Extra", y);
+  y += 6;
 
   autoTable(pdf, {
-    startY: y + 4,
+    startY: y + 2,
     head: [["Descrição", "Data", "Valor"]],
     body: data.extras.length
       ? data.extras.map((e) => [e.description, new Date(e.date).toLocaleDateString("pt-BR"), BRL(e.amount)])
       : [["—", "—", "—"]],
-    headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255] },
-    styles: { fontSize: 9 },
+    headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontStyle: "bold" },
+    styles: { fontSize: 9, cellPadding: 2.5 },
+    alternateRowStyles: { fillColor: [240, 253, 244] },
     foot: [["", "Total", BRL(totalExtras)]],
     footStyles: { fillColor: [243, 244, 246], textColor: [11, 31, 58], fontStyle: "bold" },
+    margin: { left: 14, right: 14 },
   });
 
-  y = (pdf as any).lastAutoTable.finalY + 10;
-  if (y > 230) { pdf.addPage(); addHeader(pdf, data); y = 42; }
+  y = (pdf as any).lastAutoTable.finalY + 12;
+  if (y > 230) { pdf.addPage(); addHeader(pdf, data); y = 46; }
 
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(14);
-  pdf.text("🛒 Despesas Extras", 14, y);
+  sectionTitle(pdf, "Despesas Extras", y);
+  y += 6;
 
   autoTable(pdf, {
-    startY: y + 4,
+    startY: y + 2,
     head: [["Descrição", "Categoria", "Data", "Valor"]],
     body: data.expenses.length
       ? data.expenses.map((e) => [e.description, e.category, new Date(e.date).toLocaleDateString("pt-BR"), BRL(e.amount)])
       : [["—", "—", "—", "—"]],
-    headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255] },
-    styles: { fontSize: 9 },
+    headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255], fontStyle: "bold" },
+    styles: { fontSize: 9, cellPadding: 2.5 },
+    alternateRowStyles: { fillColor: [254, 242, 242] },
     foot: [["", "", "Total", BRL(totalExpenses)]],
     footStyles: { fillColor: [243, 244, 246], textColor: [11, 31, 58], fontStyle: "bold" },
+    margin: { left: 14, right: 14 },
   });
 
   addFooter(pdf);
