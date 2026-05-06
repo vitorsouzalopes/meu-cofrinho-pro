@@ -4,12 +4,13 @@
 //
 // VAPID_KEY: Console Firebase → Cloud Messaging → Web Push certificates → Key pair
 export const FIREBASE_CONFIG = {
-  apiKey: "REPLACE_ME_API_KEY",
-  authDomain: "REPLACE_ME.firebaseapp.com",
-  projectId: "REPLACE_ME_PROJECT_ID",
-  storageBucket: "REPLACE_ME.appspot.com",
-  messagingSenderId: "REPLACE_ME_SENDER_ID",
-  appId: "REPLACE_ME_APP_ID",
+  apiKey: "AIzaSyDBXR2MqYFN0d_TBcWKV89juD6Mhz9se0M",
+  authDomain: "cofrinho-pro.firebaseapp.com",
+  projectId: "cofrinho-pro",
+  storageBucket: "cofrinho-pro.firebasestorage.app",
+  messagingSenderId: "69071518647",
+  appId: "1:69071518647:web:21d69da7742258eee88632",
+  measurementId: "G-3G8TQLSD59"
 };
 
 export const VAPID_KEY = "REPLACE_ME_VAPID_PUBLIC_KEY";

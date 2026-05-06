@@ -4,12 +4,13 @@ importScripts('https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: "REPLACE_ME_API_KEY",
-  authDomain: "REPLACE_ME.firebaseapp.com",
-  projectId: "REPLACE_ME_PROJECT_ID",
-  storageBucket: "REPLACE_ME.appspot.com",
-  messagingSenderId: "REPLACE_ME_SENDER_ID",
-  appId: "REPLACE_ME_APP_ID",
+  apiKey: "AIzaSyDBXR2MqYFN0d_TBcWKV89juD6Mhz9se0M",
+  authDomain: "cofrinho-pro.firebaseapp.com",
+  projectId: "cofrinho-pro",
+  storageBucket: "cofrinho-pro.firebasestorage.app",
+  messagingSenderId: "69071518647",
+  appId: "1:69071518647:web:21d69da7742258eee88632",
+  measurementId: "G-3G8TQLSD59"
 });
 
 const messaging = firebase.messaging();
