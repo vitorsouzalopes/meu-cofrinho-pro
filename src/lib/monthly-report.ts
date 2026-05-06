@@ -147,26 +147,52 @@ async function fetchReportData(monthYear: string): Promise<ReportData> {
 
 function addHeader(pdf: jsPDF, data: ReportData) {
   pdf.setFillColor(COLORS.navy);
-  pdf.rect(0, 0, 210, 32, "F");
-  pdf.setTextColor(COLORS.gold);
+  pdf.rect(0, 0, 210, 36, "F");
+  pdf.setFillColor(COLORS.gold);
+  pdf.rect(0, 36, 210, 1.2, "F");
+
+  pdf.setFillColor(COLORS.gold);
+  pdf.circle(20, 18, 7, "F");
+  pdf.setTextColor(COLORS.navy);
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(20);
-  pdf.text("🐷 Cofrinho Pro", 14, 14);
+  pdf.setFontSize(14);
+  pdf.text("C", 20, 21, { align: "center" });
+
   pdf.setTextColor(255, 255, 255);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(16);
+  pdf.text("Cofrinho Pro", 32, 16);
   pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(11);
-  pdf.text(`Relatório Financeiro — ${data.monthLabel}`, 14, 22);
-  pdf.setFontSize(9);
-  pdf.text(`${data.user.name} • ${data.user.email}`, 14, 28);
+  pdf.setFontSize(10);
+  pdf.setTextColor(212, 175, 55);
+  pdf.text(`Relatório Financeiro · ${data.monthLabel}`, 32, 22);
+  pdf.setTextColor(220, 220, 220);
+  pdf.setFontSize(8);
+  pdf.text(`${data.user.name}  ·  ${data.user.email}`, 32, 28);
+}
+
+function sectionTitle(pdf: jsPDF, text: string, y: number) {
+  pdf.setFillColor(COLORS.gold);
+  pdf.rect(14, y - 4, 2.5, 6, "F");
+  pdf.setTextColor(COLORS.navy);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(13);
+  pdf.text(text, 20, y);
+  pdf.setDrawColor(230, 230, 230);
+  pdf.setLineWidth(0.3);
+  pdf.line(14, y + 2.5, 196, y + 2.5);
 }
 
 function addFooter(pdf: jsPDF) {
   const pageCount = (pdf as any).internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     pdf.setPage(i);
+    pdf.setDrawColor(230, 230, 230);
+    pdf.setLineWidth(0.3);
+    pdf.line(14, 285, 196, 285);
     pdf.setFontSize(8);
     pdf.setTextColor(COLORS.gray);
-    pdf.text(`Cofrinho Pro • Gerado em ${new Date().toLocaleString("pt-BR")}`, 14, 290);
+    pdf.text(`Cofrinho Pro · Gerado em ${new Date().toLocaleString("pt-BR")}`, 14, 290);
     pdf.text(`Página ${i} de ${pageCount}`, 196, 290, { align: "right" });
   }
 }
@@ -189,41 +215,40 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
   const totalExpenses = data.expenses.reduce((a, e) => a + e.amount, 0);
   const balance = totalIncome - totalAccounts - totalExpenses;
 
-  pdf.setTextColor(COLORS.navy);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(14);
-  pdf.text("📊 Resumo do Mês", 14, y);
-  y += 8;
+  sectionTitle(pdf, "Resumo do Mês", y);
+  y += 10;
 
   // KPI cards
   const kpis = [
-    { label: "Receita Total", value: BRL(totalIncome), color: COLORS.emerald },
-    { label: "Contas Mensais", value: BRL(totalAccounts), color: COLORS.gold },
-    { label: "Dívidas (parcelas)", value: BRL(totalDebts), color: COLORS.red },
-    { label: "Saldo Final", value: BRL(balance), color: balance >= 0 ? COLORS.emerald : COLORS.red },
+    { label: "RECEITA TOTAL", value: BRL(totalIncome), color: COLORS.emerald, accent: COLORS.emerald },
+    { label: "CONTAS MENSAIS", value: BRL(totalAccounts), color: COLORS.gold, accent: COLORS.gold },
+    { label: "DÍVIDAS (PARCELAS)", value: BRL(totalDebts), color: COLORS.red, accent: COLORS.red },
+    { label: "SALDO FINAL", value: BRL(balance), color: balance >= 0 ? COLORS.emerald : COLORS.red, accent: balance >= 0 ? COLORS.emerald : COLORS.red },
   ];
-  const cardW = 44; const cardH = 22; const gap = 4;
+  const cardW = 44; const cardH = 26; const gap = 4;
   kpis.forEach((k, i) => {
     const x = 14 + i * (cardW + gap);
-    pdf.setFillColor(COLORS.light);
-    pdf.roundedRect(x, y, cardW, cardH, 2, 2, "F");
-    pdf.setFontSize(8);
+    pdf.setFillColor(255, 255, 255);
+    pdf.setDrawColor(230, 230, 230);
+    pdf.setLineWidth(0.4);
+    pdf.roundedRect(x, y, cardW, cardH, 2.5, 2.5, "FD");
+    // top accent bar
+    pdf.setFillColor(k.accent);
+    pdf.rect(x, y, cardW, 1.4, "F");
+    pdf.setFontSize(7);
     pdf.setTextColor(COLORS.gray);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(k.label, x + 3, y + 6);
-    pdf.setFontSize(11);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(k.label, x + 3, y + 8);
+    pdf.setFontSize(12);
     pdf.setTextColor(k.color);
     pdf.setFont("helvetica", "bold");
-    pdf.text(k.value, x + 3, y + 16);
+    pdf.text(k.value, x + 3, y + 19);
   });
-  y += cardH + 10;
+  y += cardH + 12;
 
   // Balance evolution chart
-  pdf.setTextColor(COLORS.navy);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(12);
-  pdf.text("📈 Evolução do Saldo (últimos 6 meses)", 14, y);
-  y += 4;
+  sectionTitle(pdf, "Evolução do Saldo (últimos 6 meses)", y);
+  y += 6;
 
   const balanceImg = await renderChartToImage("line", {
     labels: data.balanceHistory.map((b) => b.month),
@@ -248,12 +273,9 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
         backgroundColor: [COLORS.gold, COLORS.red, "#9CA3AF", COLORS.emerald],
       }],
     }, {}, 600, 360);
-    if (y > 200) { pdf.addPage(); addHeader(pdf, data); y = 42; }
-    pdf.setTextColor(COLORS.navy);
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(12);
-    pdf.text("💸 Distribuição da Renda", 14, y);
-    y += 4;
+    if (y > 200) { pdf.addPage(); addHeader(pdf, data); y = 46; }
+    sectionTitle(pdf, "Distribuição da Renda", y);
+    y += 6;
     pdf.addImage(doughImg, "PNG", 50, y, 110, 65);
     y += 72;
   }
@@ -261,12 +283,9 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
   // ---------- PAGE 2: Accounts + Debts ----------
   pdf.addPage();
   addHeader(pdf, data);
-  y = 42;
-  pdf.setTextColor(COLORS.navy);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(14);
-  pdf.text("🧾 Contas Mensais", 14, y);
-  y += 4;
+  y = 46;
+  sectionTitle(pdf, "Contas Mensais", y);
+  y += 6;
 
   autoTable(pdf, {
     startY: y + 2,
@@ -274,19 +293,19 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
     body: data.accounts.length
       ? data.accounts.map((a) => [a.name, a.account_type, `Dia ${a.due_day}`, BRL(a.amount), a.paid ? "✓ Paga" : "Pendente"])
       : [["—", "—", "—", "—", "—"]],
-    headStyles: { fillColor: [11, 31, 58], textColor: [212, 175, 55] },
-    styles: { fontSize: 9 },
+    headStyles: { fillColor: [11, 31, 58], textColor: [212, 175, 55], fontSize: 9, fontStyle: "bold" },
+    styles: { fontSize: 9, cellPadding: 2.5 },
+    alternateRowStyles: { fillColor: [250, 250, 252] },
     foot: [["", "", "Total", BRL(totalAccounts), ""]],
     footStyles: { fillColor: [243, 244, 246], textColor: [11, 31, 58], fontStyle: "bold" },
+    margin: { left: 14, right: 14 },
   });
 
   y = (pdf as any).lastAutoTable.finalY + 10;
-  if (y > 230) { pdf.addPage(); addHeader(pdf, data); y = 42; }
+  if (y > 230) { pdf.addPage(); addHeader(pdf, data); y = 46; }
 
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(14);
-  pdf.text("💳 Dívidas", 14, y);
-  y += 4;
+  sectionTitle(pdf, "Dívidas", y);
+  y += 6;
 
   autoTable(pdf, {
     startY: y + 2,
@@ -297,14 +316,15 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
           return [d.nome, BRL(d.valor_total), BRL(d.valor_restante), BRL(d.parcela_mensal), d.parcelas_restantes ?? "—", `${pct}%`];
         })
       : [["—", "—", "—", "—", "—", "—"]],
-    headStyles: { fillColor: [11, 31, 58], textColor: [212, 175, 55] },
-    styles: { fontSize: 9 },
+    headStyles: { fillColor: [11, 31, 58], textColor: [212, 175, 55], fontStyle: "bold" },
+    styles: { fontSize: 9, cellPadding: 2.5 },
+    alternateRowStyles: { fillColor: [250, 250, 252] },
+    margin: { left: 14, right: 14 },
   });
 
-  // Debt chart
   if (data.debts.length > 0) {
-    y = (pdf as any).lastAutoTable.finalY + 8;
-    if (y > 200) { pdf.addPage(); addHeader(pdf, data); y = 42; }
+    y = (pdf as any).lastAutoTable.finalY + 10;
+    if (y > 200) { pdf.addPage(); addHeader(pdf, data); y = 46; }
     const debtImg = await renderChartToImage("bar", {
       labels: data.debts.map((d) => d.nome),
       datasets: [
@@ -312,22 +332,16 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
         { label: "Restante", data: data.debts.map((d) => d.valor_restante), backgroundColor: COLORS.red },
       ],
     }, { scales: { x: { stacked: true }, y: { stacked: true } } });
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(12);
-    pdf.setTextColor(COLORS.navy);
-    pdf.text("Progresso por dívida", 14, y);
-    pdf.addImage(debtImg, "PNG", 14, y + 3, 182, 70);
+    sectionTitle(pdf, "Progresso por dívida", y);
+    pdf.addImage(debtImg, "PNG", 14, y + 6, 182, 70);
   }
 
   // ---------- PAGE 3: Goals + Payment History ----------
   pdf.addPage();
   addHeader(pdf, data);
-  y = 42;
-  pdf.setTextColor(COLORS.navy);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(14);
-  pdf.text("🎯 Metas", 14, y);
-  y += 4;
+  y = 46;
+  sectionTitle(pdf, "Metas", y);
+  y += 6;
 
   autoTable(pdf, {
     startY: y + 2,
@@ -340,17 +354,17 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
           return [g.name, BRL(g.target_amount), BRL(g.current_amount), BRL(g.monthly_amount), `${pct}%`, months ? `${months} meses` : "—"];
         })
       : [["—", "—", "—", "—", "—", "—"]],
-    headStyles: { fillColor: [11, 31, 58], textColor: [212, 175, 55] },
-    styles: { fontSize: 9 },
+    headStyles: { fillColor: [11, 31, 58], textColor: [212, 175, 55], fontStyle: "bold" },
+    styles: { fontSize: 9, cellPadding: 2.5 },
+    alternateRowStyles: { fillColor: [250, 250, 252] },
+    margin: { left: 14, right: 14 },
   });
 
-  y = (pdf as any).lastAutoTable.finalY + 10;
-  if (y > 230) { pdf.addPage(); addHeader(pdf, data); y = 42; }
+  y = (pdf as any).lastAutoTable.finalY + 12;
+  if (y > 230) { pdf.addPage(); addHeader(pdf, data); y = 46; }
 
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(14);
-  pdf.text("📜 Histórico de Pagamentos", 14, y);
-  y += 4;
+  sectionTitle(pdf, "Histórico de Pagamentos", y);
+  y += 6;
 
   autoTable(pdf, {
     startY: y + 2,
@@ -358,48 +372,51 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
     body: data.payments.length
       ? data.payments.map((p) => [p.name, BRL(p.amount), new Date(p.paid_at).toLocaleDateString("pt-BR")])
       : [["—", "—", "—"]],
-    headStyles: { fillColor: [11, 31, 58], textColor: [212, 175, 55] },
-    styles: { fontSize: 9 },
+    headStyles: { fillColor: [11, 31, 58], textColor: [212, 175, 55], fontStyle: "bold" },
+    styles: { fontSize: 9, cellPadding: 2.5 },
+    alternateRowStyles: { fillColor: [250, 250, 252] },
+    margin: { left: 14, right: 14 },
   });
 
   // ---------- PAGE 4: Extras ----------
   pdf.addPage();
   addHeader(pdf, data);
-  y = 42;
-  pdf.setTextColor(COLORS.navy);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(14);
-  pdf.text("💰 Renda Extra", 14, y);
+  y = 46;
+  sectionTitle(pdf, "Renda Extra", y);
+  y += 6;
 
   autoTable(pdf, {
-    startY: y + 4,
+    startY: y + 2,
     head: [["Descrição", "Data", "Valor"]],
     body: data.extras.length
       ? data.extras.map((e) => [e.description, new Date(e.date).toLocaleDateString("pt-BR"), BRL(e.amount)])
       : [["—", "—", "—"]],
-    headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255] },
-    styles: { fontSize: 9 },
+    headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontStyle: "bold" },
+    styles: { fontSize: 9, cellPadding: 2.5 },
+    alternateRowStyles: { fillColor: [240, 253, 244] },
     foot: [["", "Total", BRL(totalExtras)]],
     footStyles: { fillColor: [243, 244, 246], textColor: [11, 31, 58], fontStyle: "bold" },
+    margin: { left: 14, right: 14 },
   });
 
-  y = (pdf as any).lastAutoTable.finalY + 10;
-  if (y > 230) { pdf.addPage(); addHeader(pdf, data); y = 42; }
+  y = (pdf as any).lastAutoTable.finalY + 12;
+  if (y > 230) { pdf.addPage(); addHeader(pdf, data); y = 46; }
 
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(14);
-  pdf.text("🛒 Despesas Extras", 14, y);
+  sectionTitle(pdf, "Despesas Extras", y);
+  y += 6;
 
   autoTable(pdf, {
-    startY: y + 4,
+    startY: y + 2,
     head: [["Descrição", "Categoria", "Data", "Valor"]],
     body: data.expenses.length
       ? data.expenses.map((e) => [e.description, e.category, new Date(e.date).toLocaleDateString("pt-BR"), BRL(e.amount)])
       : [["—", "—", "—", "—"]],
-    headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255] },
-    styles: { fontSize: 9 },
+    headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255], fontStyle: "bold" },
+    styles: { fontSize: 9, cellPadding: 2.5 },
+    alternateRowStyles: { fillColor: [254, 242, 242] },
     foot: [["", "", "Total", BRL(totalExpenses)]],
     footStyles: { fillColor: [243, 244, 246], textColor: [11, 31, 58], fontStyle: "bold" },
+    margin: { left: 14, right: 14 },
   });
 
   addFooter(pdf);

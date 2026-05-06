@@ -305,57 +305,73 @@ const Today = () => {
         </div>
       </div>
 
-      {/* Expenses Comparison Section */}
-      <div className="mb-8">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4 px-1">Despesas</p>
-        <div className="grid grid-cols-2 gap-4">
-          {/* Current Month Column */}
-          <Card className="p-4 bg-card border border-border/50 animate-slide-up" style={{ animationDelay: "0.2s" }}>
-            <p className="text-[9px] font-bold uppercase text-muted-foreground mb-4 border-b border-border/40 pb-2 flex justify-between items-center">
-              <span>Contas ({currentMonthName})</span>
-              <span className="text-[8px] opacity-60">ATIVO</span>
-            </p>
-            <div className="space-y-4">
-              {accounts.slice(0, 3).map(acc => (
-                <div key={acc.id} className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
-                    <Wallet className="w-3.5 h-3.5 text-blue-500" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-medium text-foreground truncate">{acc.nome}</p>
-                    <p className="text-[9px] text-muted-foreground font-mono">({formatCurrency(acc.valor)})</p>
-                  </div>
-                </div>
-              ))}
-              {accounts.length === 0 && <p className="text-[10px] text-muted-foreground italic py-4 text-center">Tudo pago!</p>}
-            </div>
-          </Card>
-
-          {/* Next Month Column */}
-          <Card className="p-4 bg-card border border-border/50 animate-slide-up" style={{ animationDelay: "0.3s" }}>
-            <p className="text-[9px] font-bold uppercase text-muted-foreground mb-4 border-b border-border/40 pb-2">Próximos ({nextMonthName})</p>
-            <div className="space-y-4">
-              {templates.slice(0, 3).map(tmp => (
-                <div key={tmp.id} className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-                    <Wallet className="w-3.5 h-3.5 text-amber-500" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-medium text-foreground truncate">{tmp.name}</p>
-                    <p className="text-[9px] text-muted-foreground font-mono">({formatCurrency(Number(tmp.amount))})</p>
-                  </div>
-                </div>
-              ))}
-              <div 
-                className="pt-2 text-[9px] text-primary font-bold cursor-pointer hover:underline flex items-center justify-center gap-1 border-t border-border/30 mt-2"
+      {/* Expenses Section */}
+      {(() => {
+        const totalMes = accounts.reduce((s, a) => s + Number(a.valor || 0), 0);
+        const pendentes = accounts.filter(a => a.status !== "pago");
+        const totalPendente = pendentes.reduce((s, a) => s + Number(a.valor || 0), 0);
+        const pagas = accounts.length - pendentes.length;
+        return (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4 px-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Despesas — {currentMonthName}</p>
+              <button
+                className="text-[9px] text-primary font-bold hover:underline"
                 onClick={() => navigate("/accounts")}
               >
-                + ADICIONAR CONTA
-              </div>
+                + Adicionar
+              </button>
             </div>
-          </Card>
-        </div>
-      </div>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Total a pagar no mês */}
+              <Card className="p-4 bg-card border border-border/50 animate-slide-up" style={{ animationDelay: "0.2s" }}>
+                <div className="flex items-center justify-between mb-2 border-b border-border/40 pb-2">
+                  <span className="text-[9px] font-bold uppercase text-muted-foreground">Total do mês</span>
+                  <span className="text-[8px] text-muted-foreground">{accounts.length} {accounts.length === 1 ? "conta" : "contas"}</span>
+                </div>
+                <p className="font-heading text-xl font-bold text-foreground mb-3">{formatCurrency(totalMes)}</p>
+                <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
+                  {accounts.slice(0, 4).map(acc => (
+                    <div key={acc.id} className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-md bg-blue-500/10 flex items-center justify-center shrink-0">
+                        <Wallet className="w-3 h-3 text-blue-500" />
+                      </div>
+                      <p className="text-[10px] font-medium text-foreground truncate flex-1">{acc.nome}</p>
+                      <p className="text-[10px] text-muted-foreground font-mono">{formatCurrency(acc.valor)}</p>
+                    </div>
+                  ))}
+                  {accounts.length === 0 && <p className="text-[10px] text-muted-foreground italic py-2 text-center">Nenhuma conta</p>}
+                  {accounts.length > 4 && <p className="text-[9px] text-muted-foreground text-center pt-1">+{accounts.length - 4} outras</p>}
+                </div>
+              </Card>
+
+              {/* Falta pagar */}
+              <Card className="p-4 bg-card border border-border/50 animate-slide-up" style={{ animationDelay: "0.3s" }}>
+                <div className="flex items-center justify-between mb-2 border-b border-border/40 pb-2">
+                  <span className="text-[9px] font-bold uppercase text-muted-foreground">Falta pagar</span>
+                  <span className="text-[8px] text-emerald-accent font-semibold">{pagas} pagas</span>
+                </div>
+                <p className={`font-heading text-xl font-bold mb-3 ${totalPendente > 0 ? "text-amber-500" : "text-emerald-accent"}`}>
+                  {formatCurrency(totalPendente)}
+                </p>
+                <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
+                  {pendentes.slice(0, 4).map(acc => (
+                    <div key={acc.id} className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-md bg-amber-500/10 flex items-center justify-center shrink-0">
+                        <Wallet className="w-3 h-3 text-amber-500" />
+                      </div>
+                      <p className="text-[10px] font-medium text-foreground truncate flex-1">{acc.nome}</p>
+                      <p className="text-[10px] text-amber-500 font-mono font-semibold">{formatCurrency(acc.valor)}</p>
+                    </div>
+                  ))}
+                  {pendentes.length === 0 && <p className="text-[10px] text-emerald-accent italic py-2 text-center">Tudo pago! 🎉</p>}
+                  {pendentes.length > 4 && <p className="text-[9px] text-muted-foreground text-center pt-1">+{pendentes.length - 4} pendentes</p>}
+                </div>
+              </Card>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Progress Widgets Section - dados reais */}
       <div className="grid grid-cols-2 gap-4 mb-10">
