@@ -68,6 +68,7 @@ const Today = () => {
   const [templates, setTemplates] = useState<Account[]>([]);
   const [debts, setDebts] = useState<any[]>([]);
   const [goals, setGoals] = useState<any[]>([]);
+  const [expensesData, setExpensesData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [salary, setSalary] = useState(0);
   const [salaryId, setSalaryId] = useState<string | null>(null);
@@ -96,13 +97,14 @@ const Today = () => {
       setLoading(true);
 
       // Consultas individuais para evitar que um erro 404 trave tudo
-      const [resInst, resTemp, resSal, resExtra, resGoals, resDebts] = await Promise.all([
+      const [resInst, resTemp, resSal, resExtra, resGoals, resDebts, resExp] = await Promise.all([
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
         supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
         supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear),
         supabase.from("goals" as any).select("*").eq("user_id", user.id).limit(2),
         supabase.from("debts" as any).select("*").eq("user_id", user.id),
+        supabase.from("expenses").select("*").eq("user_id", user.id).gte("date", `${currentMonthYear}-01`).lte("date", `${currentMonthYear}-31`),
       ]);
 
       const rawAccounts = resInst.data || [];
@@ -123,6 +125,7 @@ const Today = () => {
       setExtraIncomes(resExtra.data || []);
       setGoals(resGoals.data || []);
       setDebts((resDebts.data as any[]) || []);
+      setExpensesData(resExp.data || []);
       
       if (resSal.data) {
         const s = resSal.data as any;
@@ -149,13 +152,19 @@ const Today = () => {
   const totais = useMemo(() => {
     const totalExtra = extraIncomes.reduce((s, e) => s + Number(e.amount), 0);
     const dividasParaSoma = debts.map((d: any) => ({ amount: d.parcela_mensal }));
+    
+    const allContas = [
+      ...accounts,
+      ...expensesData.map(e => ({ amount: e.amount, tipo: "expense", billing_type: "expense" }))
+    ];
+
     return calcularTotaisFinanceiros({
       salario: salary,
       extra: totalExtra,
-      contas: accounts,
+      contas: allContas,
       dividas: dividasParaSoma,
     });
-  }, [accounts, salary, extraIncomes, debts]);
+  }, [accounts, salary, extraIncomes, debts, expensesData]);
 
   const saveSalary = async () => {
     if (!user) return;
@@ -307,10 +316,22 @@ const Today = () => {
 
       {/* Expenses Section */}
       {(() => {
-        const totalMes = accounts.reduce((s, a) => s + Number(a.valor || 0), 0);
-        const pendentes = accounts.filter(a => a.status !== "pago");
+        const contasDespesas = accounts.filter(a => a.tipo !== "divida" && a.tipo !== "debt");
+        const contasEGastos = [
+          ...contasDespesas,
+          ...expensesData.map(e => ({
+            id: e.id,
+            nome: e.description,
+            valor: Number(e.amount),
+            status: "pago",
+          }))
+        ];
+        
+        const totalMes = contasEGastos.reduce((s, a) => s + Number(a.valor || 0), 0);
+        const pendentes = contasEGastos.filter(a => a.status !== "pago");
         const totalPendente = pendentes.reduce((s, a) => s + Number(a.valor || 0), 0);
-        const pagas = accounts.length - pendentes.length;
+        const pagas = contasEGastos.length - pendentes.length;
+        
         return (
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4 px-1">
@@ -327,11 +348,11 @@ const Today = () => {
               <Card className="p-4 bg-card border border-border/50 animate-slide-up" style={{ animationDelay: "0.2s" }}>
                 <div className="flex items-center justify-between mb-2 border-b border-border/40 pb-2">
                   <span className="text-[9px] font-bold uppercase text-muted-foreground">Total do mês</span>
-                  <span className="text-[8px] text-muted-foreground">{accounts.length} {accounts.length === 1 ? "conta" : "contas"}</span>
+                  <span className="text-[8px] text-muted-foreground">{contasEGastos.length} {contasEGastos.length === 1 ? "conta" : "contas"}</span>
                 </div>
                 <p className="font-heading text-xl font-bold text-foreground mb-3">{formatCurrency(totalMes)}</p>
                 <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
-                  {accounts.slice(0, 4).map(acc => (
+                  {contasEGastos.slice(0, 4).map(acc => (
                     <div key={acc.id} className="flex items-center gap-2">
                       <div className="w-5 h-5 rounded-md bg-blue-500/10 flex items-center justify-center shrink-0">
                         <Wallet className="w-3 h-3 text-blue-500" />
@@ -340,8 +361,8 @@ const Today = () => {
                       <p className="text-[10px] text-muted-foreground font-mono">{formatCurrency(acc.valor)}</p>
                     </div>
                   ))}
-                  {accounts.length === 0 && <p className="text-[10px] text-muted-foreground italic py-2 text-center">Nenhuma conta</p>}
-                  {accounts.length > 4 && <p className="text-[9px] text-muted-foreground text-center pt-1">+{accounts.length - 4} outras</p>}
+                  {contasEGastos.length === 0 && <p className="text-[10px] text-muted-foreground italic py-2 text-center">Nenhuma conta</p>}
+                  {contasEGastos.length > 4 && <p className="text-[9px] text-muted-foreground text-center pt-1">+{contasEGastos.length - 4} outras</p>}
                 </div>
               </Card>
 
