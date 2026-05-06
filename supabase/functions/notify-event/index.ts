@@ -67,10 +67,16 @@ Deno.serve(async (req) => {
       salary: "💵 Salário atualizado",
       extra_income: "✨ Renda extra",
     };
+    const urlByEvent: Record<EventType, string> = {
+      challenge_progress: "/challenges",
+      challenge_completed: "/challenges",
+      salary: "/monthly-accounts",
+      extra_income: "/today",
+    };
     const fcmPromise = fetch(`${SUPA_URL}/functions/v1/send-fcm`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY },
-      body: JSON.stringify({ user_id: targetUserId, title: titleByEvent[event], body: plainText.slice(0, 200), url: "/" }),
+      body: JSON.stringify({ user_id: targetUserId, title: titleByEvent[event], body: plainText.slice(0, 200), url: urlByEvent[event] }),
     }).catch((e) => console.warn("send-fcm failed:", e));
 
     if (!cfg?.telegram_chat_id || !eventsEnabled) {

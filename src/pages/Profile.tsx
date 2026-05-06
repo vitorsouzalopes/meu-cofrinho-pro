@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { User, LogOut, Settings, HelpCircle, RefreshCcw, Target, ChevronRight, FileDown, Plus, Trash2, MessageCircle, X } from "lucide-react";
+import { User, LogOut, Settings, HelpCircle, RefreshCcw, Target, ChevronRight, FileDown, Plus, Trash2, MessageCircle, X, Bell } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -322,6 +322,7 @@ const ProfilePage = () => {
       <div className="space-y-1 mb-10 animate-slide-up" style={{ animationDelay: "0.3s" }}>
         {[
           { icon: <Settings className="w-5 h-5" />, label: "Configurações da conta", onClick: () => setEditing(true) },
+          { icon: <Bell className="w-5 h-5" />, label: "Notificações (Push e Telegram)", onClick: () => navigate("/telegram") },
           { icon: <Target className="w-5 h-5" />, label: "Metas Financeiras", onClick: () => navigate("/goals") },
           { icon: <Plus className="w-5 h-5" />, label: "Categorias Personalizadas" },
           { icon: <FileDown className="w-5 h-5" />, label: "Exportar Relatório Mensal (PDF)", onClick: async () => {
