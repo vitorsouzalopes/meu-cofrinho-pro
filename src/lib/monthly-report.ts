@@ -215,41 +215,40 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
   const totalExpenses = data.expenses.reduce((a, e) => a + e.amount, 0);
   const balance = totalIncome - totalAccounts - totalExpenses;
 
-  pdf.setTextColor(COLORS.navy);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(14);
-  pdf.text("📊 Resumo do Mês", 14, y);
-  y += 8;
+  sectionTitle(pdf, "Resumo do Mês", y);
+  y += 10;
 
   // KPI cards
   const kpis = [
-    { label: "Receita Total", value: BRL(totalIncome), color: COLORS.emerald },
-    { label: "Contas Mensais", value: BRL(totalAccounts), color: COLORS.gold },
-    { label: "Dívidas (parcelas)", value: BRL(totalDebts), color: COLORS.red },
-    { label: "Saldo Final", value: BRL(balance), color: balance >= 0 ? COLORS.emerald : COLORS.red },
+    { label: "RECEITA TOTAL", value: BRL(totalIncome), color: COLORS.emerald, accent: COLORS.emerald },
+    { label: "CONTAS MENSAIS", value: BRL(totalAccounts), color: COLORS.gold, accent: COLORS.gold },
+    { label: "DÍVIDAS (PARCELAS)", value: BRL(totalDebts), color: COLORS.red, accent: COLORS.red },
+    { label: "SALDO FINAL", value: BRL(balance), color: balance >= 0 ? COLORS.emerald : COLORS.red, accent: balance >= 0 ? COLORS.emerald : COLORS.red },
   ];
-  const cardW = 44; const cardH = 22; const gap = 4;
+  const cardW = 44; const cardH = 26; const gap = 4;
   kpis.forEach((k, i) => {
     const x = 14 + i * (cardW + gap);
-    pdf.setFillColor(COLORS.light);
-    pdf.roundedRect(x, y, cardW, cardH, 2, 2, "F");
-    pdf.setFontSize(8);
+    pdf.setFillColor(255, 255, 255);
+    pdf.setDrawColor(230, 230, 230);
+    pdf.setLineWidth(0.4);
+    pdf.roundedRect(x, y, cardW, cardH, 2.5, 2.5, "FD");
+    // top accent bar
+    pdf.setFillColor(k.accent);
+    pdf.rect(x, y, cardW, 1.4, "F");
+    pdf.setFontSize(7);
     pdf.setTextColor(COLORS.gray);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(k.label, x + 3, y + 6);
-    pdf.setFontSize(11);
+    pdf.setFont("helvetica", "bold");
+    pdf.text(k.label, x + 3, y + 8);
+    pdf.setFontSize(12);
     pdf.setTextColor(k.color);
     pdf.setFont("helvetica", "bold");
-    pdf.text(k.value, x + 3, y + 16);
+    pdf.text(k.value, x + 3, y + 19);
   });
-  y += cardH + 10;
+  y += cardH + 12;
 
   // Balance evolution chart
-  pdf.setTextColor(COLORS.navy);
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(12);
-  pdf.text("📈 Evolução do Saldo (últimos 6 meses)", 14, y);
-  y += 4;
+  sectionTitle(pdf, "Evolução do Saldo (últimos 6 meses)", y);
+  y += 6;
 
   const balanceImg = await renderChartToImage("line", {
     labels: data.balanceHistory.map((b) => b.month),
