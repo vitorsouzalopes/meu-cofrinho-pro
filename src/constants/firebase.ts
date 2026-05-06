@@ -13,7 +13,7 @@ export const FIREBASE_CONFIG = {
   measurementId: "G-3G8TQLSD59"
 };
 
-export const VAPID_KEY = "REPLACE_ME_VAPID_PUBLIC_KEY";
+export const VAPID_KEY = "BKBkqCOCBwu8_4rmTP5Y5a-IjTmr8iX6UQDTU8Hw_R0wMzT2HPAZuy6OJGILudsdnr7wope60miW4HgNXc1wt-I";
 
 export const isFirebaseConfigured = () =>
   !FIREBASE_CONFIG.apiKey.startsWith("REPLACE_ME") &&

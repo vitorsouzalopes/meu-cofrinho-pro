@@ -235,14 +235,32 @@ const TelegramSettings = () => {
           <span className="text-xs text-muted-foreground">
             {fcmEnabled ? `${fcmTokenCount} dispositivo(s) registrado(s)` : "Desativado"}
           </span>
-          <Button
-            size="sm"
-            variant={fcmEnabled ? "outline" : "gold"}
-            onClick={handleToggleFcm}
-            disabled={fcmBusy || !isFirebaseConfigured()}
-          >
-            {fcmBusy ? "..." : fcmEnabled ? "Desativar push" : "Ativar push"}
-          </Button>
+          <div className="flex gap-2">
+            {fcmEnabled && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  toast({ title: "Enviando teste..." });
+                  const res = await supabase.functions.invoke("send-fcm", {
+                    body: { user_id: user?.id, title: "🔔 Notificação de Teste", body: "Seu push está configurado corretamente!", url: "/" }
+                  });
+                  if (res.error) toast({ title: "Erro", description: res.error.message, variant: "destructive" });
+                  else toast({ title: "Notificação enviada!" });
+                }}
+              >
+                Testar Push
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant={fcmEnabled ? "outline" : "gold"}
+              onClick={handleToggleFcm}
+              disabled={fcmBusy || !isFirebaseConfigured()}
+            >
+              {fcmBusy ? "..." : fcmEnabled ? "Desativar push" : "Ativar push"}
+            </Button>
+          </div>
         </div>
       </div>
 
