@@ -33,8 +33,11 @@ const ProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState("");
+  const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMonth, setExportMonth] = useState(new Date().toISOString().slice(0, 7));
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -53,6 +56,7 @@ const ProfilePage = () => {
     if (profRes.data) {
       setProfile(profRes.data as Profile);
       setDisplayName(profRes.data.display_name || "");
+      setPhone((profRes.data as any).phone || "");
     }
     
     const rawAccounts = (instancesRes.data ?? []) as any[];
@@ -83,7 +87,7 @@ const ProfilePage = () => {
     setSaving(true);
     const { error } = await supabase
       .from("profiles")
-      .update({ display_name: displayName, updated_at: new Date().toISOString() })
+      .update({ display_name: displayName, phone, updated_at: new Date().toISOString() })
       .eq("id", user.id);
 
     if (error) {
@@ -325,16 +329,8 @@ const ProfilePage = () => {
           { icon: <Bell className="w-5 h-5" />, label: "Notificações (Push e Telegram)", onClick: () => navigate("/telegram") },
           { icon: <Target className="w-5 h-5" />, label: "Metas Financeiras", onClick: () => navigate("/goals") },
           { icon: <Plus className="w-5 h-5" />, label: "Categorias Personalizadas" },
-          { icon: <FileDown className="w-5 h-5" />, label: "Exportar Relatório Mensal (PDF)", onClick: async () => {
-            try {
-              toast({ title: "Gerando relatório...", description: "Aguarde alguns segundos." });
-              await generateMonthlyReport();
-              toast({ title: "Relatório gerado!", description: "PDF baixado com sucesso." });
-            } catch (e: any) {
-              toast({ title: "Erro ao gerar", description: e.message, variant: "destructive" });
-            }
-          } },
-          { icon: <HelpCircle className="w-5 h-5" />, label: "Ajuda e Suporte" },
+          { icon: <FileDown className="w-5 h-5" />, label: "Exportar Relatório Mensal (PDF)", onClick: () => setExportDialogOpen(true) },
+          { icon: <HelpCircle className="w-5 h-5" />, label: "Ajuda e Suporte", onClick: () => setHelpOpen(true) },
           { icon: <RefreshCcw className="w-5 h-5" />, label: "Sincronizar Mês", onClick: loadData },
           { icon: <Trash2 className="w-5 h-5" />, label: "Limpar Dados Auto-Gerados do Mês", onClick: limparDadosAutoGerados, color: "text-amber-500" },
           { icon: <Trash2 className="w-5 h-5" />, label: "Apagar Todos os Objetivos", onClick: limparObjetivos, color: "text-destructive" },
@@ -356,6 +352,129 @@ const ProfilePage = () => {
           </div>
         ))}
       </div>
+
+      {/* Account Settings Dialog */}
+      <Dialog open={editing} onOpenChange={setEditing}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Configurações da Conta</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nome</label>
+              <Input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Seu nome"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email</label>
+              <Input
+                value={profile?.email || user?.email || ""}
+                disabled
+                className="bg-muted/50 text-muted-foreground"
+              />
+              <p className="text-[10px] text-muted-foreground">O email não pode ser alterado por aqui.</p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Telefone / WhatsApp</label>
+              <Input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setEditing(false)}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Data Dialog */}
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Exportar Relatório</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Selecione o mês desejado para gerar o relatório em PDF com todas as suas informações financeiras.
+            </p>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mês de Referência</label>
+              <Input
+                type="month"
+                value={exportMonth}
+                onChange={(e) => setExportMonth(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setExportDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={async () => {
+              try {
+                toast({ title: "Gerando relatório...", description: "Aguarde alguns segundos." });
+                await generateMonthlyReport(exportMonth);
+                toast({ title: "Relatório gerado!", description: "PDF baixado com sucesso." });
+                setExportDialogOpen(false);
+              } catch (e: any) {
+                toast({ title: "Erro ao gerar", description: e.message, variant: "destructive" });
+              }
+            }}>
+              Gerar PDF
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Help & Support Dialog */}
+      <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Ajuda e Suporte</DialogTitle>
+          </DialogHeader>
+          <div className="py-6 space-y-6">
+            <div className="flex flex-col items-center justify-center text-center space-y-2">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+                <MessageCircle className="w-6 h-6 text-primary" />
+              </div>
+              <h3 className="font-semibold text-lg">Precisa de ajuda?</h3>
+              <p className="text-sm text-muted-foreground">
+                Nossa equipe está pronta para ajudar você a resolver qualquer problema ou responder dúvidas sobre o app.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <Card className="p-3 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase">E-mail de Suporte</p>
+                  <p className="text-sm font-medium">vitorsouzalopes@souunisuam.com.br</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => {
+                  navigator.clipboard.writeText("vitorsouzalopes@souunisuam.com.br");
+                  toast({ title: "E-mail copiado!" });
+                }}>Copiar</Button>
+              </Card>
+
+              <Card className="p-3 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase">WhatsApp / Telefone</p>
+                  <p className="text-sm font-medium">+55 21 99999-9999</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => {
+                  window.open("https://wa.me/5521999999999", "_blank");
+                }}>Chamar</Button>
+              </Card>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };
