@@ -147,26 +147,52 @@ async function fetchReportData(monthYear: string): Promise<ReportData> {
 
 function addHeader(pdf: jsPDF, data: ReportData) {
   pdf.setFillColor(COLORS.navy);
-  pdf.rect(0, 0, 210, 32, "F");
-  pdf.setTextColor(COLORS.gold);
+  pdf.rect(0, 0, 210, 36, "F");
+  pdf.setFillColor(COLORS.gold);
+  pdf.rect(0, 36, 210, 1.2, "F");
+
+  pdf.setFillColor(COLORS.gold);
+  pdf.circle(20, 18, 7, "F");
+  pdf.setTextColor(COLORS.navy);
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(20);
-  pdf.text("🐷 Cofrinho Pro", 14, 14);
+  pdf.setFontSize(14);
+  pdf.text("C", 20, 21, { align: "center" });
+
   pdf.setTextColor(255, 255, 255);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(16);
+  pdf.text("Cofrinho Pro", 32, 16);
   pdf.setFont("helvetica", "normal");
-  pdf.setFontSize(11);
-  pdf.text(`Relatório Financeiro — ${data.monthLabel}`, 14, 22);
-  pdf.setFontSize(9);
-  pdf.text(`${data.user.name} • ${data.user.email}`, 14, 28);
+  pdf.setFontSize(10);
+  pdf.setTextColor(212, 175, 55);
+  pdf.text(`Relatório Financeiro · ${data.monthLabel}`, 32, 22);
+  pdf.setTextColor(220, 220, 220);
+  pdf.setFontSize(8);
+  pdf.text(`${data.user.name}  ·  ${data.user.email}`, 32, 28);
+}
+
+function sectionTitle(pdf: jsPDF, text: string, y: number) {
+  pdf.setFillColor(COLORS.gold);
+  pdf.rect(14, y - 4, 2.5, 6, "F");
+  pdf.setTextColor(COLORS.navy);
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(13);
+  pdf.text(text, 20, y);
+  pdf.setDrawColor(230, 230, 230);
+  pdf.setLineWidth(0.3);
+  pdf.line(14, y + 2.5, 196, y + 2.5);
 }
 
 function addFooter(pdf: jsPDF) {
   const pageCount = (pdf as any).internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     pdf.setPage(i);
+    pdf.setDrawColor(230, 230, 230);
+    pdf.setLineWidth(0.3);
+    pdf.line(14, 285, 196, 285);
     pdf.setFontSize(8);
     pdf.setTextColor(COLORS.gray);
-    pdf.text(`Cofrinho Pro • Gerado em ${new Date().toLocaleString("pt-BR")}`, 14, 290);
+    pdf.text(`Cofrinho Pro · Gerado em ${new Date().toLocaleString("pt-BR")}`, 14, 290);
     pdf.text(`Página ${i} de ${pageCount}`, 196, 290, { align: "right" });
   }
 }
