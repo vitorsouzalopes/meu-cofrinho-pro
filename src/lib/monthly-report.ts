@@ -293,10 +293,12 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
     body: data.accounts.length
       ? data.accounts.map((a) => [a.name, a.account_type, `Dia ${a.due_day}`, BRL(a.amount), a.paid ? "✓ Paga" : "Pendente"])
       : [["—", "—", "—", "—", "—"]],
-    headStyles: { fillColor: [11, 31, 58], textColor: [212, 175, 55] },
-    styles: { fontSize: 9 },
+    headStyles: { fillColor: [11, 31, 58], textColor: [212, 175, 55], fontSize: 9, fontStyle: "bold" },
+    styles: { fontSize: 9, cellPadding: 2.5 },
+    alternateRowStyles: { fillColor: [250, 250, 252] },
     foot: [["", "", "Total", BRL(totalAccounts), ""]],
     footStyles: { fillColor: [243, 244, 246], textColor: [11, 31, 58], fontStyle: "bold" },
+    margin: { left: 14, right: 14 },
   });
 
   y = (pdf as any).lastAutoTable.finalY + 10;
