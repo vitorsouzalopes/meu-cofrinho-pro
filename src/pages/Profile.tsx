@@ -38,6 +38,7 @@ const ProfilePage = () => {
   const [helpOpen, setHelpOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportMonth, setExportMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -45,12 +46,13 @@ const ProfilePage = () => {
     const today = new Date();
     const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 
-    const [profRes, instancesRes, templatesRes, invRes, goalsRes] = await Promise.all([
+    const [profRes, instancesRes, templatesRes, invRes, goalsRes, roleRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).single(),
       supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
       supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
       supabase.from("investments").select("*").eq("user_id", user.id),
-      supabase.from("goals" as any).select("*").eq("user_id", user.id).limit(2)
+      supabase.from("goals" as any).select("*").eq("user_id", user.id).limit(2),
+      supabase.from("user_roles" as any).select("role").eq("user_id", user.id).maybeSingle()
     ]);
 
     if (profRes.data) {
@@ -58,6 +60,8 @@ const ProfilePage = () => {
       setDisplayName(profRes.data.display_name || "");
       setPhone((profRes.data as any).phone || "");
     }
+    
+    setIsAdmin(roleRes.data?.role === "admin" || user.email === "vitorsouzalopes@souunisuam.com.br");
     
     const rawAccounts = (instancesRes.data ?? []) as any[];
     const rawTemplates = (templatesRes.data ?? []) as any[];
@@ -331,10 +335,12 @@ const ProfilePage = () => {
           { icon: <Plus className="w-5 h-5" />, label: "Categorias Personalizadas" },
           { icon: <FileDown className="w-5 h-5" />, label: "Exportar Relatório Mensal (PDF)", onClick: () => setExportDialogOpen(true) },
           { icon: <HelpCircle className="w-5 h-5" />, label: "Ajuda e Suporte", onClick: () => setHelpOpen(true) },
-          { icon: <RefreshCcw className="w-5 h-5" />, label: "Sincronizar Mês", onClick: loadData },
-          { icon: <Trash2 className="w-5 h-5" />, label: "Limpar Dados Auto-Gerados do Mês", onClick: limparDadosAutoGerados, color: "text-amber-500" },
-          { icon: <Trash2 className="w-5 h-5" />, label: "Apagar Todos os Objetivos", onClick: limparObjetivos, color: "text-destructive" },
-          { icon: <Trash2 className="w-5 h-5" />, label: "Apagar Todas as Dívidas Ativas", onClick: limparDividasAtivas, color: "text-destructive" },
+          ...(isAdmin ? [
+            { icon: <RefreshCcw className="w-5 h-5" />, label: "Sincronizar Mês", onClick: loadData },
+            { icon: <Trash2 className="w-5 h-5" />, label: "Limpar Dados Auto-Gerados do Mês", onClick: limparDadosAutoGerados, color: "text-amber-500" },
+            { icon: <Trash2 className="w-5 h-5" />, label: "Apagar Todos os Objetivos", onClick: limparObjetivos, color: "text-destructive" },
+            { icon: <Trash2 className="w-5 h-5" />, label: "Apagar Todas as Dívidas Ativas", onClick: limparDividasAtivas, color: "text-destructive" },
+          ] : []),
           { icon: <LogOut className="w-5 h-5" />, label: "Logout", onClick: handleSignOut, color: "text-destructive" },
         ].map((item, i) => (
           <div 
