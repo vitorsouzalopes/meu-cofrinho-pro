@@ -75,12 +75,30 @@ Deno.serve(async (req) => {
 
     const FCM_SERVICE_ACCOUNT_JSON = Deno.env.get("FCM_SERVICE_ACCOUNT_JSON");
     const FCM_PROJECT_ID = Deno.env.get("FCM_PROJECT_ID");
-    if (!FCM_SERVICE_ACCOUNT_JSON || !FCM_PROJECT_ID) {
-      return new Response(JSON.stringify({ ok: false, skipped: true, reason: "FCM not configured" }), {
+    
+    if (!FCM_SERVICE_ACCOUNT_JSON) {
+      return new Response(JSON.stringify({ ok: false, error: "Variável FCM_SERVICE_ACCOUNT_JSON não configurada no Supabase" }), {
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const serviceAccount = JSON.parse(FCM_SERVICE_ACCOUNT_JSON);
+    
+    if (!FCM_PROJECT_ID) {
+      return new Response(JSON.stringify({ ok: false, error: "Variável FCM_PROJECT_ID não configurada no Supabase" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    let serviceAccount;
+    try {
+      serviceAccount = JSON.parse(FCM_SERVICE_ACCOUNT_JSON);
+    } catch (e) {
+      return new Response(JSON.stringify({ ok: false, error: "Erro ao processar FCM_SERVICE_ACCOUNT_JSON: JSON inválido" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -110,7 +128,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    const accessToken = await getAccessToken(serviceAccount);
+    let accessToken;
+    try {
+      accessToken = await getAccessToken(serviceAccount);
+    } catch (e) {
+      return new Response(JSON.stringify({ ok: false, error: `Erro ao obter Access Token do Google: ${(e as Error).message}` }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const endpoint = `https://fcm.googleapis.com/v1/projects/${FCM_PROJECT_ID}/messages:send`;
 
     const results = await Promise.all(
