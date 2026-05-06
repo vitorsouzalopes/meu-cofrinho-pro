@@ -302,12 +302,10 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
   });
 
   y = (pdf as any).lastAutoTable.finalY + 10;
-  if (y > 230) { pdf.addPage(); addHeader(pdf, data); y = 42; }
+  if (y > 230) { pdf.addPage(); addHeader(pdf, data); y = 46; }
 
-  pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(14);
-  pdf.text("💳 Dívidas", 14, y);
-  y += 4;
+  sectionTitle(pdf, "Dívidas", y);
+  y += 6;
 
   autoTable(pdf, {
     startY: y + 2,
@@ -318,14 +316,15 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
           return [d.nome, BRL(d.valor_total), BRL(d.valor_restante), BRL(d.parcela_mensal), d.parcelas_restantes ?? "—", `${pct}%`];
         })
       : [["—", "—", "—", "—", "—", "—"]],
-    headStyles: { fillColor: [11, 31, 58], textColor: [212, 175, 55] },
-    styles: { fontSize: 9 },
+    headStyles: { fillColor: [11, 31, 58], textColor: [212, 175, 55], fontStyle: "bold" },
+    styles: { fontSize: 9, cellPadding: 2.5 },
+    alternateRowStyles: { fillColor: [250, 250, 252] },
+    margin: { left: 14, right: 14 },
   });
 
-  // Debt chart
   if (data.debts.length > 0) {
-    y = (pdf as any).lastAutoTable.finalY + 8;
-    if (y > 200) { pdf.addPage(); addHeader(pdf, data); y = 42; }
+    y = (pdf as any).lastAutoTable.finalY + 10;
+    if (y > 200) { pdf.addPage(); addHeader(pdf, data); y = 46; }
     const debtImg = await renderChartToImage("bar", {
       labels: data.debts.map((d) => d.nome),
       datasets: [
@@ -333,11 +332,8 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
         { label: "Restante", data: data.debts.map((d) => d.valor_restante), backgroundColor: COLORS.red },
       ],
     }, { scales: { x: { stacked: true }, y: { stacked: true } } });
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(12);
-    pdf.setTextColor(COLORS.navy);
-    pdf.text("Progresso por dívida", 14, y);
-    pdf.addImage(debtImg, "PNG", 14, y + 3, 182, 70);
+    sectionTitle(pdf, "Progresso por dívida", y);
+    pdf.addImage(debtImg, "PNG", 14, y + 6, 182, 70);
   }
 
   // ---------- PAGE 3: Goals + Payment History ----------
