@@ -26,6 +26,10 @@ export async function enableFcmPush(userId: string): Promise<{ ok: boolean; reas
     }
 
     const swReg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    
+    // Aguarda o Service Worker estar pronto e ativo
+    await navigator.serviceWorker.ready;
+    
     const messaging = getMessaging(getApp());
     const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
 
