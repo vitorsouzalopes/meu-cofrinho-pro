@@ -209,7 +209,7 @@ const AccountForm = ({ open, onClose, onSaved, editing, userId, monthYear }: Acc
         </DialogHeader>
 
         <div className="space-y-5 mt-2">
-          {/* Tipo */}
+
           <div>
             <label className="text-[10px] uppercase font-bold text-muted-foreground mb-2 block tracking-widest">
               Tipo de Conta
@@ -231,7 +231,6 @@ const AccountForm = ({ open, onClose, onSaved, editing, userId, monthYear }: Acc
             </div>
           </div>
 
-          {/* Nome */}
           <div>
             <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1.5 block tracking-widest">
               Nome da Conta
@@ -244,7 +243,6 @@ const AccountForm = ({ open, onClose, onSaved, editing, userId, monthYear }: Acc
             />
           </div>
 
-          {/* Valor + Vencimento (sempre visíveis) */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1.5 block tracking-widest">
@@ -275,7 +273,6 @@ const AccountForm = ({ open, onClose, onSaved, editing, userId, monthYear }: Acc
             </div>
           </div>
 
-          {/* ── Campos extras apenas para Dívida ── */}
           {isDebt && (
             <>
               <div>
@@ -318,7 +315,6 @@ const AccountForm = ({ open, onClose, onSaved, editing, userId, monthYear }: Acc
   );
 };
 
-// ─── Card de Conta ────────────────────────────────────────────────────────────
 const AccountCard = ({
   account,
   monthYear,
@@ -343,12 +339,10 @@ const AccountCard = ({
   return (
     <Card className="p-4 bg-card border border-border/50 shadow-sm group hover:border-primary/20 transition-colors">
       <div className="flex items-center gap-3">
-        {/* Ícone */}
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${colorMap[accentColor]}`}>
           {accentColor === "red" ? <AlertCircle className="w-5 h-5" /> : <Wallet className="w-5 h-5" />}
         </div>
 
-        {/* Conteúdo */}
         <div className="flex-1 min-w-0">
           <div className="flex justify-between items-start gap-2">
             <p className="font-bold text-sm text-foreground truncate">{account.name}</p>
@@ -364,7 +358,6 @@ const AccountCard = ({
               monthYear={monthYear}
             />
 
-            {/* Ações */}
             <div className="flex items-center gap-1.5">
               {!account.paid && (
                 <button
@@ -392,7 +385,6 @@ const AccountCard = ({
             </div>
           </div>
 
-          {/* Info extra para dívidas */}
           {account.billing_type === "debt" && account.remaining_months && (
             <p className="text-[10px] text-muted-foreground mt-1.5 font-medium">
               {account.remaining_months} parcela(s) restante(s)
@@ -404,10 +396,10 @@ const AccountCard = ({
   );
 };
 
-// ─── Componente Principal ─────────────────────────────────────────────────────
 const Accounts = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const location = useLocation();
   const navigate = useNavigate();
   const invalidate = useInvalidateFinance();
 
@@ -423,10 +415,8 @@ const Accounts = () => {
   const [payingAccount, setPayingAccount] = useState<any>(null);
   const [paying, setPaying] = useState(false);
 
-  // Dívidas (fonte única: tabela `debts`)
   const { data: debtsData = [] } = useDebts();
 
-  // ── Carrega contas (mensais + únicas, sem dívidas) ──
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -482,9 +472,7 @@ const Accounts = () => {
     return () => window.removeEventListener("finance-data-updated", sync);
   }, [load]);
 
-  // ── Exclusão ────────────────────────────────────────────────────────────────
   const deleteAccount = async (account: any) => {
-    // Dívida (vem da tabela `debts`)
     if (account.__source === "debt") {
       if (!window.confirm(`Excluir a dívida "${account.nome}" e seu histórico?`)) return;
       const { error } = await supabase.from("debts" as any).delete().eq("id", account.id);
@@ -530,11 +518,9 @@ const Accounts = () => {
     load();
   };
 
-  // ── Pagamento ───────────────────────────────────────────────────────────────
   const confirmPay = async () => {
     if (!payingAccount || !user) return;
 
-    // Dívida: registra pagamento na tabela debt_payments e abate parcela
     if (payingAccount.__source === "debt") {
       setPaying(true);
       const novoSaldo = Math.max(0, Number(payingAccount.valor_restante) - Number(payingAccount.parcela_mensal));
@@ -570,6 +556,7 @@ const Accounts = () => {
       } else {
         toast({ title: "Parcela quitada!" });
         invalidate();
+        load();
         setPayDialogOpen(false);
       }
       return;
@@ -611,15 +598,11 @@ const Accounts = () => {
     }
   };
 
-  // ── Derivações ──────────────────────────────────────────────────────────────
   const monthly = displayAccounts.filter((a) => a.billing_type === "monthly");
   const singles = displayAccounts.filter((a) => a.billing_type === "single");
 
-  // Dívidas vêm da tabela `debts` — adapta pro AccountCard
   const debts = (debtsData || []).map((d: any) => {
-    const isPaid = debtPayments.some(
-      (p) => p.debt_id === d.id
-    );
+    const isPaid = debtPayments.some((p) => p.debt_id === d.id);
     return {
       ...d,
       __source: "debt",
@@ -634,13 +617,8 @@ const Accounts = () => {
 
   const totalMonthly = monthly.reduce((s, a) => s + Number(a.amount), 0);
   const totalDebts = debts.reduce((s, a) => s + Number(a.amount || 0), 0);
-  const totalSingles = singles.reduce((s, a) => s + Number(a.amount), 0);
-
-  // ── Navegação de meses ──────────────────────────────────────────────────────
+  const totalSingles = singles.reduce((s, a) => s + Number(a.amount || 0), 0);
   const currentIdx = MONTHS.findIndex((m) => m.value === selectedMonth);
-
-  const monthLabel =
-    MONTHS.find((m) => m.value === selectedMonth)?.label ?? selectedMonth;
 
   if (loading) {
     return (
@@ -652,10 +630,8 @@ const Accounts = () => {
 
   return (
     <div className="min-h-screen pb-28 px-4 pt-6 max-w-lg mx-auto bg-background">
-      {/* ── Cabeçalho + Navegação de Meses ─────────────────────────────────── */}
       <div className="mb-6 animate-slide-up">
         <h1 className="text-2xl font-bold text-foreground mb-4">Contas</h1>
-
         <div className="flex items-center gap-2">
           <button
             onClick={() => currentIdx > 0 && setSelectedMonth(MONTHS[currentIdx - 1].value)}
@@ -664,7 +640,6 @@ const Accounts = () => {
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-
           <div className="flex-1 overflow-x-auto flex gap-2 no-scrollbar">
             {MONTHS.map((m) => (
               <button
@@ -680,7 +655,6 @@ const Accounts = () => {
               </button>
             ))}
           </div>
-
           <button
             onClick={() =>
               currentIdx < MONTHS.length - 1 && setSelectedMonth(MONTHS[currentIdx + 1].value)
@@ -693,7 +667,6 @@ const Accounts = () => {
         </div>
       </div>
 
-      {/* ── Resumo do Mês ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-3 mb-6 animate-slide-up">
         {[
           { label: "Mensais", value: totalMonthly, color: "text-blue-400" },

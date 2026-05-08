@@ -1,4 +1,4 @@
-import { Home, Wallet, BarChart3, Target, Clock, TrendingUp } from "lucide-react";
+import { Home, Wallet, BarChart3, Target, Clock, TrendingUp, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const navItems = [
@@ -6,8 +6,9 @@ const navItems = [
   { path: "/accounts", icon: Wallet, label: "Contas" },
   { path: "/investments", icon: BarChart3, label: "Invest." },
   { path: "/allocation", icon: Target, label: "Distrib." },
-  { path: "/history", icon: Clock, label: "Histórico" },
   { path: "/progress", icon: TrendingUp, label: "Progresso" },
+  { path: "/goals", icon: Target, label: "Metas" },
+  { path: "/profile", icon: User, label: "Perfil" },
 ];
 
 const BottomNav = () => {
@@ -15,7 +16,7 @@ const BottomNav = () => {
   const navigate = useNavigate();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-t border-border/40 px-1 pb-safe-offset-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-t border-border/40 px-1 pb-safe-offset-2">
       <div className="flex items-center justify-between max-w-lg mx-auto h-20">
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
@@ -23,15 +24,15 @@ const BottomNav = () => {
             <button
               key={path}
               onClick={() => navigate(path)}
-              className={`flex flex-col items-center justify-center gap-1.5 flex-1 h-full transition-all duration-300 relative ${
-                isActive ? "text-primary" : "text-muted-foreground/60 hover:text-foreground"
+              className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-300 relative ${
+                isActive ? "text-primary" : "text-muted-foreground/40 hover:text-foreground"
               }`}
             >
               {isActive && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-primary rounded-b-full shadow-[0_2px_10px_rgba(16,185,129,0.5)]" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-1 bg-primary rounded-b-full shadow-[0_2px_10px_rgba(16,185,129,0.5)]" />
               )}
-              <Icon className={`w-5 h-5 transition-transform duration-300 ${isActive ? "scale-110" : "scale-100"}`} />
-              <span className={`text-[9px] font-bold tracking-tight ${isActive ? "opacity-100" : "opacity-60"}`}>{label}</span>
+              <Icon className={`w-4.5 h-4.5 transition-transform duration-300 ${isActive ? "scale-110" : "scale-100"}`} />
+              <span className={`text-[8px] font-bold tracking-tight ${isActive ? "opacity-100" : "opacity-60"}`}>{label}</span>
             </button>
           );
         })}
