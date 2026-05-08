@@ -89,9 +89,12 @@ const ProfilePage = () => {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
+    const updateData: any = { display_name: displayName, updated_at: new Date().toISOString() };
+    if (phone !== undefined) updateData.phone = phone;
+
     const { error } = await supabase
       .from("profiles")
-      .update({ display_name: displayName, phone, updated_at: new Date().toISOString() })
+      .update(updateData)
       .eq("id", user.id);
 
     if (error) {

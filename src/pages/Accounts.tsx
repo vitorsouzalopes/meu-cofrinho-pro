@@ -421,6 +421,11 @@ const Accounts = () => {
     if (!user) return;
     setLoading(true);
     try {
+      const [year, month] = selectedMonth.split("-").map(Number);
+      const lastDay = new Date(year, month, 0).getDate();
+      const startDate = `${selectedMonth}-01`;
+      const endDate = `${selectedMonth}-${String(lastDay).padStart(2, "0")}`;
+
       const [instRes, tmplRes, payRes] = await Promise.all([
         supabase
           .from("accounts")
@@ -439,8 +444,8 @@ const Accounts = () => {
           .from("debt_payments" as any)
           .select("*")
           .eq("user_id", user.id)
-          .gte("data_pagamento", `${selectedMonth}-01`)
-          .lte("data_pagamento", `${selectedMonth}-31`),
+          .gte("data_pagamento", startDate)
+          .lte("data_pagamento", endDate),
       ]);
 
       const instances: any[] = instRes.data ?? [];
@@ -602,12 +607,12 @@ const Accounts = () => {
   const singles = displayAccounts.filter((a) => a.billing_type === "single");
 
   const debts = (debtsData || []).map((d: any) => {
-    // Verifica se existe pagamento na tabela debt_payments OU se existe uma conta "debt" paga no mês
-    const isPaidInPayments = debtPayments.some((p) => p.debt_id === d.id);
-    const isPaidInAccounts = displayAccounts.some(
-      (a) => (a.name === d.nome || a.name === d.name) && a.billing_type === "debt" && a.paid
+    // Busca pagamento vinculado ao ID da dívida OU um registro manual com o mesmo nome
+    const hasPayment = debtPayments.some((p) => p.debt_id === d.id);
+    const hasAccountRecord = displayAccounts.some(
+      (a) => a.billing_type === "debt" && (a.name === d.nome || a.name === d.name) && a.paid
     );
-    const isPaid = isPaidInPayments || isPaidInAccounts;
+    const isPaid = hasPayment || hasAccountRecord;
 
     return {
       ...d,
