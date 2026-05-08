@@ -11,9 +11,6 @@ import { useGestureBack } from "@/hooks/use-gesture-back";
 import { checkForUpdates } from "@/lib/version";
 import Today from "./pages/Today.tsx";
 import Accounts from "./pages/Accounts.tsx";
-import Investments from "./pages/Investments.tsx";
-import InvestmentSuggestions from "./pages/InvestmentSuggestions.tsx";
-import Allocation from "./pages/Allocation.tsx";
 import History from "./pages/History.tsx";
 import Challenges from "./pages/Challenges.tsx";
 import Progress from "./pages/Progress.tsx";
@@ -60,9 +57,7 @@ const AppRoutes = () => (
     <Route path="/accounts" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
     <Route path="/monthly-accounts" element={<ProtectedRoute><MonthlyAccounts /></ProtectedRoute>} />
     <Route path="/goals" element={<ProtectedRoute><Goals /></ProtectedRoute>} />
-    <Route path="/investments" element={<ProtectedRoute><Investments /></ProtectedRoute>} />
-    <Route path="/suggestions" element={<ProtectedRoute><InvestmentSuggestions /></ProtectedRoute>} />
-    <Route path="/allocation" element={<ProtectedRoute><Allocation /></ProtectedRoute>} />
+
     <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
     <Route path="/challenges" element={<ProtectedRoute><Challenges /></ProtectedRoute>} />
     <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />

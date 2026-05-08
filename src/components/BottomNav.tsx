@@ -1,11 +1,9 @@
-import { Home, Wallet, BarChart3, Target, Clock, TrendingUp, User } from "lucide-react";
+import { Home, Wallet, Target, TrendingUp, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const navItems = [
   { path: "/", icon: Home, label: "Hoje" },
   { path: "/accounts", icon: Wallet, label: "Contas" },
-  { path: "/investments", icon: BarChart3, label: "Invest." },
-  { path: "/allocation", icon: Target, label: "Distrib." },
   { path: "/progress", icon: TrendingUp, label: "Progresso" },
   { path: "/goals", icon: Target, label: "Metas" },
   { path: "/profile", icon: User, label: "Perfil" },
