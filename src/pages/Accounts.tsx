@@ -602,7 +602,13 @@ const Accounts = () => {
   const singles = displayAccounts.filter((a) => a.billing_type === "single");
 
   const debts = (debtsData || []).map((d: any) => {
-    const isPaid = debtPayments.some((p) => p.debt_id === d.id);
+    // Verifica se existe pagamento na tabela debt_payments OU se existe uma conta "debt" paga no mês
+    const isPaidInPayments = debtPayments.some((p) => p.debt_id === d.id);
+    const isPaidInAccounts = displayAccounts.some(
+      (a) => (a.name === d.nome || a.name === d.name) && a.billing_type === "debt" && a.paid
+    );
+    const isPaid = isPaidInPayments || isPaidInAccounts;
+
     return {
       ...d,
       __source: "debt",
