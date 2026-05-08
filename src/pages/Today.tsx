@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { TrendingUp, Wallet, Clock, AlertCircle, Sparkles, CheckCircle2, Target, Menu, Settings, Pencil, Trash2 } from "lucide-react";
+import { TrendingUp, Wallet, Clock, AlertCircle, Sparkles, CheckCircle2, Target, Menu, Settings, Pencil, Trash2, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -390,7 +390,7 @@ const Today = () => {
                 <Card className="p-4 border-none bg-blue-500/10 border border-blue-500/20 animate-slide-up">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-                      <Calendar className="w-5 h-5 text-blue-500" />
+                      <CalendarIcon className="w-5 h-5 text-blue-500" />
                     </div>
                     <div className="flex-1">
                       <p className="text-[10px] font-bold uppercase text-blue-500 tracking-widest">Próximos 7 Dias</p>
