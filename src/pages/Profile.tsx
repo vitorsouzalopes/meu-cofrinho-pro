@@ -89,16 +89,30 @@ const ProfilePage = () => {
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const updateData: any = { display_name: displayName, updated_at: new Date().toISOString() };
-    if (phone !== undefined) updateData.phone = phone;
-
-    const { error } = await supabase
+    
+    // Tenta salvar nome e telefone
+    const { error: fullError } = await supabase
       .from("profiles")
-      .update(updateData)
+      .update({ display_name: displayName, phone, updated_at: new Date().toISOString() })
       .eq("id", user.id);
 
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    if (fullError) {
+      // Se o erro for "coluna inexistente" (PGRST204 ou similar), tenta salvar apenas o nome
+      if (fullError.message?.includes("phone") || fullError.code === "PGRST204" || fullError.code === "42703") {
+        const { error: nameOnlyError } = await supabase
+          .from("profiles")
+          .update({ display_name: displayName, updated_at: new Date().toISOString() })
+          .eq("id", user.id);
+
+        if (nameOnlyError) {
+          toast({ title: "Erro", description: nameOnlyError.message, variant: "destructive" });
+        } else {
+          toast({ title: "Nome atualizado!", description: "O campo de telefone ainda não está liberado no banco de dados." });
+          setEditing(false);
+        }
+      } else {
+        toast({ title: "Erro ao salvar", description: fullError.message, variant: "destructive" });
+      }
     } else {
       toast({ title: "Perfil atualizado!" });
       setEditing(false);

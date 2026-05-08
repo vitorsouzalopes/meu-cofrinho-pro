@@ -76,16 +76,12 @@ Deno.serve(async (req) => {
     const FCM_SERVICE_ACCOUNT_JSON = Deno.env.get("FCM_SERVICE_ACCOUNT_JSON");
     const FCM_PROJECT_ID = Deno.env.get("FCM_PROJECT_ID");
     
-    if (!FCM_SERVICE_ACCOUNT_JSON) {
-      return new Response(JSON.stringify({ ok: false, error: "Variável FCM_SERVICE_ACCOUNT_JSON não configurada no Supabase" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    
-    if (!FCM_PROJECT_ID) {
-      return new Response(JSON.stringify({ ok: false, error: "Variável FCM_PROJECT_ID não configurada no Supabase" }), {
-        status: 500,
+    if (!FCM_SERVICE_ACCOUNT_JSON || !FCM_PROJECT_ID) {
+      return new Response(JSON.stringify({ 
+        ok: false, 
+        error: "Firebase não configurado no Supabase. Defina FCM_SERVICE_ACCOUNT_JSON e FCM_PROJECT_ID nas Edge Functions." 
+      }), {
+        status: 200, 
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
