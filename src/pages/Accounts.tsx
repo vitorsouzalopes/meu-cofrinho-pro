@@ -399,7 +399,6 @@ const AccountCard = ({
 const Accounts = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const location = useLocation();
   const navigate = useNavigate();
   const invalidate = useInvalidateFinance();
 
