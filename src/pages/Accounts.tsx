@@ -454,9 +454,12 @@ const Accounts = () => {
         return inst ?? t;
       });
 
-      const orphans = instances.filter((i) => !i.parent_id);
+      const templateIds = templates.map((t) => t.id);
+      const remainingInstances = instances.filter(
+        (i) => !i.parent_id || !templateIds.includes(i.parent_id)
+      );
 
-      setDisplayAccounts([...merged, ...orphans]);
+      setDisplayAccounts([...merged, ...remainingInstances]);
     } catch (e: any) {
       toast({ title: "Erro ao carregar", description: e.message, variant: "destructive" });
     } finally {
