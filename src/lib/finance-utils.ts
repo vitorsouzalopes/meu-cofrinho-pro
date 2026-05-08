@@ -40,9 +40,16 @@ export function sincronizarDividas(contas: any[], dividas: any[]) {
  * Prioridade: Instância > Template
  */
 export function resolverContasDoMes(instancias: any[], templates: any[], currentMonthYear: string) {
-  // Retorna apenas as instâncias reais que já existem no banco de dados.
-  // Ignoramos a geração de dados virtuais/projeções para manter apenas os dados reais.
-  return [...instancias];
+  // Une instâncias e templates sem duplicar.
+  // Prioridade: Instância > Template
+  const merged = templates.map((t) => {
+    const inst = instancias.find((i) => i.parent_id === t.id);
+    return inst || t;
+  });
+
+  const orphans = instancias.filter((i) => !i.parent_id);
+  
+  return [...merged, ...orphans];
 }
 
 /**

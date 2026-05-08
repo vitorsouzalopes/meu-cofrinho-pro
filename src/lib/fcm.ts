@@ -25,11 +25,24 @@ export async function enableFcmPush(userId: string): Promise<{ ok: boolean; reas
       return { ok: false, reason: "Permissão de notificação negada." };
     }
 
-    const swReg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    let swReg = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
+    if (!swReg) {
+      swReg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    }
     
     // Aguarda o Service Worker estar pronto e ativo
     await navigator.serviceWorker.ready;
-    
+
+    // Garantir que o Service Worker está ativado antes de pedir o token
+    const worker = swReg.installing || swReg.waiting;
+    if (worker) {
+      await new Promise<void>((resolve) => {
+        worker.addEventListener("statechange", (e: any) => {
+          if (e.target.state === "activated") resolve();
+        });
+      });
+    }
+
     const messaging = getMessaging(getApp());
     const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { TrendingUp, Wallet, Clock, AlertCircle, Sparkles, CheckCircle2, Target, Menu, Settings, Pencil, Trash2 } from "lucide-react";
+import { TrendingUp, Wallet, Clock, AlertCircle, Sparkles, CheckCircle2, Target, Menu, Settings, Pencil, Trash2, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -96,6 +96,12 @@ const Today = () => {
     try {
       setLoading(true);
 
+      // Garantir instâncias do mês atual
+      if (!hasGenerated.current) {
+        await ensureMonthlyInstances(user.id, currentMonthYear);
+        hasGenerated.current = true;
+      }
+
       // Consultas individuais para evitar que um erro 404 trave tudo
       const [resInst, resTemp, resSal, resExtra, resGoals, resDebts, resExp] = await Promise.all([
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
@@ -116,6 +122,7 @@ const Today = () => {
         id: a.id,
         nome: a.name || a.nome,
         valor: Number(a.amount || a.valor || 0),
+        due_day: a.due_day,
         tipo: a.billing_type || a.tipo,
         status: (a.paid || a.status === "pago") ? "pago" : "pendente",
       }));
@@ -314,6 +321,104 @@ const Today = () => {
         </div>
       </div>
 
+      {/* Dynamic Alerts Section */}
+      <div className="space-y-4 mb-8">
+        {(() => {
+          const currentDay = new Date().getDate();
+          const overdue = accounts.filter(a => a.status !== "pago" && a.due_day && a.due_day < currentDay);
+          const isToday = accounts.filter(a => a.status !== "pago" && a.due_day === currentDay);
+          const upcoming = accounts.filter(a => a.status !== "pago" && a.due_day > currentDay && a.due_day <= currentDay + 7);
+
+          return (
+            <>
+              {/* Atrasadas */}
+              {overdue.length > 0 && (
+                <Card className="p-4 border-none bg-destructive/10 border border-destructive/20 animate-slide-up">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-destructive/20 flex items-center justify-center">
+                      <AlertCircle className="w-5 h-5 text-destructive" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-destructive tracking-widest">Contas Atrasadas</p>
+                      <p className="text-xs text-destructive/80">Você tem {overdue.length} {overdue.length === 1 ? "pendência" : "pendências"} de dias anteriores</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2 mb-3">
+                    {overdue.map(acc => (
+                      <div key={acc.id} className="flex justify-between items-center text-xs">
+                        <span className="text-foreground font-medium">{acc.nome}</span>
+                        <span className="text-destructive font-bold">{formatCurrency(acc.valor)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    className="w-full h-9 rounded-xl text-[11px] font-bold"
+                    onClick={() => navigate("/accounts")}
+                  >
+                    Resolver agora
+                  </Button>
+                </Card>
+              )}
+
+              {/* Vence Hoje */}
+              {isToday.length > 0 && (
+                <Card className="p-4 border-none bg-amber-500/10 border border-amber-500/20 animate-slide-up">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] font-bold uppercase text-amber-500 tracking-widest">Vence Hoje</p>
+                      <p className="text-xs text-amber-500/80">{isToday.length} {isToday.length === 1 ? "conta vence" : "contas vencem"} hoje</p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 rounded-lg border-amber-500/30 text-amber-500 text-[10px] font-bold hover:bg-amber-500/10"
+                      onClick={() => navigate("/accounts")}
+                    >
+                      Ver contas
+                    </Button>
+                  </div>
+                </Card>
+              )}
+
+              {/* Próximos 7 Dias */}
+              {!overdue.length && !isToday.length && upcoming.length > 0 && (
+                <Card className="p-4 border-none bg-blue-500/10 border border-blue-500/20 animate-slide-up">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                      <CalendarIcon className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[10px] font-bold uppercase text-blue-500 tracking-widest">Próximos 7 Dias</p>
+                      <p className="text-xs text-blue-500/80">{upcoming.length} {upcoming.length === 1 ? "conta vence" : "contas vencem"} em breve</p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Tudo em dia */}
+              {!overdue.length && !isToday.length && !upcoming.length && (
+                <Card className="p-4 border-none bg-emerald-500/10 border border-emerald-500/20 animate-slide-up">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase text-emerald-500 tracking-widest">Tudo em dia!</p>
+                      <p className="text-xs text-emerald-500/80">Nenhuma conta pendente para os próximos dias.</p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+            </>
+          );
+        })()}
+      </div>
+
       {/* Expenses Section */}
       {(() => {
         const contasDespesas = accounts.filter(a => a.tipo !== "divida" && a.tipo !== "debt");
@@ -393,6 +498,42 @@ const Today = () => {
           </div>
         );
       })()}
+
+      {/* Distribution Suggestion */}
+      {totais.disponivel > 0 && (
+        <div className="mb-8 animate-slide-up" style={{ animationDelay: "0.4s" }}>
+          <div className="flex items-center justify-between mb-4 px-1">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Sugestão de Distribuição</p>
+            <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+          </div>
+          <Card className="p-5 border-none bg-gradient-to-br from-card to-card/50 shadow-lg relative overflow-hidden">
+            <div className="relative z-10">
+              <p className="text-xs text-muted-foreground mb-4">Com base no seu saldo de <span className="text-foreground font-bold">{formatCurrency(totais.disponivel)}</span>, sugerimos:</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-[9px] font-bold text-muted-foreground uppercase">Emergência (40%)</p>
+                  <p className="text-sm font-bold text-foreground">{formatCurrency(totais.disponivel * 0.4)}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[9px] font-bold text-muted-foreground uppercase">Investir (30%)</p>
+                  <p className="text-sm font-bold text-primary">{formatCurrency(totais.disponivel * 0.3)}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[9px] font-bold text-muted-foreground uppercase">Banco Digital (20%)</p>
+                  <p className="text-sm font-bold text-foreground">{formatCurrency(totais.disponivel * 0.2)}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[9px] font-bold text-muted-foreground uppercase">Cofrinho (10%)</p>
+                  <p className="text-sm font-bold text-foreground">{formatCurrency(totais.disponivel * 0.1)}</p>
+                </div>
+              </div>
+            </div>
+            <div className="absolute -right-4 -bottom-4 opacity-5">
+              <Sparkles className="w-24 h-24 text-primary" />
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Progress Widgets Section - dados reais */}
       <div className="grid grid-cols-2 gap-4 mb-10">

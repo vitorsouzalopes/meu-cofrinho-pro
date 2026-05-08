@@ -413,6 +413,7 @@ const Accounts = () => {
 
   const [selectedMonth, setSelectedMonth] = useState(TODAY_MY);
   const [displayAccounts, setDisplayAccounts] = useState<any[]>([]);
+  const [debtPayments, setDebtPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -430,7 +431,7 @@ const Accounts = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const [instRes, tmplRes] = await Promise.all([
+      const [instRes, tmplRes, payRes] = await Promise.all([
         supabase
           .from("accounts")
           .select("*")
@@ -444,19 +445,29 @@ const Accounts = () => {
           .eq("user_id", user.id)
           .eq("is_template", true)
           .order("name", { ascending: true }),
+        supabase
+          .from("debt_payments" as any)
+          .select("*")
+          .eq("user_id", user.id)
+          .gte("data_pagamento", `${selectedMonth}-01`)
+          .lte("data_pagamento", `${selectedMonth}-31`),
       ]);
 
       const instances: any[] = instRes.data ?? [];
       const templates: any[] = tmplRes.data ?? [];
+      setDebtPayments(payRes.data ?? []);
 
       const merged: any[] = templates.map((t) => {
         const inst = instances.find((i) => i.parent_id === t.id);
         return inst ?? t;
       });
 
-      const orphans = instances.filter((i) => !i.parent_id);
+      const templateIds = templates.map((t) => t.id);
+      const remainingInstances = instances.filter(
+        (i) => !i.parent_id || !templateIds.includes(i.parent_id)
+      );
 
-      setDisplayAccounts([...merged, ...orphans]);
+      setDisplayAccounts([...merged, ...remainingInstances]);
     } catch (e: any) {
       toast({ title: "Erro ao carregar", description: e.message, variant: "destructive" });
     } finally {
@@ -528,7 +539,7 @@ const Accounts = () => {
       setPaying(true);
       const novoSaldo = Math.max(0, Number(payingAccount.valor_restante) - Number(payingAccount.parcela_mensal));
       const novasParcelas = payingAccount.parcelas_restantes ? Math.max(0, payingAccount.parcelas_restantes - 1) : null;
-      const [{ error: e1 }, { error: e2 }] = await Promise.all([
+      const [{ error: e1 }, { error: e2 }, { error: e3 }] = await Promise.all([
         supabase.from("debt_payments" as any).insert({
           user_id: user.id,
           debt_id: payingAccount.id,
@@ -540,10 +551,22 @@ const Accounts = () => {
           valor_restante: novoSaldo,
           parcelas_restantes: novasParcelas,
         }).eq("id", payingAccount.id),
+        supabase.from("accounts").insert({
+          user_id: user.id,
+          name: payingAccount.nome || payingAccount.name,
+          amount: Number(payingAccount.parcela_mensal),
+          billing_type: "debt",
+          due_day: payingAccount.dia_vencimento || payingAccount.due_day,
+          account_type: "Dívida",
+          month_year: selectedMonth,
+          is_template: false,
+          paid: true,
+          paid_at: new Date().toISOString(),
+        }),
       ]);
       setPaying(false);
-      if (e1 || e2) {
-        toast({ title: "Erro ao pagar", description: (e1 || e2)?.message, variant: "destructive" });
+      if (e1 || e2 || e3) {
+        toast({ title: "Erro ao pagar", description: (e1 || e2 || e3)?.message, variant: "destructive" });
       } else {
         toast({ title: "Parcela quitada!" });
         invalidate();
@@ -593,16 +616,21 @@ const Accounts = () => {
   const singles = displayAccounts.filter((a) => a.billing_type === "single");
 
   // Dívidas vêm da tabela `debts` — adapta pro AccountCard
-  const debts = (debtsData || []).map((d: any) => ({
-    ...d,
-    __source: "debt",
-    name: d.nome,
-    amount: d.parcela_mensal,
-    due_day: d.dia_vencimento,
-    billing_type: "debt",
-    paid: false,
-    remaining_months: d.parcelas_restantes,
-  }));
+  const debts = (debtsData || []).map((d: any) => {
+    const isPaid = debtPayments.some(
+      (p) => p.debt_id === d.id
+    );
+    return {
+      ...d,
+      __source: "debt",
+      name: d.nome,
+      amount: d.parcela_mensal,
+      due_day: d.dia_vencimento,
+      billing_type: "debt",
+      paid: isPaid,
+      remaining_months: d.parcelas_restantes,
+    };
+  });
 
   const totalMonthly = monthly.reduce((s, a) => s + Number(a.amount), 0);
   const totalDebts = debts.reduce((s, a) => s + Number(a.amount || 0), 0);
