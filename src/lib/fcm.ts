@@ -25,15 +25,32 @@ export async function enableFcmPush(userId: string): Promise<{ ok: boolean; reas
       return { ok: false, reason: "Permissão de notificação negada." };
     }
 
-    const swReg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    // 1. Get or register Service Worker
+    let swReg = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
+    if (!swReg) {
+      console.log("FCM: Registering new service worker...");
+      swReg = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
+    }
+
+    // 2. Wait for it to be ready (has an active worker)
+    const activeReg = await navigator.serviceWorker.ready;
     
-    // Aguarda o Service Worker estar pronto e ativo
-    await navigator.serviceWorker.ready;
+    // 3. Ensure the worker is truly 'activated' (not just active)
+    // If it's still installing or waiting, wait for it.
+    if (!activeReg.active) {
+       return { ok: false, reason: "Service worker não pôde ser ativado." };
+    }
+
+    // Small delay to ensure browser context is ready for push subscription
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     const messaging = getMessaging(getApp());
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+    const token = await getToken(messaging, { 
+      vapidKey: VAPID_KEY, 
+      serviceWorkerRegistration: activeReg 
+    });
 
-    if (!token) return { ok: false, reason: "Não foi possível obter token FCM." };
+    if (!token) return { ok: false, reason: "Não foi possível obter token FCM (token vazio)." };
 
     // upsert by token (unique)
     const { error } = await supabase

@@ -14,17 +14,22 @@ export function useAccounts(monthYear: string = todayMY()) {
     queryKey: ["accounts", user?.id, monthYear],
     enabled: !!user?.id,
     queryFn: async () => {
-      const [inst, tmpl] = await Promise.all([
+      const [inst, tmpl, pay] = await Promise.all([
         supabase.from("accounts").select("*")
           .eq("user_id", user!.id).eq("is_template", false)
           .eq("month_year", monthYear).order("due_day", { ascending: true }),
         supabase.from("accounts").select("*")
           .eq("user_id", user!.id).eq("is_template", true)
           .order("name", { ascending: true }),
+        supabase.from("debt_payments" as any).select("*")
+          .eq("user_id", user!.id)
+          .gte("data_pagamento", `${monthYear}-01`)
+          .lte("data_pagamento", `${monthYear}-31`),
       ]);
       return {
         instances: inst.data ?? [],
         templates: tmpl.data ?? [],
+        debtPayments: pay.data ?? [],
       };
     },
   });

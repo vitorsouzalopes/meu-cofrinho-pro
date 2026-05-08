@@ -413,6 +413,7 @@ const Accounts = () => {
 
   const [selectedMonth, setSelectedMonth] = useState(TODAY_MY);
   const [displayAccounts, setDisplayAccounts] = useState<any[]>([]);
+  const [debtPayments, setDebtPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -430,7 +431,7 @@ const Accounts = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const [instRes, tmplRes] = await Promise.all([
+      const [instRes, tmplRes, payRes] = await Promise.all([
         supabase
           .from("accounts")
           .select("*")
@@ -444,10 +445,17 @@ const Accounts = () => {
           .eq("user_id", user.id)
           .eq("is_template", true)
           .order("name", { ascending: true }),
+        supabase
+          .from("debt_payments" as any)
+          .select("*")
+          .eq("user_id", user.id)
+          .gte("data_pagamento", `${selectedMonth}-01`)
+          .lte("data_pagamento", `${selectedMonth}-31`),
       ]);
 
       const instances: any[] = instRes.data ?? [];
       const templates: any[] = tmplRes.data ?? [];
+      setDebtPayments(payRes.data ?? []);
 
       const merged: any[] = templates.map((t) => {
         const inst = instances.find((i) => i.parent_id === t.id);
@@ -545,7 +553,6 @@ const Accounts = () => {
         }).eq("id", payingAccount.id),
         supabase.from("accounts").insert({
           user_id: user.id,
-          parent_id: payingAccount.id,
           name: payingAccount.nome || payingAccount.name,
           amount: Number(payingAccount.parcela_mensal),
           billing_type: "debt",
@@ -610,8 +617,8 @@ const Accounts = () => {
 
   // Dívidas vêm da tabela `debts` — adapta pro AccountCard
   const debts = (debtsData || []).map((d: any) => {
-    const isPaid = displayAccounts.some(
-      (acc) => acc.parent_id === d.id && acc.paid === true
+    const isPaid = debtPayments.some(
+      (p) => p.debt_id === d.id
     );
     return {
       ...d,
