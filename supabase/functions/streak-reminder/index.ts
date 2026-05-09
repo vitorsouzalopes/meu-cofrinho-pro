@@ -41,8 +41,13 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const body = await req.clone().json().catch(() => ({}));
-    const { user_id } = body;
+    let user_id = null;
+    try {
+      const body = await req.json();
+      user_id = body?.user_id;
+    } catch (e) {
+      // ignore if no body
+    }
 
     const targetHour = brasiliaHourNow();
 

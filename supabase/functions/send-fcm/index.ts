@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { user_id, title, body, url } = await req.json();
+    const { user_id, title, body, url, force } = await req.json();
     if (!user_id || !title || !body) {
       return new Response(JSON.stringify({ error: "user_id, title, body required" }), {
         status: 400,
@@ -108,7 +108,6 @@ Deno.serve(async (req) => {
       .eq("user_id", user_id)
       .maybeSingle();
 
-    const { force } = await req.clone().json().catch(() => ({}));
 
     if (!force && cfg && cfg.fcm_notifications_enabled === false) {
       return new Response(JSON.stringify({ ok: true, skipped: true, reason: "user disabled" }), {
