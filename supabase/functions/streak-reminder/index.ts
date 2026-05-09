@@ -41,15 +41,26 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    const body = await req.clone().json().catch(() => ({}));
+    const { user_id } = body;
+
     const targetHour = brasiliaHourNow();
 
     // Pega só configs cujo reminder_hour bate com a hora atual de Brasília
-    const { data: configs, error } = await supabase
+    // OU se for um disparo forçado para um usuário específico
+    let query = supabase
       .from("telegram_config")
       .select("*")
       .eq("streak_reminders_enabled", true)
-      .eq("reminder_hour", targetHour)
       .not("telegram_chat_id", "is", null);
+
+    if (user_id) {
+      query = query.eq("user_id", user_id);
+    } else {
+      query = query.eq("reminder_hour", targetHour);
+    }
+
+    const { data: configs, error } = await query;
 
     if (error) throw error;
     if (!configs || configs.length === 0) {

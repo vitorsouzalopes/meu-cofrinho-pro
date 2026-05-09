@@ -107,7 +107,10 @@ Deno.serve(async (req) => {
       .select("fcm_notifications_enabled")
       .eq("user_id", user_id)
       .maybeSingle();
-    if (cfg && cfg.fcm_notifications_enabled === false) {
+
+    const { force } = await req.clone().json().catch(() => ({}));
+
+    if (!force && cfg && cfg.fcm_notifications_enabled === false) {
       return new Response(JSON.stringify({ ok: true, skipped: true, reason: "user disabled" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

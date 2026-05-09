@@ -235,32 +235,67 @@ const TelegramSettings = () => {
           <span className="text-xs text-muted-foreground">
             {fcmEnabled ? `${fcmTokenCount} dispositivo(s) registrado(s)` : "Desativado"}
           </span>
-          <div className="flex gap-2">
-            {fcmEnabled && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={async () => {
-                  toast({ title: "Enviando teste..." });
-                  const res = await supabase.functions.invoke("send-fcm", {
-                    body: { user_id: user?.id, title: "🔔 Notificação de Teste", body: "Seu push está configurado corretamente!", url: "/" }
-                  });
-                  if (res.error) toast({ title: "Erro", description: res.error.message, variant: "destructive" });
-                  else toast({ title: "Notificação enviada!" });
-                }}
-              >
-                Testar Push
-              </Button>
-            )}
-            <Button
-              size="sm"
-              variant={fcmEnabled ? "outline" : "gold"}
-              onClick={handleToggleFcm}
-              disabled={fcmBusy || !isFirebaseConfigured()}
-            >
-              {fcmBusy ? "..." : fcmEnabled ? "Desativar push" : "Ativar push"}
-            </Button>
-          </div>
+          <Button
+            size="sm"
+            variant={fcmEnabled ? "outline" : "gold"}
+            onClick={handleToggleFcm}
+            disabled={fcmBusy || !isFirebaseConfigured()}
+          >
+            {fcmBusy ? "..." : fcmEnabled ? "Desativar push" : "Ativar push"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Force Notification Testing Zone */}
+      <div className="glass-card p-5 mb-4 animate-slide-up bg-amber-500/5 border-amber-500/10">
+        <h2 className="font-heading font-semibold text-foreground text-sm flex items-center gap-2 mb-3">
+          <Send className="w-4 h-4 text-amber-500" />
+          Zona de Testes (Forçar Push)
+        </h2>
+        <p className="text-xs text-muted-foreground mb-4">
+          Use estes botões para validar se as notificações estão chegando, ignorando horários e preferências de desativação.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-[11px] h-10 border-amber-500/30 hover:bg-amber-500/10"
+            onClick={async () => {
+              if (!fcmEnabled) {
+                toast({ title: "Ative o push primeiro", variant: "destructive" });
+                return;
+              }
+              toast({ title: "Enviando push forçado..." });
+              const { data, error } = await supabase.functions.invoke("send-fcm", {
+                body: { 
+                  user_id: user?.id, 
+                  title: "🚀 Push Forçado", 
+                  body: "Este é um teste de entrega imediata!", 
+                  url: "/",
+                  force: true 
+                }
+              });
+              if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
+              else toast({ title: "Push enviado!" });
+            }}
+          >
+            Push Simples
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-[11px] h-10 border-amber-500/30 hover:bg-amber-500/10"
+            onClick={async () => {
+              toast({ title: "Triggering streak reminder..." });
+              const { data, error } = await supabase.functions.invoke("streak-reminder", {
+                body: { user_id: user?.id }
+              });
+              if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
+              else toast({ title: "Lembrete disparado!", description: `Verifique seu Telegram/Push.` });
+            }}
+          >
+            Streak Reminder
+          </Button>
         </div>
       </div>
 
