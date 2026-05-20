@@ -75,13 +75,21 @@ Deno.serve(async (req) => {
 
     const FCM_SERVICE_ACCOUNT_JSON = Deno.env.get("FCM_SERVICE_ACCOUNT_JSON");
     const FCM_PROJECT_ID = Deno.env.get("FCM_PROJECT_ID");
-    
-    if (!FCM_SERVICE_ACCOUNT_JSON || !FCM_PROJECT_ID) {
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    const missingEnv = [];
+    if (!FCM_SERVICE_ACCOUNT_JSON) missingEnv.push("FCM_SERVICE_ACCOUNT_JSON");
+    if (!FCM_PROJECT_ID) missingEnv.push("FCM_PROJECT_ID");
+    if (!SUPABASE_URL) missingEnv.push("SUPABASE_URL");
+    if (!SUPABASE_SERVICE_ROLE_KEY) missingEnv.push("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (missingEnv.length > 0) {
       return new Response(JSON.stringify({ 
         ok: false, 
-        error: "Firebase não configurado no Supabase. Defina FCM_SERVICE_ACCOUNT_JSON e FCM_PROJECT_ID nas Edge Functions." 
+        error: `Firebase/Supabase não configurado. Defina: ${missingEnv.join(", ")}`
       }), {
-        status: 200, 
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -97,8 +105,8 @@ Deno.serve(async (req) => {
     }
 
     const admin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY,
     );
 
     // check user prefs

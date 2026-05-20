@@ -275,8 +275,13 @@ const TelegramSettings = () => {
                   force: true 
                 }
               });
-              if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
-              else toast({ title: "Push enviado!" });
+              if (error) {
+                toast({ title: "Erro", description: error.message, variant: "destructive" });
+              } else if (!data?.ok) {
+                toast({ title: "Erro", description: data?.error || "Falha ao enviar push", variant: "destructive" });
+              } else {
+                toast({ title: "Push enviado!" });
+              }
             }}
           >
             Push Simples
