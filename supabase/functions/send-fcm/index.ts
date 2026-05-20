@@ -60,6 +60,41 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
   return json.access_token;
 }
 
+function parseServiceAccountJson(value: string) {
+  const raw = value.trim();
+  if (!raw) throw new Error("FCM_SERVICE_ACCOUNT_JSON está vazio.");
+  if (raw.includes("firebase-adminsdk") || raw.endsWith(".json")) {
+    throw new Error(
+      "FCM_SERVICE_ACCOUNT_JSON deve conter o JSON completo do service account, não apenas o nome do arquivo ou a chave parcial."
+    );
+  }
+
+  try {
+    if (raw.startsWith("{")) return JSON.parse(raw);
+    if (raw.startsWith('"')) {
+      const parsed = JSON.parse(raw);
+      return typeof parsed === "string" ? JSON.parse(parsed) : parsed;
+    }
+
+    const maybeBase64 = raw.replace(/\s+/g, "");
+    if (/^[A-Za-z0-9+/=]+$/.test(maybeBase64)) {
+      const decoded = atob(maybeBase64);
+      return JSON.parse(decoded);
+    }
+
+    throw new Error(
+      "FCM_SERVICE_ACCOUNT_JSON deve ser o JSON completo do service account. Verifique se você colou todo o conteúdo do arquivo de credenciais do Firebase."
+    );
+  } catch (e) {
+    if (e instanceof SyntaxError) {
+      throw new Error(
+        `JSON inválido para FCM_SERVICE_ACCOUNT_JSON: ${e.message}. Use o JSON completo do service account.`
+      );
+    }
+    throw e;
+  }
+}
+
 // ---------- Handler ----------
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -96,9 +131,9 @@ Deno.serve(async (req) => {
 
     let serviceAccount;
     try {
-      serviceAccount = JSON.parse(FCM_SERVICE_ACCOUNT_JSON);
-    } catch (e) {
-      return new Response(JSON.stringify({ ok: false, error: "Erro ao processar FCM_SERVICE_ACCOUNT_JSON: JSON inválido" }), {
+      serviceAccount = parseServiceAccountJson(FCM_SERVICE_ACCOUNT_JSON);
+    } catch (error) {
+      return new Response(JSON.stringify({ ok: false, error: `${(error as Error).message}` }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
