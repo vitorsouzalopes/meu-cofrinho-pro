@@ -57,7 +57,10 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
   });
   if (!res.ok) throw new Error(`token exchange failed: ${res.status} ${await res.text()}`);
   const json = await res.json();
-  return json.sb_secret_bI3bftp8A1g2yf2YfzagtQ_JHdkeQZxaccess_token;
+  if (!json?.access_token) {
+    throw new Error(`Google token response missing access_token: ${JSON.stringify(json)}`);
+  }
+  return json.access_token;
 }
 
 function parseServiceAccountJson(value: string) {
