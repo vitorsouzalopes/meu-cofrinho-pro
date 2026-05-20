@@ -529,11 +529,13 @@ const Accounts = () => {
       setPaying(true);
       const novoSaldo = Math.max(0, Number(payingAccount.valor_restante) - Number(payingAccount.parcela_mensal));
       const novasParcelas = payingAccount.parcelas_restantes ? Math.max(0, payingAccount.parcelas_restantes - 1) : null;
+      const paymentDate = new Date().toISOString().slice(0, 10);
       const [{ error: e1 }, { error: e2 }, { error: e3 }] = await Promise.all([
         supabase.from("debt_payments" as any).insert({
           user_id: user.id,
           debt_id: payingAccount.id,
           valor_pago: Number(payingAccount.parcela_mensal),
+          data_pagamento: paymentDate,
           tipo_pagamento: "parcela",
           parcelas_quitadas: 1,
         }),
@@ -558,6 +560,29 @@ const Accounts = () => {
       if (e1 || e2 || e3) {
         toast({ title: "Erro ao pagar", description: (e1 || e2 || e3)?.message, variant: "destructive" });
       } else {
+        setDebtPayments((prev) => [
+          ...prev,
+          {
+            debt_id: payingAccount.id,
+            valor_pago: Number(payingAccount.parcela_mensal),
+            data_pagamento: paymentDate,
+          },
+        ]);
+        setDisplayAccounts((prev) => [
+          ...prev,
+          {
+            user_id: user.id,
+            name: payingAccount.nome || payingAccount.name,
+            amount: Number(payingAccount.parcela_mensal),
+            billing_type: "debt",
+            due_day: payingAccount.dia_vencimento || payingAccount.due_day,
+            account_type: "Dívida",
+            month_year: selectedMonth,
+            is_template: false,
+            paid: true,
+            paid_at: new Date().toISOString(),
+          },
+        ]);
         toast({ title: "Parcela quitada!" });
         invalidate();
         load();
@@ -606,12 +631,13 @@ const Accounts = () => {
   const singles = displayAccounts.filter((a) => a.billing_type === "single");
 
   const debts = (debtsData || []).map((d: any) => {
-    // Busca pagamento vinculado ao ID da dívida OU um registro manual com o mesmo nome
+    // Busca pagamento vinculado ao ID da dívida OU um registro manual com o mesmo nome.
     const hasPayment = debtPayments.some((p) => p.debt_id === d.id);
     const hasAccountRecord = displayAccounts.some(
       (a) => a.billing_type === "debt" && (a.name === d.nome || a.name === d.name) && a.paid
     );
-    const isPaid = hasPayment || hasAccountRecord;
+    const isFullySettled = Number(d.parcelas_restantes) === 0 || Number(d.valor_restante) <= 0;
+    const isPaid = hasPayment || hasAccountRecord || isFullySettled;
 
     return {
       ...d,
