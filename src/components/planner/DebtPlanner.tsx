@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,15 +7,24 @@ import { Plus, Trash2, Edit2, Flame, Scale, AlertTriangle, TrendingDown, Sparkle
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useInvalidateFinance } from "@/hooks/use-finance-data";
+import { useDebts, useInvalidateFinance } from "@/hooks/use-finance-data";
+import { Debt } from "@/financial/types";
 import {
-  type Debt,
+  avalancheStrategy,
+  snowballStrategy,
+  smartPriority,
+  shouldAmortize,
+  shouldNegotiate,
+  debtScore,
+} from "@/financial/debtEngine";
+import { forecastMonth } from "@/financial/forecastEngine";
+import { analyzeFinancialRisk } from "@/financial/notificationEngine";
+import {
+  type Debt as LocalDebt,
   simular,
   estrategiaHard,
   estrategiaMista,
   gerarGraficoDivida,
-  ordenarDividasPorJuros,
-  sugestaoAutomatica,
   formatBRL,
 } from "@/lib/debt-utils";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
@@ -38,8 +47,9 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const invalidate = useInvalidateFinance();
-  const [debts, setDebts] = useState<Debt[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const { data: debtsData = [], isLoading } = useDebts();
+  const [sortingStrategy, setSortingStrategy] = useState<'smart' | 'avalanche' | 'snowball'>('smart');
   const [openDialog, setOpenDialog] = useState(false);
   const [editing, setEditing] = useState<Debt | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -57,29 +67,54 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
 
   const rendaDisponivel = Math.max(0, initialIncome - initialExpenses);
 
-  const load = useCallback(async () => {
-    if (!user) return;
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("debts" as any)
-      .select("*")
-      .eq("user_id", user.id)
-      .order("juros_mensal", { ascending: false });
-    if (error) {
-      console.warn("debts:", error.message);
-      setDebts([]);
-    } else {
-      setDebts((data as any) || []);
-    }
-    setLoading(false);
-  }, [user]);
+  const mapToLocalDebt = (d: Debt): LocalDebt => {
+    return {
+      id: d.id,
+      nome: d.nome,
+      tipo: d.tipo,
+      valor_total: (d as any).valor_total ?? d.valorTotal,
+      valor_restante: (d as any).valor_restante ?? d.valorTotal,
+      parcela_mensal: d.valorParcela,
+      total_parcelas: (d as any).total_parcelas ?? null,
+      parcelas_restantes: d.parcelasRestantes,
+      juros_mensal: d.jurosMensal / 100, // convert percentage to decimal ratio
+      dia_vencimento: parseInt(d.vencimento) || 1,
+      permite_antecipacao: d.permiteQuitacao,
+      permite_amortizacao: d.permiteAmortizacao,
+    };
+  };
 
-  useEffect(() => {
-    load();
-    const sync = () => load();
-    window.addEventListener("finance-data-updated", sync);
-    return () => window.removeEventListener("finance-data-updated", sync);
-  }, [load]);
+  const sortedDebts = useMemo(() => {
+    if (sortingStrategy === 'smart') {
+      return smartPriority(debtsData);
+    } else if (sortingStrategy === 'avalanche') {
+      return avalancheStrategy(debtsData);
+    } else {
+      return snowballStrategy(debtsData);
+    }
+  }, [debtsData, sortingStrategy]);
+
+  const priorityDebtId = useMemo(() => {
+    if (debtsData.length === 0) return null;
+    const prioritized = smartPriority(debtsData);
+    return prioritized[0]?.id;
+  }, [debtsData]);
+
+  const forecast = useMemo(() => {
+    const forecastInput = {
+      salario: initialIncome,
+      rendaExtra: 0,
+      contas: [{ valor: initialExpenses }],
+      dividas: debtsData.map((d) => ({
+        valorParcela: d.valorParcela,
+      })),
+    };
+    return forecastMonth(forecastInput);
+  }, [initialIncome, initialExpenses, debtsData]);
+
+  const riskAlert = useMemo(() => {
+    return analyzeFinancialRisk(forecast);
+  }, [forecast]);
 
   const reset = () => {
     setEditing(null);
@@ -91,13 +126,13 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
   const handleEdit = (d: Debt) => {
     setEditing(d);
     setNome(d.nome); setTipo(d.tipo);
-    setValorTotal(String(d.valor_total));
-    setValorRestante(String(d.valor_restante));
-    setParcelaMensal(String(d.parcela_mensal));
-    setTotalParcelasInput(d.total_parcelas ? String(d.total_parcelas) : "");
-    setParcelasRestantes(d.parcelas_restantes ? String(d.parcelas_restantes) : "");
-    setJurosMensal(String((d.juros_mensal || 0) * 100));
-    setDiaVencimento(String(d.dia_vencimento));
+    setValorTotal(String(d.valorTotal));
+    setValorRestante(String((d as any).valor_restante ?? d.valorTotal));
+    setParcelaMensal(String(d.valorParcela));
+    setTotalParcelasInput((d as any).total_parcelas ? String((d as any).total_parcelas) : "");
+    setParcelasRestantes(d.parcelasRestantes ? String(d.parcelasRestantes) : "");
+    setJurosMensal(String(d.jurosMensal));
+    setDiaVencimento(d.vencimento);
     setOpenDialog(true);
   };
 
@@ -130,7 +165,6 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
       }
       setOpenDialog(false);
       reset();
-      load();
       invalidate();
     } catch (e: any) {
       toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" });
@@ -145,16 +179,14 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
       return;
     }
     toast({ title: "Dívida removida" });
-    load();
     invalidate();
   };
 
   // Totais agregados
-  const totalRestante = debts.reduce((s, d) => s + Number(d.valor_restante || 0), 0);
-  const totalParcelasMes = debts.reduce((s, d) => s + Number(d.parcela_mensal || 0), 0);
-  const dividasOrdenadas = ordenarDividasPorJuros(debts);
+  const totalRestante = debtsData.reduce((s, d) => s + Number((d as any).valor_restante || d.valorTotal), 0);
+  const totalParcelasMes = debtsData.reduce((s, d) => s + Number(d.valorParcela || 0), 0);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -197,9 +229,47 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
         </div>
       </Card>
 
+      {/* Alerta de Risco Financeiro */}
+      {riskAlert && (
+        <Card className={`p-4 border-none flex items-center gap-3 ${
+          riskAlert.type === 'danger'
+            ? 'bg-destructive/10 border border-destructive/20 text-destructive'
+            : 'bg-amber-500/10 border border-amber-500/20 text-amber-500'
+        }`}>
+          <AlertTriangle className="w-5 h-5 shrink-0" />
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider">
+              {riskAlert.type === 'danger' ? 'Alerta de Risco Crítico' : 'Alerta de Saldo Baixo'}
+            </p>
+            <p className="text-xs opacity-90 mt-0.5">
+              {riskAlert.message}. Saldo livre estimado para o mês (excluindo margem de 10%): {formatBRL(forecast)}.
+            </p>
+          </div>
+        </Card>
+      )}
+
+      {/* Header da lista de dívidas e ordenação */}
+      <div className="flex items-center justify-between pt-2">
+        <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+          Minhas Dívidas
+        </h2>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] text-muted-foreground">Ordenar por:</span>
+          <select
+            value={sortingStrategy}
+            onChange={(e) => setSortingStrategy(e.target.value as any)}
+            className="h-8 rounded-lg border border-border bg-card px-2 text-xs text-foreground font-medium outline-none focus:ring-1 focus:ring-primary"
+          >
+            <option value="smart">Recomendado (Smart)</option>
+            <option value="avalanche">Avalanche (Maior Juros)</option>
+            <option value="snowball">Bola de Neve (Menor Valor)</option>
+          </select>
+        </div>
+      </div>
+
       {/* Lista de dívidas */}
       <div className="space-y-3">
-        {debts.length === 0 ? (
+        {debtsData.length === 0 ? (
           <div className="text-center py-12 bg-card/50 rounded-2xl border border-dashed border-border">
             <TrendingDown className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
             <p className="text-sm text-muted-foreground">Nenhuma dívida cadastrada</p>
@@ -208,38 +278,58 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
             </Button>
           </div>
         ) : (
-          dividasOrdenadas.map((d, idx) => {
-            const aviso = sugestaoAutomatica(d);
-            const isPrioridade = idx === 0 && (d.juros_mensal || 0) > 0.05;
+          sortedDebts.map((d, idx) => {
+            const localDebt = mapToLocalDebt(d);
             const expanded = expandedId === d.id;
 
             // Simulações
-            const valorHard = estrategiaHard(rendaDisponivel) || d.parcela_mensal;
-            const valorMista = estrategiaMista(rendaDisponivel) || d.parcela_mensal;
-            const simAtual = simular(d, d.parcela_mensal);
-            const simHard = simular(d, valorHard);
-            const simMista = simular(d, valorMista);
+            const valorHard = estrategiaHard(rendaDisponivel) || localDebt.parcela_mensal;
+            const valorMista = estrategiaMista(rendaDisponivel) || localDebt.parcela_mensal;
+            const simAtual = simular(localDebt, localDebt.parcela_mensal);
+            const simHard = simular(localDebt, valorHard);
+            const simMista = simular(localDebt, valorMista);
             const economiaHard = simAtual.totalJuros - simHard.totalJuros;
             const economiaMista = simAtual.totalJuros - simMista.totalJuros;
             const sobraMista = rendaDisponivel - valorMista;
 
-            const grafico = gerarGraficoDivida(d, valorMista, Math.min(simMista.meses + 2, 36));
+            const grafico = gerarGraficoDivida(localDebt, valorMista, Math.min(simMista.meses + 2, 36));
+
+            // Dynamic suggestions using the engines
+            const amortizeAlert = shouldAmortize(d, rendaDisponivel);
+            const negotiateAlert = shouldNegotiate(d, rendaDisponivel);
+            const recommendations: string[] = [];
+
+            if (amortizeAlert) {
+              recommendations.push("Amortização recomendada: Taxa de juros alta, mais de 12 parcelas restantes e você possui margem de renda.");
+            }
+            if (negotiateAlert) {
+              recommendations.push("Proposta de negociação recomendada: Sua renda disponível atinge pelo menos 30% do saldo restante desta dívida, facilitando um acordo.");
+            }
+            if (recommendations.length === 0) {
+              if (d.jurosMensal > 10) {
+                recommendations.push("Alta taxa de juros — priorize quitar ou renegociar esta dívida.");
+              } else if (d.jurosMensal > 5) {
+                recommendations.push("Juros acima da média — considere antecipar parcelas quando possível.");
+              }
+            }
 
             return (
-              <Card key={d.id} className="bg-card border-border/50 overflow-hidden">
+              <Card key={d.id} className={`bg-card border-border/50 overflow-hidden ${
+                d.id === priorityDebtId ? "border-destructive/40 shadow-sm" : ""
+              }`}>
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        {isPrioridade && (
-                          <span className="text-[9px] font-bold uppercase bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded">
-                            Prioridade
+                        {d.id === priorityDebtId && (
+                          <span className="text-[9px] font-bold uppercase bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded flex items-center gap-1">
+                            <Flame className="w-3 h-3 animate-pulse" /> Prioridade (Score: {debtScore(d).toFixed(0)})
                           </span>
                         )}
                         <h3 className="font-bold text-foreground truncate">{d.nome}</h3>
                       </div>
                       <p className="text-[11px] text-muted-foreground capitalize">
-                        {TIPOS.find(t => t.value === d.tipo)?.label || d.tipo} · venc. dia {d.dia_vencimento}
+                        {TIPOS.find(t => t.value === d.tipo)?.label || d.tipo} · venc. dia {d.vencimento}
                       </p>
                     </div>
                     <div className="flex gap-1">
@@ -255,22 +345,26 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
                   <div className="grid grid-cols-3 gap-2 mb-3 text-center">
                     <div className="bg-muted/50 rounded-lg py-2">
                       <p className="text-[9px] uppercase text-muted-foreground font-bold">Saldo</p>
-                      <p className="text-sm font-bold text-foreground">{formatBRL(d.valor_restante)}</p>
+                      <p className="text-sm font-bold text-foreground">{formatBRL(localDebt.valor_restante)}</p>
                     </div>
                     <div className="bg-muted/50 rounded-lg py-2">
                       <p className="text-[9px] uppercase text-muted-foreground font-bold">Parcela</p>
-                      <p className="text-sm font-bold text-foreground">{formatBRL(d.parcela_mensal)}</p>
+                      <p className="text-sm font-bold text-foreground">{formatBRL(localDebt.parcela_mensal)}</p>
                     </div>
                     <div className="bg-muted/50 rounded-lg py-2">
                       <p className="text-[9px] uppercase text-muted-foreground font-bold">Juros</p>
-                      <p className="text-sm font-bold text-amber-500">{((d.juros_mensal || 0) * 100).toFixed(2)}%</p>
+                      <p className="text-sm font-bold text-amber-500">{d.jurosMensal.toFixed(2)}%</p>
                     </div>
                   </div>
 
-                  {aviso && (
-                    <div className="flex items-start gap-2 bg-destructive/5 border border-destructive/20 rounded-lg p-2 mb-3">
-                      <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-                      <p className="text-[11px] text-foreground/80">{aviso}</p>
+                  {recommendations.length > 0 && (
+                    <div className="space-y-1.5 mb-3">
+                      {recommendations.map((rec, rIdx) => (
+                        <div key={rIdx} className="flex items-start gap-2 bg-primary/5 border border-primary/20 rounded-lg p-2.5">
+                          <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5 animate-pulse" />
+                          <p className="text-[11px] text-foreground/90 font-medium leading-normal">{rec}</p>
+                        </div>
+                      ))}
                     </div>
                   )}
 

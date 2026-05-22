@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { Debt } from "@/financial/types";
 
 const todayMY = () => {
   const d = new Date();
@@ -35,21 +36,36 @@ export function useAccounts(monthYear: string = todayMY()) {
   });
 }
 
+export async function fetchDebts(userId: string): Promise<Debt[]> {
+  const { data, error } = await supabase
+    .from("debts" as any)
+    .select("*")
+    .eq("user_id", userId)
+    .order("juros_mensal", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((d: any) => ({
+    ...d,
+    id: d.id,
+    nome: d.nome,
+    banco: d.banco || d.nome,
+    valorTotal: Number(d.valor_total),
+    valorParcela: Number(d.parcela_mensal),
+    parcelasRestantes: Number(d.parcelas_restantes ?? 0),
+    jurosMensal: Number(d.juros_mensal) * 100,
+    tipo: d.tipo as any,
+    vencimento: String(d.dia_vencimento),
+    permiteAmortizacao: d.permite_amortizacao ?? true,
+    permiteQuitacao: d.permite_antecipacao ?? true,
+  }));
+}
+
 /** Dívidas (fonte única para Planejamento e dashboard) */
 export function useDebts() {
   const { user } = useAuth();
   return useQuery({
     queryKey: ["debts", user?.id],
     enabled: !!user?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("debts" as any)
-        .select("*")
-        .eq("user_id", user!.id)
-        .order("juros_mensal", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as any[];
-    },
+    queryFn: () => fetchDebts(user!.id),
   });
 }
 

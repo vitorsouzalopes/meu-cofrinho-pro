@@ -12,6 +12,11 @@ import { ensureMonthlyInstances } from "@/lib/account-utils";
 import { calcularTotaisFinanceiros, resolverContasDoMes } from "@/lib/finance-utils";
 import type { Tables } from "@/integrations/supabase/types";
 import { notifyEvent } from "@/lib/notify";
+import { useDebts } from "@/hooks/use-finance-data";
+import { smartPriority, shouldAmortize, shouldNegotiate, debtScore } from "@/financial/debtEngine";
+import { forecastMonth } from "@/financial/forecastEngine";
+import { analyzeFinancialRisk } from "@/financial/notificationEngine";
+import { cn } from "@/lib/utils";
 
 type Account = Tables<"accounts">;
 type Investment = Tables<"investments">;
@@ -66,7 +71,7 @@ const Today = () => {
   const navigate = useNavigate();
   const [accounts, setAccounts] = useState<any[]>([]);
   const [templates, setTemplates] = useState<Account[]>([]);
-  const [debts, setDebts] = useState<any[]>([]);
+  const { data: debts = [] } = useDebts();
   const [goals, setGoals] = useState<any[]>([]);
   const [expensesData, setExpensesData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,13 +108,12 @@ const Today = () => {
       }
 
       // Consultas individuais para evitar que um erro 404 trave tudo
-      const [resInst, resTemp, resSal, resExtra, resGoals, resDebts, resExp] = await Promise.all([
+      const [resInst, resTemp, resSal, resExtra, resGoals, resExp] = await Promise.all([
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
         supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
         supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear),
         supabase.from("goals" as any).select("*").eq("user_id", user.id).limit(2),
-        supabase.from("debts" as any).select("*").eq("user_id", user.id),
         supabase.from("expenses").select("*").eq("user_id", user.id).gte("date", `${currentMonthYear}-01`).lte("date", `${currentMonthYear}-31`),
       ]);
 
@@ -131,7 +135,6 @@ const Today = () => {
       setTemplates(rawTemplates);
       setExtraIncomes(resExtra.data || []);
       setGoals(resGoals.data || []);
-      setDebts((resDebts.data as any[]) || []);
       setExpensesData(resExp.data || []);
       
       if (resSal.data) {
@@ -329,8 +332,46 @@ const Today = () => {
           const isToday = accounts.filter(a => a.status !== "pago" && a.due_day === currentDay);
           const upcoming = accounts.filter(a => a.status !== "pago" && a.due_day > currentDay && a.due_day <= currentDay + 7);
 
+          // Risco Financeiro / Previsão do mês
+          const totalExtra = extraIncomes.reduce((s, e) => s + Number(e.amount), 0);
+          const forecastInput = {
+            salario: salary,
+            rendaExtra: totalExtra,
+            contas: accounts
+              .filter(c => c.tipo !== "divida" && c.billing_type !== "debt")
+              .map(c => ({ valor: Number(c.valor || c.amount || 0) })),
+            dividas: debts.map(d => ({ valorParcela: Number(d.valorParcela || d.parcela_mensal || 0) }))
+          };
+          const forecast = forecastMonth(forecastInput);
+          const risk = analyzeFinancialRisk(forecast);
+
           return (
             <>
+              {risk && (
+                <Card className={cn(
+                  "p-4 border-none animate-slide-up",
+                  risk.type === "danger" 
+                    ? "bg-destructive/10 border border-destructive/20 text-destructive animate-pulse" 
+                    : "bg-amber-500/10 border border-amber-500/20 text-amber-500"
+                )}>
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                      risk.type === "danger" ? "bg-destructive/20" : "bg-amber-500/20"
+                    )}>
+                      <AlertCircle className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest">
+                        {risk.type === "danger" ? "Risco Financeiro Próximo" : "Saldo Baixo Previsto"}
+                      </p>
+                      <p className="text-xs opacity-90 mt-0.5">
+                        {risk.message}. Margem líquida estimada: {formatCurrency(forecast)}.
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              )}
               {/* Atrasadas */}
               {overdue.length > 0 && (
                 <Card className="p-4 border-none bg-destructive/10 border border-destructive/20 animate-slide-up">
@@ -418,6 +459,100 @@ const Today = () => {
           );
         })()}
       </div>
+
+      {/* Seção Dívida Prioritária */}
+      {(() => {
+        if (!debts || debts.length === 0) return null;
+        const sorted = smartPriority(debts);
+        const priorityDebt = sorted[0];
+        if (!priorityDebt) return null;
+
+        const saldo = totais.disponivel;
+        
+        let prioritySuggestion;
+        if (shouldNegotiate(priorityDebt, saldo)) {
+          prioritySuggestion = {
+            label: "Negociação Recomendada",
+            description: `Seu saldo livre de ${formatCurrency(saldo)} é suficiente para negociar à vista (cobre mais de 30% do total de ${formatCurrency(priorityDebt.valorTotal)}).`,
+            color: "bg-sky-500/10 border-sky-500/30 text-sky-400 border",
+            icon: Wallet
+          };
+        } else if (shouldAmortize(priorityDebt, saldo)) {
+          prioritySuggestion = {
+            label: "Amortização Recomendada",
+            description: `Juros altos (${priorityDebt.jurosMensal}% a.m.) e prazo longo. Abata parcelas com seu saldo de ${formatCurrency(saldo)}.`,
+            color: "bg-amber-500/10 border-amber-500/30 text-amber-400 border",
+            icon: Sparkles
+          };
+        } else if (priorityDebt.permiteQuitacao && saldo >= priorityDebt.valorTotal) {
+          prioritySuggestion = {
+            label: "Quitação Recomendada",
+            description: `Seu saldo atual de ${formatCurrency(saldo)} cobre o valor total de ${formatCurrency(priorityDebt.valorTotal)}. Livre-se desta dívida!`,
+            color: "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 border",
+            icon: CheckCircle2
+          };
+        } else {
+          prioritySuggestion = {
+            label: "Foco no Pagamento",
+            description: `Evite atrasos para não acumular juros abusivos de ${priorityDebt.jurosMensal}% a.m.`,
+            color: "bg-muted/50 border-border text-muted-foreground border",
+            icon: Clock
+          };
+        }
+
+        return (
+          <div className="mb-8 animate-slide-up" style={{ animationDelay: "0.45s" }}>
+            <div className="flex items-center justify-between mb-4 px-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">💳 Dívida Prioritária</p>
+              <button
+                className="text-[9px] text-primary font-bold hover:underline"
+                onClick={() => navigate("/goals")}
+              >
+                Planejamento Completo
+              </button>
+            </div>
+            <Card className="p-5 border border-border/50 bg-gradient-to-br from-card to-card/70 relative overflow-hidden group hover:border-primary/30 transition-all rounded-3xl">
+              <div className="relative z-10 flex flex-col gap-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-[9px] uppercase font-bold text-muted-foreground mb-1">Banco / Credor</p>
+                    <h4 className="text-lg font-bold text-foreground">{priorityDebt.banco || priorityDebt.nome}</h4>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[9px] uppercase font-bold text-muted-foreground mb-1">Prioridade</p>
+                    <span className="text-xs font-bold text-destructive font-mono bg-destructive/10 px-2.5 py-1 rounded-lg border border-destructive/20">
+                      {debtScore(priorityDebt).toFixed(0)} pts
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-muted/30 border border-border/30 rounded-2xl p-2.5 text-center">
+                    <p className="text-[8px] uppercase font-bold text-muted-foreground mb-1">Juros</p>
+                    <p className="text-xs font-bold text-amber-500 font-mono">{priorityDebt.jurosMensal.toFixed(1)}% a.m.</p>
+                  </div>
+                  <div className="bg-muted/30 border border-border/30 rounded-2xl p-2.5 text-center">
+                    <p className="text-[8px] uppercase font-bold text-muted-foreground mb-1">Valor Total</p>
+                    <p className="text-xs font-bold text-foreground font-mono">{formatCurrency(priorityDebt.valorTotal)}</p>
+                  </div>
+                  <div className="bg-muted/30 border border-border/30 rounded-2xl p-2.5 text-center">
+                    <p className="text-[8px] uppercase font-bold text-muted-foreground mb-1">Parcela</p>
+                    <p className="text-xs font-bold text-foreground font-mono">{formatCurrency(priorityDebt.valorParcela)}</p>
+                  </div>
+                </div>
+
+                <div className={cn("p-3 rounded-2xl flex gap-3 items-start", prioritySuggestion.color)}>
+                  <prioritySuggestion.icon className="w-5 h-5 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-bold uppercase">{prioritySuggestion.label}</p>
+                    <p className="text-[11px] opacity-90 mt-0.5 leading-relaxed">{prioritySuggestion.description}</p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+        );
+      })()}
 
       {/* Expenses Section */}
       {(() => {
