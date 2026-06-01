@@ -76,41 +76,59 @@ function parseServiceAccountJson(value: string) {
     return typeof parsed === "string" ? JSON.parse(parsed) : parsed;
   };
 
-  // 1) Direct JSON
-  if (raw.startsWith("{")) {
-    try { return tryParse(raw); } catch (_) { /* try fallbacks */ }
+  const escapeRawNewlines = (s: string) => {
+    // Escape real newlines/tabs that appear INSIDE JSON string literals.
+    // We scan char-by-char, tracking whether we're inside a "..." string.
+    let out = "";
+    let inStr = false;
+    let escaped = false;
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i];
+      if (inStr) {
+        if (escaped) { out += c; escaped = false; continue; }
+        if (c === "\\") { out += c; escaped = true; continue; }
+        if (c === '"') { out += c; inStr = false; continue; }
+        if (c === "\n") { out += "\\n"; continue; }
+        if (c === "\r") { out += "\\r"; continue; }
+        if (c === "\t") { out += "\\t"; continue; }
+        out += c;
+      } else {
+        if (c === '"') { inStr = true; }
+        out += c;
+      }
+    }
+    return out;
+  };
 
-    // Maybe the private_key has unescaped real newlines breaking JSON.
-    try {
-      const escaped = raw.replace(/\r/g, "").replace(/\n/g, "\\n").replace(/\t/g, "\\t");
-      return tryParse(escaped);
-    } catch (_) { /* continue */ }
+  // Extract from first { to last } if both exist (handles trailing junk or partial wrap)
+  const first = raw.indexOf("{");
+  const last = raw.lastIndexOf("}");
+  if (first !== -1 && last > first) {
+    const slice = raw.slice(first, last + 1);
+    try { return tryParse(slice); } catch (_) {}
+    try { return tryParse(escapeRawNewlines(slice)); } catch (_) {}
   }
 
-  // 1b) Missing surrounding braces (user pasted contents only)
-  let lastErr: any = null;
-  if (raw.startsWith('"') && (raw.includes('"type"') || raw.includes('"private_key"'))) {
+  // No braces present: wrap and try
+  if (raw.includes('"type"') || raw.includes('"private_key"')) {
     const wrapped = "{" + raw.replace(/,\s*$/, "") + "}";
-    try { return tryParse(wrapped); } catch (e) { lastErr = e; }
-    try {
-      const escaped = wrapped.replace(/\r/g, "").replace(/\n/g, "\\n").replace(/\t/g, "\\t");
-      return tryParse(escaped);
-    } catch (e) { lastErr = e; }
+    try { return tryParse(wrapped); } catch (_) {}
+    try { return tryParse(escapeRawNewlines(wrapped)); } catch (_) {}
   }
 
-  // 2) Base64 of JSON
+  // Base64 fallback
   const maybeBase64 = raw.replace(/\s+/g, "");
   if (/^[A-Za-z0-9+/=]+$/.test(maybeBase64) && maybeBase64.length > 100) {
     try {
       const decoded = atob(maybeBase64);
-      return tryParse(decoded);
-    } catch (e) { lastErr = e; }
+      try { return tryParse(decoded); } catch (_) {}
+      return tryParse(escapeRawNewlines(decoded));
+    } catch (_) {}
   }
 
   const preview = raw.slice(0, 120).replace(/[\r\n]/g, "\\n");
   throw new Error(
-    `FCM_SERVICE_ACCOUNT_JSON inválido (${lastErr?.message || "formato desconhecido"}). ` +
-    `Conteúdo começa com: "${preview}...". ` +
+    `FCM_SERVICE_ACCOUNT_JSON inválido. Conteúdo começa com: "${preview}...". ` +
     `Cole o JSON COMPLETO do arquivo .json (deve começar com { e terminar com }).`
   );
 }
