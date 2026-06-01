@@ -64,38 +64,44 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
 }
 
 function parseServiceAccountJson(value: string) {
-  const raw = value.trim();
+  // Strip BOM, surrounding whitespace, and outer single/double quotes if present
+  let raw = value.replace(/^\uFEFF/, "").trim();
+  if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
+    raw = raw.slice(1, -1).trim();
+  }
   if (!raw) throw new Error("FCM_SERVICE_ACCOUNT_JSON está vazio.");
-  if (raw.includes("firebase-adminsdk") || raw.endsWith(".json")) {
-    throw new Error(
-      "FCM_SERVICE_ACCOUNT_JSON deve conter o JSON completo do service account, não apenas o nome do arquivo ou a chave parcial."
-    );
+
+  const tryParse = (s: string) => {
+    const parsed = JSON.parse(s);
+    return typeof parsed === "string" ? JSON.parse(parsed) : parsed;
+  };
+
+  // 1) Direct JSON
+  if (raw.startsWith("{")) {
+    try { return tryParse(raw); } catch (_) { /* try fallbacks */ }
+
+    // Maybe the private_key has unescaped real newlines breaking JSON.
+    // Try escaping raw newlines/tabs inside the string.
+    try {
+      const escaped = raw.replace(/\r/g, "").replace(/\n/g, "\\n").replace(/\t/g, "\\t");
+      return tryParse(escaped);
+    } catch (_) { /* continue */ }
   }
 
-  try {
-    if (raw.startsWith("{")) return JSON.parse(raw);
-    if (raw.startsWith('"')) {
-      const parsed = JSON.parse(raw);
-      return typeof parsed === "string" ? JSON.parse(parsed) : parsed;
-    }
-
-    const maybeBase64 = raw.replace(/\s+/g, "");
-    if (/^[A-Za-z0-9+/=]+$/.test(maybeBase64)) {
+  // 2) Base64 of JSON
+  const maybeBase64 = raw.replace(/\s+/g, "");
+  if (/^[A-Za-z0-9+/=]+$/.test(maybeBase64) && maybeBase64.length > 100) {
+    try {
       const decoded = atob(maybeBase64);
-      return JSON.parse(decoded);
-    }
-
-    throw new Error(
-      "FCM_SERVICE_ACCOUNT_JSON deve ser o JSON completo do service account. Verifique se você colou todo o conteúdo do arquivo de credenciais do Firebase."
-    );
-  } catch (e) {
-    if (e instanceof SyntaxError) {
-      throw new Error(
-        `JSON inválido para FCM_SERVICE_ACCOUNT_JSON: ${e.message}. Use o JSON completo do service account.`
-      );
-    }
-    throw e;
+      return tryParse(decoded);
+    } catch (_) { /* continue */ }
   }
+
+  const preview = raw.slice(0, 80).replace(/[\r\n]/g, " ");
+  throw new Error(
+    `FCM_SERVICE_ACCOUNT_JSON inválido. Conteúdo começa com: "${preview}...". ` +
+    `Cole o JSON COMPLETO do arquivo de credenciais (começa com {"type":"service_account",...}).`
+  );
 }
 
 // ---------- Handler ----------
