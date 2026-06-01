@@ -88,14 +88,14 @@ function parseServiceAccountJson(value: string) {
   }
 
   // 1b) Missing surrounding braces (user pasted contents only)
+  let lastErr: any = null;
   if (raw.startsWith('"') && (raw.includes('"type"') || raw.includes('"private_key"'))) {
     const wrapped = "{" + raw.replace(/,\s*$/, "") + "}";
-    try { return tryParse(wrapped); } catch (_) {
-      try {
-        const escaped = wrapped.replace(/\r/g, "").replace(/\n/g, "\\n").replace(/\t/g, "\\t");
-        return tryParse(escaped);
-      } catch (_) { /* continue */ }
-    }
+    try { return tryParse(wrapped); } catch (e) { lastErr = e; }
+    try {
+      const escaped = wrapped.replace(/\r/g, "").replace(/\n/g, "\\n").replace(/\t/g, "\\t");
+      return tryParse(escaped);
+    } catch (e) { lastErr = e; }
   }
 
   // 2) Base64 of JSON
@@ -104,13 +104,14 @@ function parseServiceAccountJson(value: string) {
     try {
       const decoded = atob(maybeBase64);
       return tryParse(decoded);
-    } catch (_) { /* continue */ }
+    } catch (e) { lastErr = e; }
   }
 
-  const preview = raw.slice(0, 80).replace(/[\r\n]/g, " ");
+  const preview = raw.slice(0, 120).replace(/[\r\n]/g, "\\n");
   throw new Error(
-    `FCM_SERVICE_ACCOUNT_JSON inválido. Conteúdo começa com: "${preview}...". ` +
-    `Cole o JSON COMPLETO do arquivo de credenciais (começa com {"type":"service_account",...}).`
+    `FCM_SERVICE_ACCOUNT_JSON inválido (${lastErr?.message || "formato desconhecido"}). ` +
+    `Conteúdo começa com: "${preview}...". ` +
+    `Cole o JSON COMPLETO do arquivo .json (deve começar com { e terminar com }).`
   );
 }
 
