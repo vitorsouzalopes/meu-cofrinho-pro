@@ -100,20 +100,26 @@ function parseServiceAccountJson(value: string) {
     return out;
   };
 
-  // Extract from first { to last } if both exist (handles trailing junk or partial wrap)
+  let lastErr: any = null;
+
+  // Extract from first { to last } if both exist
   const first = raw.indexOf("{");
   const last = raw.lastIndexOf("}");
   if (first !== -1 && last > first) {
     const slice = raw.slice(first, last + 1);
-    try { return tryParse(slice); } catch (_) {}
-    try { return tryParse(escapeRawNewlines(slice)); } catch (_) {}
+    try { return tryParse(slice); } catch (e) { lastErr = e; }
+    try { return tryParse(escapeRawNewlines(slice)); } catch (e) { lastErr = e; }
   }
 
-  // No braces present: wrap and try
+  // No braces (or only partial): wrap and try
   if (raw.includes('"type"') || raw.includes('"private_key"')) {
-    const wrapped = "{" + raw.replace(/,\s*$/, "") + "}";
-    try { return tryParse(wrapped); } catch (_) {}
-    try { return tryParse(escapeRawNewlines(wrapped)); } catch (_) {}
+    let body = raw;
+    if (body.startsWith("{")) body = body.slice(1);
+    if (body.endsWith("}")) body = body.slice(0, -1);
+    body = body.trim().replace(/,\s*$/, "");
+    const wrapped = "{" + body + "}";
+    try { return tryParse(wrapped); } catch (e) { lastErr = e; }
+    try { return tryParse(escapeRawNewlines(wrapped)); } catch (e) { lastErr = e; }
   }
 
   // Base64 fallback
@@ -121,15 +127,16 @@ function parseServiceAccountJson(value: string) {
   if (/^[A-Za-z0-9+/=]+$/.test(maybeBase64) && maybeBase64.length > 100) {
     try {
       const decoded = atob(maybeBase64);
-      try { return tryParse(decoded); } catch (_) {}
-      return tryParse(escapeRawNewlines(decoded));
-    } catch (_) {}
+      try { return tryParse(decoded); } catch (e) { lastErr = e; }
+      try { return tryParse(escapeRawNewlines(decoded)); } catch (e) { lastErr = e; }
+    } catch (e) { lastErr = e; }
   }
 
-  const preview = raw.slice(0, 120).replace(/[\r\n]/g, "\\n");
+  const preview = raw.slice(0, 100).replace(/[\r\n]/g, "\\n");
+  const tail = raw.slice(-60).replace(/[\r\n]/g, "\\n");
   throw new Error(
-    `FCM_SERVICE_ACCOUNT_JSON inválido. Conteúdo começa com: "${preview}...". ` +
-    `Cole o JSON COMPLETO do arquivo .json (deve começar com { e terminar com }).`
+    `FCM_SERVICE_ACCOUNT_JSON inválido (${lastErr?.message || "formato desconhecido"}). ` +
+    `Início: "${preview}..." | Fim: "...${tail}" | Tamanho: ${raw.length}.`
   );
 }
 
