@@ -163,7 +163,7 @@ const TelegramSettings = () => {
     if (user) {
       await supabase
         .from("profiles")
-        .update({ phone, updated_at: new Date().toISOString() })
+        .update({ phone, updated_at: new Date().toISOString() } as any)
         .eq("id", user.id);
     }
 
