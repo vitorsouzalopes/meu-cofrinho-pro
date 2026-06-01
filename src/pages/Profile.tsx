@@ -61,7 +61,7 @@ const ProfilePage = () => {
       setPhone((profRes.data as any).phone || "");
     }
     
-    setIsAdmin(roleRes.data?.role === "admin" || user.email === "vitorsouzalopes@souunisuam.com.br");
+    setIsAdmin((roleRes.data as any)?.role === "admin" || user.email === "vitorsouzalopes@souunisuam.com.br");
     
     const rawAccounts = (instancesRes.data ?? []) as any[];
     const rawTemplates = (templatesRes.data ?? []) as any[];
