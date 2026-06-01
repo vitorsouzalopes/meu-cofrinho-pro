@@ -340,7 +340,7 @@ const Today = () => {
             contas: accounts
               .filter(c => c.tipo !== "divida" && c.billing_type !== "debt")
               .map(c => ({ valor: Number(c.valor || c.amount || 0) })),
-            dividas: debts.map(d => ({ valorParcela: Number(d.valorParcela || d.parcela_mensal || 0) }))
+            dividas: debts.map(d => ({ valorParcela: Number(d.valorParcela || 0) }))
           };
           const forecast = forecastMonth(forecastInput);
           const risk = analyzeFinancialRisk(forecast);
