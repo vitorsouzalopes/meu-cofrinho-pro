@@ -77,17 +77,25 @@ const Planner = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="debts" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6 bg-card border border-border">
+      <Tabs defaultValue="smart" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 mb-6 bg-card border border-border">
+          <TabsTrigger value="smart" className="data-[state=active]:bg-amber-400/20 data-[state=active]:text-amber-300">
+            <Brain className="w-4 h-4 mr-2" />
+            Inteligência
+          </TabsTrigger>
           <TabsTrigger value="debts" className="data-[state=active]:bg-emerald-accent/20 data-[state=active]:text-emerald-accent">
             <Calculator className="w-4 h-4 mr-2" />
-            Quitar Dívidas
+            Quitar
           </TabsTrigger>
           <TabsTrigger value="goals" className="data-[state=active]:bg-sky-accent/20 data-[state=active]:text-sky-accent">
             <Target className="w-4 h-4 mr-2" />
-            Objetivos
+            Metas
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="smart" className="space-y-4 animate-in fade-in-50">
+          <SmartDebtDashboard />
+        </TabsContent>
 
         <TabsContent value="debts" className="space-y-4 animate-in fade-in-50">
           <DebtPayoff initialIncome={initialIncome} initialExpenses={initialExpenses} />
