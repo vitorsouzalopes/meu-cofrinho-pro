@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
     }
 
     const FCM_SERVICE_ACCOUNT_JSON = Deno.env.get("FCM_SERVICE_ACCOUNT_JSON");
-    const FCM_PROJECT_ID = Deno.env.get("FCM_PROJECT_ID");
+    const FCM_PROJECT_ID = Deno.env.get("FCM_PROJECT_ID")?.trim();
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
