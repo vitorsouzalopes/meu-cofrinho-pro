@@ -93,7 +93,7 @@ const ProfilePage = () => {
     // Tenta salvar nome e telefone
     const { error: fullError } = await supabase
       .from("profiles")
-      .update({ display_name: displayName, phone, updated_at: new Date().toISOString() })
+      .update({ display_name: displayName, phone, updated_at: new Date().toISOString() } as any)
       .eq("id", user.id);
 
     if (fullError) {
