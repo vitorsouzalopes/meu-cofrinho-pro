@@ -81,11 +81,21 @@ function parseServiceAccountJson(value: string) {
     try { return tryParse(raw); } catch (_) { /* try fallbacks */ }
 
     // Maybe the private_key has unescaped real newlines breaking JSON.
-    // Try escaping raw newlines/tabs inside the string.
     try {
       const escaped = raw.replace(/\r/g, "").replace(/\n/g, "\\n").replace(/\t/g, "\\t");
       return tryParse(escaped);
     } catch (_) { /* continue */ }
+  }
+
+  // 1b) Missing surrounding braces (user pasted contents only)
+  if (raw.startsWith('"') && (raw.includes('"type"') || raw.includes('"private_key"'))) {
+    const wrapped = "{" + raw.replace(/,\s*$/, "") + "}";
+    try { return tryParse(wrapped); } catch (_) {
+      try {
+        const escaped = wrapped.replace(/\r/g, "").replace(/\n/g, "\\n").replace(/\t/g, "\\t");
+        return tryParse(escaped);
+      } catch (_) { /* continue */ }
+    }
   }
 
   // 2) Base64 of JSON
