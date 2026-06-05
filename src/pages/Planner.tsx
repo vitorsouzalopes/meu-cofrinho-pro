@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calculator, Target, BrainCircuit, Brain } from "lucide-react";
+import { Calculator, Target, BrainCircuit, Brain, TrendingUp } from "lucide-react";
 import DebtPayoff from "@/components/planner/DebtPayoff";
 import FinancialGoals from "@/components/planner/FinancialGoals";
 import SmartDebtDashboard from "@/components/planner/SmartDebtDashboard";
+import ForecastReport from "@/components/planner/ForecastReport";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { calcularTotaisFinanceiros, sincronizarDividas } from "@/lib/finance-utils";
