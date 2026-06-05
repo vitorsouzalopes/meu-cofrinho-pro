@@ -230,6 +230,17 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
             <p className="text-[9px] text-muted-foreground mt-0.5">extra somado à parcela</p>
           </div>
         </div>
+        <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
+          <p className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
+            <Flame className="w-3 h-3" /> Regra: atacar 1 dívida por vez
+          </p>
+          <ol className="text-[10px] text-foreground/80 mt-1 space-y-0.5 list-decimal list-inside">
+            <li>Manter a parcela mínima de TODAS as dívidas.</li>
+            <li>Escolher UMA dívida prioritária (marcada abaixo).</li>
+            <li>Direcionar todo o valor extra apenas nela.</li>
+            <li>Ao quitar, mover o extra para a próxima da fila.</li>
+          </ol>
+        </div>
       </Card>
 
       {/* Alerta de Risco Financeiro */}
