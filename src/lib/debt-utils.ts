@@ -58,14 +58,23 @@ export function simular(debt: Debt, valorMensal: number) {
   return { meses, totalPago, totalJuros };
 }
 
-/** Estratégia HARD: usa 90% da renda disponível */
+/** Estratégia HARD: usa 90% da sobra mensal como EXTRA (somado à parcela obrigatória) */
 export function estrategiaHard(rendaDisponivel: number) {
   return Math.max(0, rendaDisponivel * 0.9);
 }
 
-/** Estratégia MISTA: usa 60% da renda disponível */
+/** Estratégia MISTA: usa 50% da sobra mensal como EXTRA (somado à parcela obrigatória) */
 export function estrategiaMista(rendaDisponivel: number) {
-  return Math.max(0, rendaDisponivel * 0.6);
+  return Math.max(0, rendaDisponivel * 0.5);
+}
+
+/**
+ * Pagamento planejado = parcela obrigatória + extra da estratégia.
+ * Fórmula oficial do Cofrinho Pro:
+ *   Tempo = Saldo devedor ÷ Pagamento planejado mensal
+ */
+export function pagamentoPlanejado(parcela: number, extra: number) {
+  return Math.max(0, (parcela || 0) + (extra || 0));
 }
 
 /** Gera dados para o gráfico de evolução do saldo */

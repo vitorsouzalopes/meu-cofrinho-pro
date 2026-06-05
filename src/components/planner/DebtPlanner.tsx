@@ -24,6 +24,7 @@ import {
   simular,
   estrategiaHard,
   estrategiaMista,
+  pagamentoPlanejado,
   gerarGraficoDivida,
   formatBRL,
 } from "@/lib/debt-utils";
@@ -219,12 +220,14 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
         </div>
         <div className="grid grid-cols-2 gap-2 mt-3 text-[10px]">
           <div className="bg-destructive/10 rounded-lg p-2 border border-destructive/20">
-            <p className="font-bold text-destructive flex items-center gap-1"><Flame className="w-3 h-3" /> HARD (90%)</p>
-            <p className="text-foreground font-bold mt-0.5">{formatBRL(estrategiaHard(rendaDisponivel))}/mês</p>
+            <p className="font-bold text-destructive flex items-center gap-1"><Flame className="w-3 h-3" /> HARD (+90% sobra)</p>
+            <p className="text-foreground font-bold mt-0.5">+{formatBRL(estrategiaHard(rendaDisponivel))}/mês</p>
+            <p className="text-[9px] text-muted-foreground mt-0.5">extra somado à parcela</p>
           </div>
           <div className="bg-amber-500/10 rounded-lg p-2 border border-amber-500/20">
-            <p className="font-bold text-amber-500 flex items-center gap-1"><Scale className="w-3 h-3" /> MISTA (60%)</p>
-            <p className="text-foreground font-bold mt-0.5">{formatBRL(estrategiaMista(rendaDisponivel))}/mês</p>
+            <p className="font-bold text-amber-500 flex items-center gap-1"><Scale className="w-3 h-3" /> MISTA (+50% sobra)</p>
+            <p className="text-foreground font-bold mt-0.5">+{formatBRL(estrategiaMista(rendaDisponivel))}/mês</p>
+            <p className="text-[9px] text-muted-foreground mt-0.5">extra somado à parcela</p>
           </div>
         </div>
       </Card>
@@ -282,17 +285,19 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
             const localDebt = mapToLocalDebt(d);
             const expanded = expandedId === d.id;
 
-            // Simulações
-            const valorHard = estrategiaHard(rendaDisponivel) || localDebt.parcela_mensal;
-            const valorMista = estrategiaMista(rendaDisponivel) || localDebt.parcela_mensal;
+            // Cálculo oficial: Pagamento planejado = Parcela obrigatória + Extra da estratégia
+            const extraHard = estrategiaHard(rendaDisponivel);
+            const extraMista = estrategiaMista(rendaDisponivel);
+            const pagamentoHard = pagamentoPlanejado(localDebt.parcela_mensal, extraHard);
+            const pagamentoMista = pagamentoPlanejado(localDebt.parcela_mensal, extraMista);
             const simAtual = simular(localDebt, localDebt.parcela_mensal);
-            const simHard = simular(localDebt, valorHard);
-            const simMista = simular(localDebt, valorMista);
+            const simHard = simular(localDebt, pagamentoHard);
+            const simMista = simular(localDebt, pagamentoMista);
             const economiaHard = simAtual.totalJuros - simHard.totalJuros;
             const economiaMista = simAtual.totalJuros - simMista.totalJuros;
-            const sobraMista = rendaDisponivel - valorMista;
+            const sobraMista = Math.max(0, rendaDisponivel - extraMista);
 
-            const grafico = gerarGraficoDivida(localDebt, valorMista, Math.min(simMista.meses + 2, 36));
+            const grafico = gerarGraficoDivida(localDebt, pagamentoMista, Math.min(simMista.meses + 2, 36));
 
             // Dynamic suggestions using the engines
             const amortizeAlert = shouldAmortize(d, rendaDisponivel);
@@ -389,13 +394,15 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
                       </div>
                       <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-3">
                         <p className="text-[10px] uppercase font-bold text-destructive flex items-center gap-1"><Flame className="w-3 h-3" /> Hard</p>
-                        <p className="text-xs font-bold">{simHard.meses} meses · {formatBRL(valorHard)}/mês</p>
+                        <p className="text-xs font-bold">{simHard.meses} meses · {formatBRL(pagamentoHard)}/mês</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{formatBRL(localDebt.parcela_mensal)} parcela + {formatBRL(extraHard)} extra</p>
                         <p className="text-[11px] text-emerald-500 mt-1">Economia: {formatBRL(Math.max(0, economiaHard))}</p>
                       </div>
                       <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
                         <p className="text-[10px] uppercase font-bold text-amber-500 flex items-center gap-1"><Scale className="w-3 h-3" /> Mista</p>
-                        <p className="text-xs font-bold">{simMista.meses} meses · {formatBRL(valorMista)}/mês</p>
-                        <p className="text-[11px] text-emerald-500 mt-1">Sobra: {formatBRL(Math.max(0, sobraMista))}</p>
+                        <p className="text-xs font-bold">{simMista.meses} meses · {formatBRL(pagamentoMista)}/mês</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{formatBRL(localDebt.parcela_mensal)} parcela + {formatBRL(extraMista)} extra</p>
+                        <p className="text-[11px] text-emerald-500 mt-1">Sobra: {formatBRL(sobraMista)}</p>
                         <p className="text-[11px] text-emerald-500">Economia: {formatBRL(Math.max(0, economiaMista))}</p>
                       </div>
                     </div>
