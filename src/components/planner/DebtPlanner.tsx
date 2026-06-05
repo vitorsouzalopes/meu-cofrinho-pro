@@ -285,17 +285,19 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
             const localDebt = mapToLocalDebt(d);
             const expanded = expandedId === d.id;
 
-            // Simulações
-            const valorHard = estrategiaHard(rendaDisponivel) || localDebt.parcela_mensal;
-            const valorMista = estrategiaMista(rendaDisponivel) || localDebt.parcela_mensal;
+            // Cálculo oficial: Pagamento planejado = Parcela obrigatória + Extra da estratégia
+            const extraHard = estrategiaHard(rendaDisponivel);
+            const extraMista = estrategiaMista(rendaDisponivel);
+            const pagamentoHard = pagamentoPlanejado(localDebt.parcela_mensal, extraHard);
+            const pagamentoMista = pagamentoPlanejado(localDebt.parcela_mensal, extraMista);
             const simAtual = simular(localDebt, localDebt.parcela_mensal);
-            const simHard = simular(localDebt, valorHard);
-            const simMista = simular(localDebt, valorMista);
+            const simHard = simular(localDebt, pagamentoHard);
+            const simMista = simular(localDebt, pagamentoMista);
             const economiaHard = simAtual.totalJuros - simHard.totalJuros;
             const economiaMista = simAtual.totalJuros - simMista.totalJuros;
-            const sobraMista = rendaDisponivel - valorMista;
+            const sobraMista = Math.max(0, rendaDisponivel - extraMista);
 
-            const grafico = gerarGraficoDivida(localDebt, valorMista, Math.min(simMista.meses + 2, 36));
+            const grafico = gerarGraficoDivida(localDebt, pagamentoMista, Math.min(simMista.meses + 2, 36));
 
             // Dynamic suggestions using the engines
             const amortizeAlert = shouldAmortize(d, rendaDisponivel);
