@@ -230,6 +230,17 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
             <p className="text-[9px] text-muted-foreground mt-0.5">extra somado à parcela</p>
           </div>
         </div>
+        <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
+          <p className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
+            <Flame className="w-3 h-3" /> Regra: atacar 1 dívida por vez
+          </p>
+          <ol className="text-[10px] text-foreground/80 mt-1 space-y-0.5 list-decimal list-inside">
+            <li>Manter a parcela mínima de TODAS as dívidas.</li>
+            <li>Escolher UMA dívida prioritária (marcada abaixo).</li>
+            <li>Direcionar todo o valor extra apenas nela.</li>
+            <li>Ao quitar, mover o extra para a próxima da fila.</li>
+          </ol>
+        </div>
       </Card>
 
       {/* Alerta de Risco Financeiro */}
@@ -285,9 +296,11 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
             const localDebt = mapToLocalDebt(d);
             const expanded = expandedId === d.id;
 
-            // Cálculo oficial: Pagamento planejado = Parcela obrigatória + Extra da estratégia
-            const extraHard = estrategiaHard(rendaDisponivel);
-            const extraMista = estrategiaMista(rendaDisponivel);
+            // Regra oficial: atacar UMA dívida por vez.
+            // Apenas a dívida prioritária recebe o extra. As demais pagam só a parcela mínima.
+            const isPriority = d.id === priorityDebtId;
+            const extraHard = isPriority ? estrategiaHard(rendaDisponivel) : 0;
+            const extraMista = isPriority ? estrategiaMista(rendaDisponivel) : 0;
             const pagamentoHard = pagamentoPlanejado(localDebt.parcela_mensal, extraHard);
             const pagamentoMista = pagamentoPlanejado(localDebt.parcela_mensal, extraMista);
             const simAtual = simular(localDebt, localDebt.parcela_mensal);
