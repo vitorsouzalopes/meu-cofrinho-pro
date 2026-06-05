@@ -296,9 +296,11 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
             const localDebt = mapToLocalDebt(d);
             const expanded = expandedId === d.id;
 
-            // Cálculo oficial: Pagamento planejado = Parcela obrigatória + Extra da estratégia
-            const extraHard = estrategiaHard(rendaDisponivel);
-            const extraMista = estrategiaMista(rendaDisponivel);
+            // Regra oficial: atacar UMA dívida por vez.
+            // Apenas a dívida prioritária recebe o extra. As demais pagam só a parcela mínima.
+            const isPriority = d.id === priorityDebtId;
+            const extraHard = isPriority ? estrategiaHard(rendaDisponivel) : 0;
+            const extraMista = isPriority ? estrategiaMista(rendaDisponivel) : 0;
             const pagamentoHard = pagamentoPlanejado(localDebt.parcela_mensal, extraHard);
             const pagamentoMista = pagamentoPlanejado(localDebt.parcela_mensal, extraMista);
             const simAtual = simular(localDebt, localDebt.parcela_mensal);
