@@ -220,12 +220,14 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
         </div>
         <div className="grid grid-cols-2 gap-2 mt-3 text-[10px]">
           <div className="bg-destructive/10 rounded-lg p-2 border border-destructive/20">
-            <p className="font-bold text-destructive flex items-center gap-1"><Flame className="w-3 h-3" /> HARD (90%)</p>
-            <p className="text-foreground font-bold mt-0.5">{formatBRL(estrategiaHard(rendaDisponivel))}/mês</p>
+            <p className="font-bold text-destructive flex items-center gap-1"><Flame className="w-3 h-3" /> HARD (+90% sobra)</p>
+            <p className="text-foreground font-bold mt-0.5">+{formatBRL(estrategiaHard(rendaDisponivel))}/mês</p>
+            <p className="text-[9px] text-muted-foreground mt-0.5">extra somado à parcela</p>
           </div>
           <div className="bg-amber-500/10 rounded-lg p-2 border border-amber-500/20">
-            <p className="font-bold text-amber-500 flex items-center gap-1"><Scale className="w-3 h-3" /> MISTA (60%)</p>
-            <p className="text-foreground font-bold mt-0.5">{formatBRL(estrategiaMista(rendaDisponivel))}/mês</p>
+            <p className="font-bold text-amber-500 flex items-center gap-1"><Scale className="w-3 h-3" /> MISTA (+50% sobra)</p>
+            <p className="text-foreground font-bold mt-0.5">+{formatBRL(estrategiaMista(rendaDisponivel))}/mês</p>
+            <p className="text-[9px] text-muted-foreground mt-0.5">extra somado à parcela</p>
           </div>
         </div>
       </Card>
