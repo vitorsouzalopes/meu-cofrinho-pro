@@ -24,6 +24,7 @@ import {
   simular,
   estrategiaHard,
   estrategiaMista,
+  pagamentoPlanejado,
   gerarGraficoDivida,
   formatBRL,
 } from "@/lib/debt-utils";
