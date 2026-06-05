@@ -79,23 +79,31 @@ const Planner = () => {
       </div>
 
       <Tabs defaultValue="smart" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6 bg-card border border-border">
+        <TabsList className="grid w-full grid-cols-4 mb-6 bg-card border border-border">
           <TabsTrigger value="smart" className="data-[state=active]:bg-amber-400/20 data-[state=active]:text-amber-300">
-            <Brain className="w-4 h-4 mr-2" />
-            Inteligência
+            <Brain className="w-4 h-4 mr-1" />
+            <span className="text-xs">IA</span>
+          </TabsTrigger>
+          <TabsTrigger value="forecast" className="data-[state=active]:bg-emerald-accent/20 data-[state=active]:text-emerald-accent">
+            <TrendingUp className="w-4 h-4 mr-1" />
+            <span className="text-xs">Previsão</span>
           </TabsTrigger>
           <TabsTrigger value="debts" className="data-[state=active]:bg-emerald-accent/20 data-[state=active]:text-emerald-accent">
-            <Calculator className="w-4 h-4 mr-2" />
-            Quitar
+            <Calculator className="w-4 h-4 mr-1" />
+            <span className="text-xs">Quitar</span>
           </TabsTrigger>
           <TabsTrigger value="goals" className="data-[state=active]:bg-sky-accent/20 data-[state=active]:text-sky-accent">
-            <Target className="w-4 h-4 mr-2" />
-            Metas
+            <Target className="w-4 h-4 mr-1" />
+            <span className="text-xs">Metas</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="smart" className="space-y-4 animate-in fade-in-50">
           <SmartDebtDashboard />
+        </TabsContent>
+
+        <TabsContent value="forecast" className="space-y-4 animate-in fade-in-50">
+          <ForecastReport />
         </TabsContent>
 
         <TabsContent value="debts" className="space-y-4 animate-in fade-in-50">
