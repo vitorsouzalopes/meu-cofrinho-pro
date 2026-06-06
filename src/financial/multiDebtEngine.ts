@@ -540,3 +540,54 @@ export function compararGlobalmente(
     recomendacao,
   };
 }
+
+/**
+ * Calcula as projeções de cada dívida considerando efeito cascata
+ * @param debts Array de dívidas
+ * @param pagamentoMensal Valor total disponível por mês
+ * @param estrategia Estratégia a ser utilizada
+ */
+export function calcularProjecoes(
+  debts: Debt[],
+  pagamentoMensal: number,
+  estrategia: 'avalanche' | 'snowball' | 'fluxo-caixa' = 'avalanche'
+): { totalDividas: number; saldoLivre: number; estrategia: string; dataQuitacaoTotal: Date; projecoes: any[] } {
+  const resultado = simularMultiplasDividas(debts, pagamentoMensal, estrategia);
+  
+  const projecoes = debts.map((debt, idx) => {
+    const dataQuitacao = resultado.datasQuitacao.get(debt.id) || new Date(resultado.dataQuitacaoTotal);
+    const mesesRestantes = Math.ceil((dataQuitacao.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 30));
+    
+    // Encontrar a próxima dívida a ser quitada
+    const proximaDividaData = Array.from(resultado.datasQuitacao.values()).sort()[0];
+    const ehProxima = proximaDividaData === dataQuitacao && mesesRestantes > 0;
+    
+    // Calcular valor liberado após cascata
+    const cascata = calcularEfeitoCascata(debt.id, resultado);
+    
+    return {
+      debtId: debt.id,
+      nome: debt.nome,
+      banco: debt.banco,
+      saldoAtual: debt.valorTotal,
+      parcelaAtual: debt.valorParcela,
+      extraRecebido: pagamentoMensal - debt.valorParcela,
+      pagamentoTotal: pagamentoMensal,
+      dataQuitacao,
+      mesesRestantes: Math.max(0, mesesRestantes),
+      ehProxima,
+      valorLiberadoAposCascata: cascata.valorLiberado,
+    };
+  });
+  
+  // Ordenar por data de quitação
+  projecoes.sort((a, b) => a.dataQuitacao.getTime() - b.dataQuitacao.getTime());
+  
+  return {
+    totalDividas: debts.reduce((sum, d) => sum + d.valorTotal, 0),
+    saldoLivre: pagamentoMensal,
+    estrategia,
+    dataQuitacaoTotal: resultado.dataQuitacaoTotal,
+    projecoes,
+  };
+}
