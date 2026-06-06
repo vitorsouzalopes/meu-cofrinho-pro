@@ -1,25 +1,28 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { Calculator, TrendingDown, Zap } from "lucide-react";
+import { Calculator, TrendingDown, Zap, FileText } from "lucide-react";
 import MultiDebtManager from "@/components/planner/MultiDebtManager";
 import SimulacaoGlobal from "@/components/planner/SimulacaoGlobal";
 import Recomendacao from "@/components/planner/Recomendacao";
+import DebtReportPDF from "@/components/planner/DebtReportPDF";
 import { Debt } from "@/financial/types";
 import { simularMultiplasDividas, StrategyResult, SimulacaoIndividual, compararGlobalmente } from "@/financial/multiDebtEngine";
 
 interface MultiDebtPayoffProps {
   initialIncome?: number;
   initialExpenses?: number;
+  initialDebts?: Debt[];
 }
 
 export default function MultiDebtPayoff({
   initialIncome = 0,
   initialExpenses = 0,
+  initialDebts = [],
 }: MultiDebtPayoffProps) {
   const [income, setIncome] = useState<number>(initialIncome);
   const [expenses, setExpenses] = useState<number>(initialExpenses);
-  const [debts, setDebts] = useState<Debt[]>([]);
+  const [debts, setDebts] = useState<Debt[]>(initialDebts || []);
   const [selectedStrategy, setSelectedStrategy] = useState<"avalanche" | "snowball" | "fluxo-caixa">("avalanche");
   const [selectedScenario, setSelectedScenario] = useState<{ tipo: "individual" | "estrategia"; debtId?: string } | null>(null);
   const [strategyResult, setStrategyResult] = useState<StrategyResult | null>(null);
@@ -29,6 +32,14 @@ export default function MultiDebtPayoff({
     setIncome(initialIncome);
     setExpenses(initialExpenses);
   }, [initialIncome, initialExpenses]);
+
+  // Carregar dívidas iniciais quando o componente montar ou initialDebts mudar
+  useEffect(() => {
+    if (initialDebts && initialDebts.length > 0) {
+      console.log('📥 Carregando dívidas iniciais:', initialDebts.length);
+      setDebts(initialDebts);
+    }
+  }, [initialDebts]);
 
   useEffect(() => {
     if (debts.length > 0) {
@@ -100,7 +111,7 @@ export default function MultiDebtPayoff({
       </Card>
 
       <Tabs defaultValue="simulacao" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-6 bg-card border border-border">
+        <TabsList className="grid w-full grid-cols-5 mb-6 bg-card border border-border">
           <TabsTrigger value="manager" className="data-[state=active]:bg-sky-accent/20 data-[state=active]:text-sky-accent text-xs">
             Minhas Dívidas
           </TabsTrigger>
@@ -120,6 +131,13 @@ export default function MultiDebtPayoff({
           </TabsTrigger>
           <TabsTrigger value="detalhes" disabled={debts.length === 0} className="data-[state=active]:bg-gold/20 data-[state=active]:text-gold disabled:opacity-50 disabled:cursor-not-allowed text-xs">
             Detalhes
+          </TabsTrigger>
+          <TabsTrigger 
+            value="relatorio" 
+            disabled={debts.length === 0 || !strategyResult}
+            className="data-[state=active]:bg-purple-accent/20 data-[state=active]:text-purple-accent disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+          >
+            Relatório
           </TabsTrigger>
         </TabsList>
 
@@ -210,6 +228,23 @@ export default function MultiDebtPayoff({
               ))}
             </div>
           </Card>
+        </TabsContent>
+
+        {/* Relatório PDF */}
+        <TabsContent value="relatorio" className="space-y-4 animate-in fade-in-50">
+          {strategyResult && debts.length > 0 ? (
+            <DebtReportPDF
+              debts={debts}
+              strategyResult={strategyResult}
+              pagamentoMensal={disponivel}
+              userName="Usuário do Cofrinho Pro"
+            />
+          ) : (
+            <Card className="p-6 text-center">
+              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+              <p className="text-muted-foreground">Crie um plano primeiro para gerar o relatório</p>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>

@@ -13,6 +13,7 @@ const Planner = () => {
   const { user } = useAuth();
   const [initialIncome, setInitialIncome] = useState(0);
   const [initialExpenses, setInitialExpenses] = useState(0);
+  const [initialDebts, setInitialDebts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,8 +48,25 @@ const Planner = () => {
           dividas: syncAccounts.filter(a => a.billing_type === 'debt' || a.tipo === 'divida')
         });
 
+        // Extrair dívidas para o MultiDebtPayoff
+        const debtAccounts = syncAccounts.filter(a => a.billing_type === 'debt' || a.tipo === 'divida');
+        const debtsForPayoff = debtAccounts.map((debt: any) => ({
+          id: debt.id,
+          nome: debt.name,
+          banco: debt.institution || 'Banco',
+          valorTotal: debt.amount,
+          valorParcela: debt.monthly_value || 0,
+          parcelasRestantes: debt.remaining_months || 1,
+          jurosMensal: debt.interest_rate || 0,
+          tipo: debt.type || 'credito',
+          vencimento: debt.due_date || '',
+          permiteAmortizacao: true,
+          permiteQuitacao: true,
+        }));
+
         setInitialIncome(results.renda);
         setInitialExpenses(results.gastos);
+        setInitialDebts(debtAccounts.length > 0 ? debtsForPayoff : []);
       } catch (error) {
         console.error("Erro no Planner:", error);
       } finally {
@@ -107,7 +125,11 @@ const Planner = () => {
         </TabsContent>
 
         <TabsContent value="debts" className="space-y-4 animate-in fade-in-50">
-          <MultiDebtPayoff initialIncome={initialIncome} initialExpenses={initialExpenses} />
+          <MultiDebtPayoff 
+            initialIncome={initialIncome} 
+            initialExpenses={initialExpenses}
+            initialDebts={initialDebts}
+          />
         </TabsContent>
 
         <TabsContent value="goals" className="space-y-4 animate-in fade-in-50">
