@@ -24,6 +24,12 @@ import {
   Sparkles,
   Gauge,
   Lightbulb,
+  ShieldAlert,
+  ShieldCheck,
+  Shield,
+  Zap,
+  Rocket,
+  Scale,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,6 +52,16 @@ const STRATEGY_LABEL: Record<Strategy, string> = {
   smart: "Smart (IA híbrida)",
 };
 
+type Profile = "conservador" | "moderado" | "agressivo";
+type Usage = "hard" | "mista";
+
+const PROFILE_PCT: Record<Profile, number> = {
+  conservador: 0.30,
+  moderado: 0.20,
+  agressivo: 0.10,
+};
+const USAGE_PCT: Record<Usage, number> = { hard: 0.9, mista: 0.5 };
+
 function calcScore(args: {
   saldoLivre: number;
   receita: number;
@@ -57,21 +73,16 @@ function calcScore(args: {
 }) {
   const { saldoLivre, receita, parcelas, contas, debtsCount, goalsCount, investimentos } = args;
   let score = 50;
-  // Dívidas vs renda (até -30)
   const ratio = receita > 0 ? (parcelas + contas) / receita : 1;
   if (ratio < 0.5) score += 20;
   else if (ratio < 0.7) score += 10;
   else if (ratio > 0.9) score -= 20;
   else if (ratio > 1) score -= 30;
-  // Saldo livre (até +15)
   if (saldoLivre > receita * 0.2) score += 15;
   else if (saldoLivre > 0) score += 5;
   else score -= 10;
-  // Investimentos
   if (investimentos > 0) score += 10;
-  // Metas
   if (goalsCount > 0) score += 5;
-  // Sem dívidas = excelente
   if (debtsCount === 0) score += 15;
   return Math.max(0, Math.min(100, Math.round(score)));
 }
@@ -81,8 +92,18 @@ export default function ForecastReport() {
   const my = monthYear();
   const { data: debts = [] } = useDebts();
   const { data: goals = [] } = useGoals();
-  const [strategy, setStrategy] = useState<Strategy>("avalanche");
+  const [strategy, setStrategy] = useState<Strategy>(
+    () => (localStorage.getItem("cofrinho:strategy") as Strategy) || "avalanche",
+  );
+  const [usage, setUsage] = useState<Usage>(
+    () => (localStorage.getItem("cofrinho:usage") as Usage) || "hard",
+  );
+  const [profile, setProfile] = useState<Profile>(
+    () => (localStorage.getItem("cofrinho:profile") as Profile) || "moderado",
+  );
   const [horizon, setHorizon] = useState<3 | 6 | 12>(12);
+
+  const persist = (key: string, val: string) => localStorage.setItem(`cofrinho:${key}`, val);
 
   const { data: finance } = useQuery({
     queryKey: ["forecast-finance", user?.id, my],
@@ -108,6 +129,9 @@ export default function ForecastReport() {
   const contasMensais = finance?.contas ?? 0;
   const parcelasTotais = debts.reduce((s, d) => s + d.valorParcela, 0);
   const saldoLivre = Math.max(0, receita - contasMensais - parcelasTotais);
+  const reservaMinima = saldoLivre * PROFILE_PCT[profile];
+  const saldoUtilizavel = Math.max(0, saldoLivre - reservaMinima);
+  const extraDirigido = saldoUtilizavel * USAGE_PCT[usage];
 
   const forecast = useMemo(
     () =>
@@ -115,11 +139,37 @@ export default function ForecastReport() {
         debts,
         receita,
         contas: contasMensais,
-        saldoLivre,
+        saldoLivre: extraDirigido,
         strategy,
         horizonMonths: horizon,
       }),
-    [debts, receita, contasMensais, saldoLivre, strategy, horizon],
+    [debts, receita, contasMensais, extraDirigido, strategy, horizon],
+  );
+
+  // Comparação Hard x Mista (mesma estratégia de ataque)
+  const forecastHard = useMemo(
+    () =>
+      runForecast({
+        debts,
+        receita,
+        contas: contasMensais,
+        saldoLivre: saldoUtilizavel * USAGE_PCT.hard,
+        strategy,
+        horizonMonths: 24,
+      }),
+    [debts, receita, contasMensais, saldoUtilizavel, strategy],
+  );
+  const forecastMista = useMemo(
+    () =>
+      runForecast({
+        debts,
+        receita,
+        contas: contasMensais,
+        saldoLivre: saldoUtilizavel * USAGE_PCT.mista,
+        strategy,
+        horizonMonths: 24,
+      }),
+    [debts, receita, contasMensais, saldoUtilizavel, strategy],
   );
 
   const maxSaldoDevedor = Math.max(1, ...forecast.months.map((m) => m.saldoDevedorTotal));
@@ -140,6 +190,32 @@ export default function ForecastReport() {
   const scoreColor =
     score >= 80 ? "text-emerald-accent" : score >= 60 ? "text-sky-accent" : score >= 40 ? "text-amber-300" : "text-red-400";
 
+  // Modo Crise
+  const ratio = receita > 0 ? (parcelasTotais + contasMensais) / receita : 1;
+  const crisisActive = saldoLivre <= 0 || ratio >= 0.9;
+
+  // Previsão de sobra futura (saldo livre + parcelas liberadas acumuladas)
+  const surplusFuture = (m: number) => {
+    const liberado = forecast.timeline
+      .filter((t) => t.mesesAteQuitar <= m)
+      .reduce((s, t) => s + t.parcela, 0);
+    return saldoLivre + liberado;
+  };
+
+  // Motor de Oportunidades — usa investimentos como "guardado"
+  const guardado = finance?.investimentos ?? 0;
+  const oportunidades = useMemo(() => {
+    return debts
+      .map((d) => {
+        const falta = Math.max(0, d.valorTotal - guardado);
+        const proximidade = guardado / Math.max(1, d.valorTotal);
+        return { debt: d, falta, proximidade };
+      })
+      .filter((o) => o.proximidade >= 0.6 && o.falta <= saldoUtilizavel * 6)
+      .sort((a, b) => b.proximidade - a.proximidade)
+      .slice(0, 3);
+  }, [debts, guardado, saldoUtilizavel]);
+
   if (!debts.length) {
     return (
       <Card className="p-6 text-center bg-card/50 border-dashed">
@@ -153,13 +229,37 @@ export default function ForecastReport() {
 
   return (
     <div className="space-y-4">
+      {/* Modo Crise */}
+      {crisisActive && (
+        <Card className="p-4 bg-gradient-to-br from-red-500/15 to-transparent border border-red-500/50">
+          <div className="flex items-start gap-2">
+            <ShieldAlert className="w-5 h-5 text-red-400 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-heading font-bold text-red-300">Modo Crise ativado</h3>
+              <p className="text-xs text-foreground/80 mt-1">
+                Seu saldo livre é insuficiente ({fmt(saldoLivre)}) ou suas contas + parcelas
+                consomem {Math.round(ratio * 100)}% da renda.
+              </p>
+              <ul className="text-xs text-muted-foreground mt-2 space-y-0.5 list-disc list-inside">
+                <li>Suspenda metas e novos investimentos</li>
+                <li>Pague apenas parcelas mínimas</li>
+                <li>Negocie a dívida de maior parcela ({priorityDebt?.nome})</li>
+                <li>Priorize sobrevivência financeira</li>
+              </ul>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Header / Controles */}
       <Card className="p-4 bg-gradient-to-br from-emerald-accent/10 via-sky-accent/5 to-transparent border border-emerald-accent/30">
         <div className="flex items-center gap-2 mb-3">
           <TrendingUp className="w-5 h-5 text-emerald-accent" />
           <h3 className="font-heading font-bold text-foreground">Relatório de Previsão Financeira</h3>
         </div>
-        <div className="flex flex-wrap gap-2">
+
+        <p className="text-[10px] text-muted-foreground uppercase mb-1">Horizonte</p>
+        <div className="flex flex-wrap gap-2 mb-3">
           {([3, 6, 12] as const).map((h) => (
             <Button
               key={h}
@@ -171,30 +271,118 @@ export default function ForecastReport() {
               Próx. {h} meses
             </Button>
           ))}
-          <div className="w-full" />
+        </div>
+
+        <p className="text-[10px] text-muted-foreground uppercase mb-1">Estratégia de ataque</p>
+        <div className="flex flex-wrap gap-2 mb-3">
           {(["avalanche", "snowball", "smart"] as const).map((s) => (
             <Button
               key={s}
               size="sm"
               variant={strategy === s ? "default" : "outline"}
-              onClick={() => setStrategy(s)}
+              onClick={() => { setStrategy(s); persist("strategy", s); }}
               className="text-xs capitalize"
             >
               {s}
             </Button>
           ))}
         </div>
+
+        <p className="text-[10px] text-muted-foreground uppercase mb-1">Uso do saldo utilizável</p>
+        <div className="flex flex-wrap gap-2 mb-3">
+          {(["hard", "mista"] as const).map((u) => (
+            <Button
+              key={u}
+              size="sm"
+              variant={usage === u ? "default" : "outline"}
+              onClick={() => { setUsage(u); persist("usage", u); }}
+              className="text-xs capitalize"
+            >
+              {u} ({Math.round(USAGE_PCT[u] * 100)}%)
+            </Button>
+          ))}
+        </div>
+
+        <p className="text-[10px] text-muted-foreground uppercase mb-1">Nível de segurança</p>
+        <div className="flex flex-wrap gap-2">
+          {(["conservador", "moderado", "agressivo"] as const).map((p) => (
+            <Button
+              key={p}
+              size="sm"
+              variant={profile === p ? "default" : "outline"}
+              onClick={() => { setProfile(p); persist("profile", p); }}
+              className="text-xs capitalize"
+            >
+              {p === "conservador" && <Shield className="w-3 h-3 mr-1" />}
+              {p === "moderado" && <ShieldCheck className="w-3 h-3 mr-1" />}
+              {p === "agressivo" && <Flame className="w-3 h-3 mr-1" />}
+              {p} ({Math.round(PROFILE_PCT[p] * 100)}%)
+            </Button>
+          ))}
+        </div>
+      </Card>
+
+      {/* Saldo Livre x Saldo Utilizável */}
+      <Card className="p-5 bg-card border border-border">
+        <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2">
+          <PiggyBank className="w-5 h-5 text-amber-300" />
+          Saldo Livre x Utilizável
+        </h3>
+        <div className="grid grid-cols-3 gap-2">
+          <Stat icon={<PiggyBank className="w-4 h-4 text-amber-300" />} label="Saldo Livre" value={fmt(saldoLivre)} />
+          <Stat icon={<Shield className="w-4 h-4 text-sky-accent" />} label={`Reserva (${Math.round(PROFILE_PCT[profile] * 100)}%)`} value={fmt(reservaMinima)} />
+          <Stat icon={<Zap className="w-4 h-4 text-emerald-accent" />} label="Utilizável" value={fmt(saldoUtilizavel)} />
+        </div>
+        <div className="mt-3 p-3 rounded-lg bg-emerald-accent/5 border border-emerald-accent/30">
+          <p className="text-[10px] text-muted-foreground uppercase">Extra direcionado às dívidas ({usage} · {Math.round(USAGE_PCT[usage] * 100)}%)</p>
+          <p className="text-lg font-bold text-emerald-accent">{fmt(extraDirigido)}/mês</p>
+        </div>
+      </Card>
+
+      {/* Comparação Hard x Mista */}
+      <Card className="p-5 bg-card border border-border">
+        <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2">
+          <Scale className="w-5 h-5 text-sky-accent" />
+          Comparação Hard x Mista
+        </h3>
+        <p className="text-[11px] text-muted-foreground mb-3">
+          Mesma estratégia de ataque ({strategy}), variando apenas o % do saldo utilizável.
+        </p>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-xs">Modo</TableHead>
+              <TableHead className="text-xs text-right">Extra/mês</TableHead>
+              <TableHead className="text-xs text-right">Quitação</TableHead>
+              <TableHead className="text-xs text-right">Economia</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow className={cn(usage === "hard" && "bg-emerald-accent/10")}>
+              <TableCell className="py-2 text-sm font-medium">Hard (90%)</TableCell>
+              <TableCell className="py-2 text-right text-sm">{fmt(saldoUtilizavel * 0.9)}</TableCell>
+              <TableCell className="py-2 text-right text-sm">{forecastHard.mesQuitacaoFinal ?? "> 24m"}</TableCell>
+              <TableCell className="py-2 text-right text-sm text-emerald-accent">{fmt(forecastHard.economiaJuros)}</TableCell>
+            </TableRow>
+            <TableRow className={cn(usage === "mista" && "bg-sky-accent/10")}>
+              <TableCell className="py-2 text-sm font-medium">Mista (50%)</TableCell>
+              <TableCell className="py-2 text-right text-sm">{fmt(saldoUtilizavel * 0.5)}</TableCell>
+              <TableCell className="py-2 text-right text-sm">{forecastMista.mesQuitacaoFinal ?? "> 24m"}</TableCell>
+              <TableCell className="py-2 text-right text-sm text-emerald-accent">{fmt(forecastMista.economiaJuros)}</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       </Card>
 
       {/* Central de Recomendações */}
-      {priorityDebt && saldoLivre > 0 && (
+      {priorityDebt && extraDirigido > 0 && (
         <Card className="p-5 bg-gradient-to-br from-amber-500/10 via-red-500/5 to-transparent border border-amber-500/40">
           <h3 className="font-heading font-bold text-foreground mb-2 flex items-center gap-2">
             <Lightbulb className="w-5 h-5 text-amber-300" />
             🔥 Melhor ação hoje
           </h3>
           <p className="text-sm text-foreground">
-            Adicionar <span className="font-bold text-amber-300">{fmt(saldoLivre)}</span> extras na dívida{" "}
+            Adicionar <span className="font-bold text-amber-300">{fmt(extraDirigido)}</span> extras na dívida{" "}
             <span className="font-bold">{priorityDebt.nome}</span>.
           </p>
           <p className="text-xs text-muted-foreground mt-1">
@@ -203,6 +391,56 @@ export default function ForecastReport() {
           </p>
         </Card>
       )}
+
+      {/* Motor de Oportunidades */}
+      {oportunidades.length > 0 && (
+        <Card className="p-5 bg-gradient-to-br from-fuchsia-500/10 to-transparent border border-fuchsia-500/40">
+          <h3 className="font-heading font-bold text-foreground mb-2 flex items-center gap-2">
+            <Rocket className="w-5 h-5 text-fuchsia-300" />
+            Motor de Oportunidades
+          </h3>
+          <p className="text-xs text-muted-foreground mb-3">
+            Você possui <span className="text-foreground font-bold">{fmt(guardado)}</span> guardados.
+          </p>
+          <div className="space-y-2">
+            {oportunidades.map(({ debt, falta }) => (
+              <div key={debt.id} className="p-3 rounded-lg bg-background/40 border border-border/60">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm font-bold text-foreground">{debt.nome}</p>
+                  <Badge className="text-[10px] bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40">
+                    🔥 Oportunidade
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Saldo: {fmt(debt.valorTotal)} · Faltam {fmt(falta)} para quitar
+                </p>
+                <p className="text-xs text-emerald-accent mt-1">
+                  Liberaria {fmt(debt.valorParcela)}/mês de fluxo de caixa.
+                </p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Previsão de Sobra Futura */}
+      <Card className="p-5 bg-card border border-border">
+        <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-emerald-accent" />
+          Previsão de Sobra Futura
+        </h3>
+        <p className="text-[11px] text-muted-foreground mb-3">
+          Saldo livre projetado considerando parcelas liberadas a cada dívida quitada.
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {[3, 6, 12].map((m) => (
+            <div key={m} className="p-3 rounded-lg bg-background/40 border border-border/60 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase">Em {m}m</p>
+              <p className="text-sm font-bold text-emerald-accent tabular-nums">{fmt(surplusFuture(m))}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       {/* Score Financeiro */}
       <Card className="p-5 bg-card border border-border">
@@ -222,7 +460,6 @@ export default function ForecastReport() {
         </p>
       </Card>
 
-
       {/* Resumo Executivo */}
       <Card className="p-5 bg-card border border-border">
         <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2">
@@ -239,7 +476,7 @@ export default function ForecastReport() {
           <div className="flex items-center justify-between bg-background/40 rounded-lg p-3 border border-border/60">
             <div>
               <p className="text-[10px] text-muted-foreground uppercase">Estratégia atual</p>
-              <p className="text-sm font-bold text-foreground">{STRATEGY_LABEL[strategy]}</p>
+              <p className="text-sm font-bold text-foreground">{STRATEGY_LABEL[strategy]} · {usage}</p>
             </div>
             <Flame className="w-5 h-5 text-amber-300" />
           </div>
@@ -297,7 +534,6 @@ export default function ForecastReport() {
                       {restam > 0 ? `${restam}x` : "—"}
                     </TableCell>
                     <TableCell className="py-2 text-right">
-
                       <Badge
                         variant="outline"
                         className={cn(
@@ -371,7 +607,7 @@ export default function ForecastReport() {
         </div>
       </Card>
 
-      {/* Gráfico de Saldo Devedor (barras horizontais) */}
+      {/* Gráfico de Saldo Devedor */}
       <Card className="p-5 bg-card border border-border">
         <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-emerald-accent rotate-180" />
