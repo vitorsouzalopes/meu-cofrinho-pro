@@ -32,6 +32,7 @@ export default function MultiDebtPayoff({
 
   useEffect(() => {
     if (debts.length > 0) {
+      console.log('💰 MultiDebtPayoff - Dívidas atualizadas:', debts.length, debts.map(d => d.nome));
       const disponivel = Math.max(0, income - expenses);
       if (disponivel > 0) {
         try {

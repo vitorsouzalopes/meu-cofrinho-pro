@@ -1,12 +1,7 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-<<<<<<< HEAD
-import { Calculator, Target, BrainCircuit } from "lucide-react";
-import MultiDebtPayoff from "@/components/planner/MultiDebtPayoff";
-=======
 import { Calculator, Target, BrainCircuit, Brain, TrendingUp } from "lucide-react";
-import DebtPayoff from "@/components/planner/DebtPayoff";
->>>>>>> 43501ee4c82ece900c9c8baac6094a39a1b2c152
+import MultiDebtPayoff from "@/components/planner/MultiDebtPayoff";
 import FinancialGoals from "@/components/planner/FinancialGoals";
 import SmartDebtDashboard from "@/components/planner/SmartDebtDashboard";
 import ForecastReport from "@/components/planner/ForecastReport";

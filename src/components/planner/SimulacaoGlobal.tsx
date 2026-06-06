@@ -40,7 +40,10 @@ export default function SimulacaoGlobal({
   const comparacao = useMemo(() => {
     if (debts.length === 0 || pagamentoMensal <= 0) return null;
     try {
-      return compararGlobalmente(debts, pagamentoMensal);
+      console.log('📊 SimulacaoGlobal - Dívidas recebidas:', debts.length, debts.map(d => d.nome));
+      const resultado = compararGlobalmente(debts, pagamentoMensal);
+      console.log('📊 SimulacaoGlobal - Simulações individuais:', resultado.simulacoesIndividuais.length);
+      return resultado;
     } catch (error) {
       console.error('Erro ao comparar globalmente:', error);
       return null;

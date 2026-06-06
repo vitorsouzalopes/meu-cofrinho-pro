@@ -52,6 +52,7 @@ export default function MultiDebtManager({
     if (editingId) {
       // Atualizar
       const novaLista = debts.map((d) => (d.id === editingId ? { ...d, ...formData } : d)) as Debt[];
+      console.log('✏️ Atualizando dívida:', formData.nome, 'Total:', novaLista.length);
       onDebtsChange(novaLista);
       setEditingId(null);
     } else {
@@ -63,6 +64,7 @@ export default function MultiDebtManager({
           ...formData,
         } as Debt,
       ];
+      console.log('➕ Adicionando dívida:', formData.nome, 'Total:', novaLista.length);
       onDebtsChange(novaLista);
     }
 
