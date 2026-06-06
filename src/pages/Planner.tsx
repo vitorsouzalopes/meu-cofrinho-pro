@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calculator, Target, BrainCircuit } from "lucide-react";
-import DebtPayoff from "@/components/planner/DebtPayoff";
+import MultiDebtPayoff from "@/components/planner/MultiDebtPayoff";
 import FinancialGoals from "@/components/planner/FinancialGoals";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -89,7 +89,7 @@ const Planner = () => {
         </TabsList>
 
         <TabsContent value="debts" className="space-y-4 animate-in fade-in-50">
-          <DebtPayoff initialIncome={initialIncome} initialExpenses={initialExpenses} />
+          <MultiDebtPayoff initialIncome={initialIncome} initialExpenses={initialExpenses} />
         </TabsContent>
 
         <TabsContent value="goals" className="space-y-4 animate-in fade-in-50">
