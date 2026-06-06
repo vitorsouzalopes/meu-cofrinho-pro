@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -21,11 +22,13 @@ import {
   ArrowRight,
   Calendar,
   Sparkles,
+  Gauge,
+  Lightbulb,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useDebts } from "@/hooks/use-finance-data";
+import { useDebts, useGoals } from "@/hooks/use-finance-data";
 import { runForecast, Strategy } from "@/financial/forecastSimulation";
 import { cn } from "@/lib/utils";
 
@@ -43,10 +46,41 @@ const STRATEGY_LABEL: Record<Strategy, string> = {
   smart: "Smart (IA híbrida)",
 };
 
+function calcScore(args: {
+  saldoLivre: number;
+  receita: number;
+  parcelas: number;
+  contas: number;
+  debtsCount: number;
+  goalsCount: number;
+  investimentos: number;
+}) {
+  const { saldoLivre, receita, parcelas, contas, debtsCount, goalsCount, investimentos } = args;
+  let score = 50;
+  // Dívidas vs renda (até -30)
+  const ratio = receita > 0 ? (parcelas + contas) / receita : 1;
+  if (ratio < 0.5) score += 20;
+  else if (ratio < 0.7) score += 10;
+  else if (ratio > 0.9) score -= 20;
+  else if (ratio > 1) score -= 30;
+  // Saldo livre (até +15)
+  if (saldoLivre > receita * 0.2) score += 15;
+  else if (saldoLivre > 0) score += 5;
+  else score -= 10;
+  // Investimentos
+  if (investimentos > 0) score += 10;
+  // Metas
+  if (goalsCount > 0) score += 5;
+  // Sem dívidas = excelente
+  if (debtsCount === 0) score += 15;
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
 export default function ForecastReport() {
   const { user } = useAuth();
   const my = monthYear();
   const { data: debts = [] } = useDebts();
+  const { data: goals = [] } = useGoals();
   const [strategy, setStrategy] = useState<Strategy>("avalanche");
   const [horizon, setHorizon] = useState<3 | 6 | 12>(12);
 
@@ -54,17 +88,19 @@ export default function ForecastReport() {
     queryKey: ["forecast-finance", user?.id, my],
     enabled: !!user?.id,
     queryFn: async () => {
-      const [sal, extra, accs] = await Promise.all([
+      const [sal, extra, accs, inv] = await Promise.all([
         supabase.from("salary" as any).select("amount").eq("user_id", user!.id).eq("month_year", my).maybeSingle(),
         supabase.from("extra_income").select("amount").eq("user_id", user!.id).eq("month_year", my),
         supabase.from("accounts").select("amount,billing_type,tipo").eq("user_id", user!.id).eq("is_template", false).eq("month_year", my),
+        supabase.from("investments" as any).select("amount").eq("user_id", user!.id),
       ]);
       const salario = Number((sal.data as any)?.amount ?? 0);
       const rendaExtra = (extra.data ?? []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
       const contas = (accs.data ?? [])
         .filter((a: any) => a.billing_type !== "debt" && a.tipo !== "divida")
         .reduce((s: number, a: any) => s + Number(a.amount || 0), 0);
-      return { salario, rendaExtra, contas };
+      const investimentos = (inv.data ?? []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
+      return { salario, rendaExtra, contas, investimentos };
     },
   });
 
@@ -87,6 +123,22 @@ export default function ForecastReport() {
   );
 
   const maxSaldoDevedor = Math.max(1, ...forecast.months.map((m) => m.saldoDevedorTotal));
+
+  const score = calcScore({
+    saldoLivre,
+    receita,
+    parcelas: parcelasTotais,
+    contas: contasMensais,
+    debtsCount: debts.length,
+    goalsCount: goals.length,
+    investimentos: finance?.investimentos ?? 0,
+  });
+
+  const priorityDebt = forecast.timeline.sort((a, b) => a.mesesAteQuitar - b.mesesAteQuitar)[0];
+  const scoreLabel =
+    score >= 80 ? "Excelente" : score >= 60 ? "Bom" : score >= 40 ? "Atenção" : "Crítico";
+  const scoreColor =
+    score >= 80 ? "text-emerald-accent" : score >= 60 ? "text-sky-accent" : score >= 40 ? "text-amber-300" : "text-red-400";
 
   if (!debts.length) {
     return (
@@ -133,6 +185,43 @@ export default function ForecastReport() {
           ))}
         </div>
       </Card>
+
+      {/* Central de Recomendações */}
+      {priorityDebt && saldoLivre > 0 && (
+        <Card className="p-5 bg-gradient-to-br from-amber-500/10 via-red-500/5 to-transparent border border-amber-500/40">
+          <h3 className="font-heading font-bold text-foreground mb-2 flex items-center gap-2">
+            <Lightbulb className="w-5 h-5 text-amber-300" />
+            🔥 Melhor ação hoje
+          </h3>
+          <p className="text-sm text-foreground">
+            Adicionar <span className="font-bold text-amber-300">{fmt(saldoLivre)}</span> extras na dívida{" "}
+            <span className="font-bold">{priorityDebt.nome}</span>.
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Economia estimada de juros no horizonte:{" "}
+            <span className="font-bold text-emerald-accent">{fmt(forecast.economiaJuros)}</span>
+          </p>
+        </Card>
+      )}
+
+      {/* Score Financeiro */}
+      <Card className="p-5 bg-card border border-border">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-heading font-bold text-foreground flex items-center gap-2">
+            <Gauge className="w-5 h-5 text-sky-accent" />
+            Score Financeiro
+          </h3>
+          <span className={cn("text-2xl font-bold tabular-nums", scoreColor)}>
+            {score}<span className="text-sm text-muted-foreground">/100</span>
+          </span>
+        </div>
+        <Progress value={score} className="h-2 mb-2" />
+        <p className={cn("text-xs font-medium mb-2", scoreColor)}>{scoreLabel}</p>
+        <p className="text-[11px] text-muted-foreground">
+          Baseado em: dívidas vs renda, saldo livre, investimentos e metas ativas.
+        </p>
+      </Card>
+
 
       {/* Resumo Executivo */}
       <Card className="p-5 bg-card border border-border">
@@ -186,13 +275,17 @@ export default function ForecastReport() {
                 <TableHead className="text-xs">Dívida</TableHead>
                 <TableHead className="text-xs text-right">Saldo</TableHead>
                 <TableHead className="text-xs text-right">Parcela</TableHead>
+                <TableHead className="text-xs text-right">Restam</TableHead>
                 <TableHead className="text-xs text-right">Término</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {[...forecast.timeline]
                 .sort((a, b) => a.mesesAteQuitar - b.mesesAteQuitar)
-                .map((t) => (
+                .map((t) => {
+                  const debt = debts.find((d) => d.id === t.id);
+                  const restam = debt?.parcelasRestantes ?? 0;
+                  return (
                   <TableRow key={t.id}>
                     <TableCell className="py-2">
                       <div className="text-sm font-medium text-foreground truncate max-w-[120px]">{t.nome}</div>
@@ -200,7 +293,11 @@ export default function ForecastReport() {
                     </TableCell>
                     <TableCell className="py-2 text-right text-sm text-foreground">{fmt(t.saldoAtual)}</TableCell>
                     <TableCell className="py-2 text-right text-sm text-foreground">{fmt(t.parcela)}</TableCell>
+                    <TableCell className="py-2 text-right text-xs text-muted-foreground tabular-nums">
+                      {restam > 0 ? `${restam}x` : "—"}
+                    </TableCell>
                     <TableCell className="py-2 text-right">
+
                       <Badge
                         variant="outline"
                         className={cn(
@@ -214,7 +311,8 @@ export default function ForecastReport() {
                       </Badge>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
             </TableBody>
           </Table>
         </div>
