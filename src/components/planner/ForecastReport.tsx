@@ -80,6 +80,7 @@ export default function ForecastReport() {
   const { user } = useAuth();
   const my = monthYear();
   const { data: debts = [] } = useDebts();
+  const { data: goals = [] } = useGoals();
   const [strategy, setStrategy] = useState<Strategy>("avalanche");
   const [horizon, setHorizon] = useState<3 | 6 | 12>(12);
 
@@ -87,17 +88,19 @@ export default function ForecastReport() {
     queryKey: ["forecast-finance", user?.id, my],
     enabled: !!user?.id,
     queryFn: async () => {
-      const [sal, extra, accs] = await Promise.all([
+      const [sal, extra, accs, inv] = await Promise.all([
         supabase.from("salary" as any).select("amount").eq("user_id", user!.id).eq("month_year", my).maybeSingle(),
         supabase.from("extra_income").select("amount").eq("user_id", user!.id).eq("month_year", my),
         supabase.from("accounts").select("amount,billing_type,tipo").eq("user_id", user!.id).eq("is_template", false).eq("month_year", my),
+        supabase.from("investments" as any).select("amount").eq("user_id", user!.id),
       ]);
       const salario = Number((sal.data as any)?.amount ?? 0);
       const rendaExtra = (extra.data ?? []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
       const contas = (accs.data ?? [])
         .filter((a: any) => a.billing_type !== "debt" && a.tipo !== "divida")
         .reduce((s: number, a: any) => s + Number(a.amount || 0), 0);
-      return { salario, rendaExtra, contas };
+      const investimentos = (inv.data ?? []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
+      return { salario, rendaExtra, contas, investimentos };
     },
   });
 
@@ -120,6 +123,22 @@ export default function ForecastReport() {
   );
 
   const maxSaldoDevedor = Math.max(1, ...forecast.months.map((m) => m.saldoDevedorTotal));
+
+  const score = calcScore({
+    saldoLivre,
+    receita,
+    parcelas: parcelasTotais,
+    contas: contasMensais,
+    debtsCount: debts.length,
+    goalsCount: goals.length,
+    investimentos: finance?.investimentos ?? 0,
+  });
+
+  const priorityDebt = forecast.timeline.sort((a, b) => a.mesesAteQuitar - b.mesesAteQuitar)[0];
+  const scoreLabel =
+    score >= 80 ? "Excelente" : score >= 60 ? "Bom" : score >= 40 ? "Atenção" : "Crítico";
+  const scoreColor =
+    score >= 80 ? "text-emerald-accent" : score >= 60 ? "text-sky-accent" : score >= 40 ? "text-amber-300" : "text-red-400";
 
   if (!debts.length) {
     return (
