@@ -323,3 +323,220 @@ export function compararEstrategias(
     melhorFluxo: fluxoCaixa,
   };
 }
+
+/**
+ * Simula o cenário de atacar UMA ÚNICA dívida com todo o saldo livre
+ * Mantém outras dívidas pagando apenas a parcela mínima
+ */
+export interface SimulacaoIndividual {
+  debtId: string;
+  nomeDivida: string;
+  mesesTotais: number;
+  totalJuros: number;
+  economiJuros: number;
+  dataQuitacaoTotal: Date;
+  percentualEconomia: number; // economia / (jurosBase) * 100
+}
+
+export function simularAtacarDividaIndividual(
+  debts: Debt[],
+  indexAlvo: number,
+  pagamentoExtra: number
+): SimulacaoIndividual {
+  const debtAlvo = debts[indexAlvo];
+  if (!debtAlvo) throw new Error('Dívida não encontrada');
+
+  let mesAtual = new Date();
+  let mes = 0;
+  let totalJurosSimulado = 0;
+
+  // Estados das dívidas
+  const estados = debts.map((d, i) => ({
+    id: d.id,
+    nome: d.nome,
+    saldo: d.valorTotal,
+    jurosMensal: d.jurosMensal / 100,
+    valorParcela: d.valorParcela,
+    isAlvo: i === indexAlvo,
+  }));
+
+  // Simular até quitação completa
+  while (mes < 360 && estados.some((e) => e.saldo > 0.01)) {
+    mes++;
+    mesAtual = new Date(mesAtual);
+    mesAtual.setMonth(mesAtual.getMonth() + 1);
+
+    // Aplicar juros
+    for (const estado of estados) {
+      if (estado.saldo > 0.01) {
+        const juros = estado.saldo * estado.jurosMensal;
+        estado.saldo += juros;
+        totalJurosSimulado += juros;
+      }
+    }
+
+    // Distribuir pagamentos
+    for (const estado of estados) {
+      if (estado.saldo <= 0.01) continue;
+
+      let pagamento: number;
+      if (estado.isAlvo) {
+        // Dívida alvo: paga parcela + saldo extra
+        pagamento = Math.min(estado.valorParcela + pagamentoExtra, estado.saldo);
+      } else {
+        // Outras: apenas a parcela
+        pagamento = Math.min(estado.valorParcela, estado.saldo);
+      }
+
+      estado.saldo -= pagamento;
+      if (estado.saldo < 0.01) estado.saldo = 0;
+    }
+  }
+
+  // Calcular juros base (pagar sempre a parcela)
+  const jurosBase = calcularJurosBase(debts);
+  const economia = jurosBase - totalJurosSimulado;
+
+  return {
+    debtId: debtAlvo.id,
+    nomeDivida: debtAlvo.nome,
+    mesesTotais: mes,
+    totalJuros: totalJurosSimulado,
+    economiJuros: Math.max(0, economia),
+    dataQuitacaoTotal: mesAtual,
+    percentualEconomia: (economia / jurosBase) * 100,
+  };
+}
+
+/**
+ * Compara todos os cenários: atacar cada dívida individualmente vs estratégias globais
+ */
+export interface ComparacaoGlobal {
+  simulacoesIndividuais: SimulacaoIndividual[];
+  estrategias: {
+    avalanche: StrategyResult;
+    snowball: StrategyResult;
+    fluxoCaixa: StrategyResult;
+  };
+  melhorCenario: {
+    tipo: 'individual' | 'estrategia';
+    debtId?: string;
+    nomeDivida?: string;
+    estrategia?: 'avalanche' | 'snowball' | 'fluxo-caixa';
+    tempo: number;
+    economia: number;
+    motivo: string;
+  };
+  recomendacao: string;
+}
+
+export function compararGlobalmente(
+  debts: Debt[],
+  pagamentoMensal: number
+): ComparacaoGlobal {
+  // Simular atacar cada dívida individualmente
+  const simulacoesIndividuais = debts.map((_, idx) =>
+    simularAtacarDividaIndividual(debts, idx, pagamentoMensal)
+  );
+
+  // Simular as 3 estratégias globais
+  const estrategias = {
+    avalanche: simularMultiplasDividas(debts, pagamentoMensal, 'avalanche'),
+    snowball: simularMultiplasDividas(debts, pagamentoMensal, 'snowball'),
+    fluxoCaixa: simularMultiplasDividas(debts, pagamentoMensal, 'fluxo-caixa'),
+  };
+
+  // Encontrar melhor cenário
+  let melhorTempo = Infinity;
+  let melhorEconomia = -Infinity;
+  let melhorCenario: ComparacaoGlobal['melhorCenario'] = {
+    tipo: 'estrategia',
+    tempo: 0,
+    economia: 0,
+    motivo: '',
+  };
+
+  // Comparar individuais
+  for (const sim of simulacoesIndividuais) {
+    if (sim.mesesTotais < melhorTempo) {
+      melhorTempo = sim.mesesTotais;
+      melhorCenario = {
+        tipo: 'individual',
+        debtId: sim.debtId,
+        nomeDivida: sim.nomeDivida,
+        tempo: sim.mesesTotais,
+        economia: sim.economiJuros,
+        motivo: `Atacar ${sim.nomeDivida} individualmente quitaria todas em ${sim.mesesTotais} meses`,
+      };
+    }
+  }
+
+  // Comparar estratégias
+  if (estrategias.avalanche.mesesTotais < melhorTempo) {
+    melhorTempo = estrategias.avalanche.mesesTotais;
+    melhorCenario = {
+      tipo: 'estrategia',
+      estrategia: 'avalanche',
+      tempo: estrategias.avalanche.mesesTotais,
+      economia: estrategias.avalanche.economiJuros,
+      motivo: `Estratégia Avalanche é mais rápida: ${estrategias.avalanche.mesesTotais} meses`,
+    };
+  }
+
+  if (estrategias.snowball.mesesTotais < melhorTempo) {
+    melhorTempo = estrategias.snowball.mesesTotais;
+    melhorCenario = {
+      tipo: 'estrategia',
+      estrategia: 'snowball',
+      tempo: estrategias.snowball.mesesTotais,
+      economia: estrategias.snowball.economiJuros,
+      motivo: `Estratégia Snowball é mais rápida: ${estrategias.snowball.mesesTotais} meses`,
+    };
+  }
+
+  if (estrategias.fluxoCaixa.mesesTotais < melhorTempo) {
+    melhorTempo = estrategias.fluxoCaixa.mesesTotais;
+    melhorCenario = {
+      tipo: 'estrategia',
+      estrategia: 'fluxo-caixa',
+      tempo: estrategias.fluxoCaixa.mesesTotais,
+      economia: estrategias.fluxoCaixa.economiJuros,
+      motivo: `Estratégia Fluxo de Caixa é mais rápida: ${estrategias.fluxoCaixa.mesesTotais} meses`,
+    };
+  }
+
+  // Verificar se economia é melhor
+  for (const sim of simulacoesIndividuais) {
+    if (sim.economiJuros > melhorEconomia) {
+      melhorEconomia = sim.economiJuros;
+    }
+  }
+  if (estrategias.avalanche.economiJuros > melhorEconomia) {
+    melhorEconomia = estrategias.avalanche.economiJuros;
+  }
+  if (estrategias.snowball.economiJuros > melhorEconomia) {
+    melhorEconomia = estrategias.snowball.economiJuros;
+  }
+  if (estrategias.fluxoCaixa.economiJuros > melhorEconomia) {
+    melhorEconomia = estrategias.fluxoCaixa.economiJuros;
+  }
+
+  // Gerar recomendação
+  let recomendacao = '';
+  if (melhorCenario.tipo === 'individual') {
+    recomendacao = `Concentrar todo o saldo livre (R$ ${pagamentoMensal.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    })}) em ${melhorCenario.nomeDivida} é o caminho mais rápido. Você quitará tudo em ${melhorCenario.tempo} meses economizando R$ ${melhorCenario.economia.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}.`;
+  } else {
+    const nomeEst = melhorCenario.estrategia === 'avalanche' ? 'Avalanche' : melhorCenario.estrategia === 'snowball' ? 'Snowball' : 'Fluxo de Caixa';
+    recomendacao = `A Estratégia ${nomeEst} é a melhor escolha, quitando tudo em ${melhorCenario.tempo} meses com economia de R$ ${melhorCenario.economia.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}.`;
+  }
+
+  return {
+    simulacoesIndividuais,
+    estrategias,
+    melhorCenario,
+    recomendacao,
+  };
+}

@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { Calculator, TrendingDown } from "lucide-react";
+import { Calculator, TrendingDown, Zap } from "lucide-react";
 import MultiDebtManager from "@/components/planner/MultiDebtManager";
-import StrategyComparison from "@/components/planner/StrategyComparison";
-import DebtTimeline from "@/components/planner/DebtTimeline";
+import SimulacaoGlobal from "@/components/planner/SimulacaoGlobal";
+import Recomendacao from "@/components/planner/Recomendacao";
 import { Debt } from "@/financial/types";
-import { simularMultiplasDividas, StrategyResult } from "@/financial/multiDebtEngine";
+import { simularMultiplasDividas, StrategyResult, SimulacaoIndividual, compararGlobalmente } from "@/financial/multiDebtEngine";
 
 interface MultiDebtPayoffProps {
   initialIncome?: number;
@@ -21,7 +21,9 @@ export default function MultiDebtPayoff({
   const [expenses, setExpenses] = useState<number>(initialExpenses);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [selectedStrategy, setSelectedStrategy] = useState<"avalanche" | "snowball" | "fluxo-caixa">("avalanche");
+  const [selectedScenario, setSelectedScenario] = useState<{ tipo: "individual" | "estrategia"; debtId?: string } | null>(null);
   const [strategyResult, setStrategyResult] = useState<StrategyResult | null>(null);
+  const [individualSimulation, setIndividualSimulation] = useState<SimulacaoIndividual | null>(null);
 
   useEffect(() => {
     setIncome(initialIncome);
@@ -42,6 +44,25 @@ export default function MultiDebtPayoff({
       }
     }
   }, [debts, income, expenses, selectedStrategy]);
+
+  const handleSelectCenario = (tipo: string, debtId?: string) => {
+    setSelectedScenario({ tipo: tipo as "individual" | "estrategia", debtId });
+    
+    if (tipo === "individual" && debtId && debts.length > 0) {
+      const disponivel = Math.max(0, income - expenses);
+      try {
+        const comparacao = compararGlobalmente(debts, disponivel);
+        const simIndividual = comparacao.simulacoesIndividuais.find((s) => s.debtId === debtId);
+        if (simIndividual) {
+          setIndividualSimulation(simIndividual);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar simulação individual:", error);
+      }
+    } else {
+      setIndividualSimulation(null);
+    }
+  };
 
   const disponivel = Math.max(0, income - expenses);
   const totalDividas = debts.reduce((sum, d) => sum + d.valorTotal, 0);
@@ -77,24 +98,27 @@ export default function MultiDebtPayoff({
         </div>
       </Card>
 
-      <Tabs defaultValue="manager" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6 bg-card border border-border">
-          <TabsTrigger value="manager" className="data-[state=active]:bg-sky-accent/20 data-[state=active]:text-sky-accent">
+      <Tabs defaultValue="simulacao" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 mb-6 bg-card border border-border">
+          <TabsTrigger value="manager" className="data-[state=active]:bg-sky-accent/20 data-[state=active]:text-sky-accent text-xs">
             Minhas Dívidas
           </TabsTrigger>
           <TabsTrigger
-            value="comparison"
+            value="simulacao"
             disabled={debts.length === 0}
-            className="data-[state=active]:bg-emerald-accent/20 data-[state=active]:text-emerald-accent disabled:opacity-50 disabled:cursor-not-allowed"
+            className="data-[state=active]:bg-zap/20 data-[state=active]:text-zap disabled:opacity-50 disabled:cursor-not-allowed text-xs"
           >
-            Comparar
+            Simulação Global
           </TabsTrigger>
           <TabsTrigger
-            value="timeline"
-            disabled={!strategyResult}
-            className="data-[state=active]:bg-gold/20 data-[state=active]:text-gold disabled:opacity-50 disabled:cursor-not-allowed"
+            value="recomendacao"
+            disabled={!selectedScenario}
+            className="data-[state=active]:bg-emerald-accent/20 data-[state=active]:text-emerald-accent disabled:opacity-50 disabled:cursor-not-allowed text-xs"
           >
-            Timeline
+            Recomendação
+          </TabsTrigger>
+          <TabsTrigger value="detalhes" disabled={debts.length === 0} className="data-[state=active]:bg-gold/20 data-[state=active]:text-gold disabled:opacity-50 disabled:cursor-not-allowed text-xs">
+            Detalhes
           </TabsTrigger>
         </TabsList>
 
@@ -108,35 +132,10 @@ export default function MultiDebtPayoff({
           />
         </TabsContent>
 
-        {/* Comparação de Estratégias */}
-        <TabsContent value="comparison" className="space-y-4 animate-in fade-in-50">
+        {/* Simulação Global */}
+        <TabsContent value="simulacao" className="space-y-4 animate-in fade-in-50">
           {debts.length > 0 && disponivel > 0 ? (
-            <div className="space-y-4">
-              <Card className="p-4 bg-muted/50">
-                <h3 className="font-semibold text-foreground text-sm mb-3">Selecione uma estratégia para visualizar timeline</h3>
-                <div className="flex gap-2">
-                  {(["avalanche", "snowball", "fluxo-caixa"] as const).map((estrat) => (
-                    <button
-                      key={estrat}
-                      onClick={() => setSelectedStrategy(estrat)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        selectedStrategy === estrat
-                          ? "bg-foreground text-background"
-                          : "bg-muted text-foreground hover:bg-muted/80"
-                      }`}
-                    >
-                      {estrat === "avalanche"
-                        ? "Avalanche"
-                        : estrat === "snowball"
-                        ? "Snowball"
-                        : "Fluxo de Caixa"}
-                    </button>
-                  ))}
-                </div>
-              </Card>
-
-              <StrategyComparison debts={debts} pagamentoMensal={disponivel} />
-            </div>
+            <SimulacaoGlobal debts={debts} pagamentoMensal={disponivel} onSelectCenario={handleSelectCenario} />
           ) : (
             <Card className="p-6 text-center">
               <TrendingDown className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
@@ -152,61 +151,66 @@ export default function MultiDebtPayoff({
           )}
         </TabsContent>
 
-        {/* Timeline de Quitação */}
-        <TabsContent value="timeline" className="space-y-4 animate-in fade-in-50">
-          {strategyResult ? (
-            <DebtTimeline resultado={strategyResult} />
+        {/* Recomendação */}
+        <TabsContent value="recomendacao" className="space-y-4 animate-in fade-in-50">
+          {selectedScenario && strategyResult ? (
+            <Recomendacao
+              estrategia={strategyResult}
+              simulacaoIndividual={selectedScenario.tipo === "individual" ? individualSimulation : null}
+              isIndividual={selectedScenario.tipo === "individual"}
+              pagamentoMensal={disponivel}
+            />
           ) : (
             <Card className="p-6 text-center">
-              <TrendingDown className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-              <p className="text-muted-foreground">Selecione uma estratégia na aba Comparar</p>
+              <Zap className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+              <p className="text-muted-foreground">Selecione um cenário na aba Simulação Global</p>
             </Card>
           )}
         </TabsContent>
-      </Tabs>
 
-      {/* Resumo Rápido */}
-      {debts.length > 0 && (
-        <Card className="p-4 bg-gradient-to-r from-blue-accent/10 to-sky-accent/10 border-blue-accent/30">
-          <h3 className="font-semibold text-foreground mb-3">Resumo</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground mb-1">Total de Dívidas</p>
-              <p className="font-bold text-destructive text-lg">
-                {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalDividas)}
-              </p>
+        {/* Detalhes */}
+        <TabsContent value="detalhes" className="space-y-4 animate-in fade-in-50">
+          <Card className="p-6 border-border">
+            <h3 className="font-bold text-foreground text-lg mb-4">Resumo das Dívidas</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Total de Dívidas</p>
+                <p className="text-2xl font-bold text-destructive">
+                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalDividas)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">{debts.length} dívida(s)</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Juros Médios</p>
+                <p className="text-2xl font-bold text-destructive">
+                  {debts.length > 0
+                    ? (debts.reduce((sum, d) => sum + d.jurosMensal, 0) / debts.length).toFixed(1)
+                    : 0}
+                  %
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">ao mês</p>
+              </div>
             </div>
-            {strategyResult && (
-              <>
-                <div>
-                  <p className="text-muted-foreground mb-1">Tempo Estimado</p>
-                  <p className="font-bold text-foreground text-lg">
-                    {strategyResult.mesesTotais < 12
-                      ? `${strategyResult.mesesTotais} meses`
-                      : `${Math.floor(strategyResult.mesesTotais / 12)} anos ${strategyResult.mesesTotais % 12} meses`}
-                  </p>
+
+            <div className="mt-6 space-y-3">
+              <h4 className="font-semibold text-foreground text-sm">Dívidas Cadastradas</h4>
+              {debts.map((debt, idx) => (
+                <div key={debt.id} className="p-3 bg-muted rounded-lg">
+                  <div className="flex justify-between mb-2">
+                    <p className="font-medium text-foreground">{idx + 1}. {debt.nome}</p>
+                    <span className="text-sm font-semibold text-destructive">{debt.jurosMensal}% a.m.</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                    <div>Saldo: {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(debt.valorTotal)}</div>
+                    <div>Parcela: {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(debt.valorParcela)}</div>
+                    <div>Parcelas: {debt.parcelasRestantes}</div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-muted-foreground mb-1">Economia de Juros</p>
-                  <p className="font-bold text-emerald-accent text-lg">
-                    {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
-                      strategyResult.economiJuros
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground mb-1">Total de Juros</p>
-                  <p className="font-bold text-destructive text-lg">
-                    {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
-                      strategyResult.totalJuros
-                    )}
-                  </p>
-                </div>
-              </>
-            )}
-          </div>
-        </Card>
-      )}
+              ))}
+            </div>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
