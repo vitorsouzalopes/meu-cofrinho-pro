@@ -61,7 +61,7 @@ const ProfilePage = () => {
       setPhone((profRes.data as any).phone || "");
     }
     
-    setIsAdmin(roleRes.data?.role === "admin" || user.email === "vitorsouzalopes@souunisuam.com.br");
+    setIsAdmin((roleRes.data as any)?.role === "admin" || user.email === "vitorsouzalopes@souunisuam.com.br");
     
     const rawAccounts = (instancesRes.data ?? []) as any[];
     const rawTemplates = (templatesRes.data ?? []) as any[];
@@ -93,7 +93,7 @@ const ProfilePage = () => {
     // Tenta salvar nome e telefone
     const { error: fullError } = await supabase
       .from("profiles")
-      .update({ display_name: displayName, phone, updated_at: new Date().toISOString() })
+      .update({ display_name: displayName, phone, updated_at: new Date().toISOString() } as any)
       .eq("id", user.id);
 
     if (fullError) {

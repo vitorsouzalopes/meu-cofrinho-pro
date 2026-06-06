@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
-    const TELEGRAM_API_KEY = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
+    const TELEGRAM_API_KEY = Deno.env.get("TELEGRAM_API_KEY")!;
     const res = await fetch(`${GATEWAY_URL}/sendMessage`, {
       method: "POST",
       headers: {

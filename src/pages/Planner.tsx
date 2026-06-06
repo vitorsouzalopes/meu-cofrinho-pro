@@ -1,8 +1,15 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+<<<<<<< HEAD
 import { Calculator, Target, BrainCircuit } from "lucide-react";
 import MultiDebtPayoff from "@/components/planner/MultiDebtPayoff";
+=======
+import { Calculator, Target, BrainCircuit, Brain, TrendingUp } from "lucide-react";
+import DebtPayoff from "@/components/planner/DebtPayoff";
+>>>>>>> 43501ee4c82ece900c9c8baac6094a39a1b2c152
 import FinancialGoals from "@/components/planner/FinancialGoals";
+import SmartDebtDashboard from "@/components/planner/SmartDebtDashboard";
+import ForecastReport from "@/components/planner/ForecastReport";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { calcularTotaisFinanceiros, sincronizarDividas } from "@/lib/finance-utils";
@@ -76,17 +83,33 @@ const Planner = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="debts" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6 bg-card border border-border">
+      <Tabs defaultValue="smart" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 mb-6 bg-card border border-border">
+          <TabsTrigger value="smart" className="data-[state=active]:bg-amber-400/20 data-[state=active]:text-amber-300">
+            <Brain className="w-4 h-4 mr-1" />
+            <span className="text-xs">IA</span>
+          </TabsTrigger>
+          <TabsTrigger value="forecast" className="data-[state=active]:bg-emerald-accent/20 data-[state=active]:text-emerald-accent">
+            <TrendingUp className="w-4 h-4 mr-1" />
+            <span className="text-xs">Previsão</span>
+          </TabsTrigger>
           <TabsTrigger value="debts" className="data-[state=active]:bg-emerald-accent/20 data-[state=active]:text-emerald-accent">
-            <Calculator className="w-4 h-4 mr-2" />
-            Quitar Dívidas
+            <Calculator className="w-4 h-4 mr-1" />
+            <span className="text-xs">Quitar</span>
           </TabsTrigger>
           <TabsTrigger value="goals" className="data-[state=active]:bg-sky-accent/20 data-[state=active]:text-sky-accent">
-            <Target className="w-4 h-4 mr-2" />
-            Objetivos
+            <Target className="w-4 h-4 mr-1" />
+            <span className="text-xs">Metas</span>
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="smart" className="space-y-4 animate-in fade-in-50">
+          <SmartDebtDashboard />
+        </TabsContent>
+
+        <TabsContent value="forecast" className="space-y-4 animate-in fade-in-50">
+          <ForecastReport />
+        </TabsContent>
 
         <TabsContent value="debts" className="space-y-4 animate-in fade-in-50">
           <MultiDebtPayoff initialIncome={initialIncome} initialExpenses={initialExpenses} />
