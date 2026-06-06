@@ -186,6 +186,43 @@ export default function ForecastReport() {
         </div>
       </Card>
 
+      {/* Central de Recomendações */}
+      {priorityDebt && saldoLivre > 0 && (
+        <Card className="p-5 bg-gradient-to-br from-amber-500/10 via-red-500/5 to-transparent border border-amber-500/40">
+          <h3 className="font-heading font-bold text-foreground mb-2 flex items-center gap-2">
+            <Lightbulb className="w-5 h-5 text-amber-300" />
+            🔥 Melhor ação hoje
+          </h3>
+          <p className="text-sm text-foreground">
+            Adicionar <span className="font-bold text-amber-300">{fmt(saldoLivre)}</span> extras na dívida{" "}
+            <span className="font-bold">{priorityDebt.nome}</span>.
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Economia estimada de juros no horizonte:{" "}
+            <span className="font-bold text-emerald-accent">{fmt(forecast.economiaJuros)}</span>
+          </p>
+        </Card>
+      )}
+
+      {/* Score Financeiro */}
+      <Card className="p-5 bg-card border border-border">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-heading font-bold text-foreground flex items-center gap-2">
+            <Gauge className="w-5 h-5 text-sky-accent" />
+            Score Financeiro
+          </h3>
+          <span className={cn("text-2xl font-bold tabular-nums", scoreColor)}>
+            {score}<span className="text-sm text-muted-foreground">/100</span>
+          </span>
+        </div>
+        <Progress value={score} className="h-2 mb-2" />
+        <p className={cn("text-xs font-medium mb-2", scoreColor)}>{scoreLabel}</p>
+        <p className="text-[11px] text-muted-foreground">
+          Baseado em: dívidas vs renda, saldo livre, investimentos e metas ativas.
+        </p>
+      </Card>
+
+
       {/* Resumo Executivo */}
       <Card className="p-5 bg-card border border-border">
         <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2">
