@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -21,11 +22,13 @@ import {
   ArrowRight,
   Calendar,
   Sparkles,
+  Gauge,
+  Lightbulb,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useDebts } from "@/hooks/use-finance-data";
+import { useDebts, useGoals } from "@/hooks/use-finance-data";
 import { runForecast, Strategy } from "@/financial/forecastSimulation";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +45,36 @@ const STRATEGY_LABEL: Record<Strategy, string> = {
   snowball: "Snowball (menor saldo)",
   smart: "Smart (IA híbrida)",
 };
+
+function calcScore(args: {
+  saldoLivre: number;
+  receita: number;
+  parcelas: number;
+  contas: number;
+  debtsCount: number;
+  goalsCount: number;
+  investimentos: number;
+}) {
+  const { saldoLivre, receita, parcelas, contas, debtsCount, goalsCount, investimentos } = args;
+  let score = 50;
+  // Dívidas vs renda (até -30)
+  const ratio = receita > 0 ? (parcelas + contas) / receita : 1;
+  if (ratio < 0.5) score += 20;
+  else if (ratio < 0.7) score += 10;
+  else if (ratio > 0.9) score -= 20;
+  else if (ratio > 1) score -= 30;
+  // Saldo livre (até +15)
+  if (saldoLivre > receita * 0.2) score += 15;
+  else if (saldoLivre > 0) score += 5;
+  else score -= 10;
+  // Investimentos
+  if (investimentos > 0) score += 10;
+  // Metas
+  if (goalsCount > 0) score += 5;
+  // Sem dívidas = excelente
+  if (debtsCount === 0) score += 15;
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
 
 export default function ForecastReport() {
   const { user } = useAuth();
