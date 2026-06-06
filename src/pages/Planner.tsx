@@ -51,22 +51,27 @@ const Planner = () => {
         // Extrair dívidas para o MultiDebtPayoff
         const debtAccounts = syncAccounts.filter(a => a.billing_type === 'debt' || a.tipo === 'divida');
         const debtsForPayoff = debtAccounts.map((debt: any) => ({
-          id: debt.id,
-          nome: debt.name,
-          banco: debt.institution || 'Banco',
-          valorTotal: debt.amount,
-          valorParcela: debt.monthly_value || 0,
-          parcelasRestantes: debt.remaining_months || 1,
-          jurosMensal: debt.interest_rate || 0,
-          tipo: debt.type || 'credito',
-          vencimento: debt.due_date || '',
+          id: debt.id || '',
+          nome: debt.name || debt.description || '',
+          banco: debt.institution || debt.bank || debt.nome || 'Banco',
+          valorTotal: Number(debt.amount || debt.total || debt.saldo || 0),
+          valorParcela: Number(debt.monthly_value || debt.monthly_payment || debt.parcela || 0),
+          parcelasRestantes: Number(debt.remaining_months || debt.installments || 1),
+          jurosMensal: Number(debt.interest_rate || debt.juros || 0),
+          tipo: debt.type || debt.tipo || 'credito',
+          vencimento: debt.due_date || debt.vencimento || '',
           permiteAmortizacao: true,
           permiteQuitacao: true,
         }));
 
+        console.log('📥 Dívidas carregadas do Supabase:', {
+          total: debtAccounts.length,
+          debts: debtsForPayoff.map(d => ({ nome: d.nome, banco: d.banco, valor: d.valorTotal }))
+        });
+
         setInitialIncome(results.renda);
         setInitialExpenses(results.gastos);
-        setInitialDebts(debtAccounts.length > 0 ? debtsForPayoff : []);
+        setInitialDebts(debtsForPayoff);
       } catch (error) {
         console.error("Erro no Planner:", error);
       } finally {
