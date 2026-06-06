@@ -311,7 +311,8 @@ export default function ForecastReport() {
                       </Badge>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
             </TableBody>
           </Table>
         </div>
