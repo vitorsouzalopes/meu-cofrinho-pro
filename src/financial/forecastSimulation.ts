@@ -83,7 +83,9 @@ function simulate(input: SimInput, useExtra: boolean) {
     parcela: d.valorParcela,
     juros: d.jurosMensal / 100,
     jurosPagos: 0,
+    extraRecebido: 0,
     parcelaOriginal: d.valorParcela,
+    jurosMensalPct: d.jurosMensal,
     quitadoMes: null as string | null,
     mesesAteQuitar: 9999,
   }));
