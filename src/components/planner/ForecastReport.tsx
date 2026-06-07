@@ -230,8 +230,34 @@ export default function ForecastReport() {
     );
   }
 
+  const reportRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportPDF = async () => {
+    if (!reportRef.current) return;
+    try {
+      setExporting(true);
+      await exportToPDF(`Relatorio-Previsao-${new Date().toISOString().split("T")[0]}.pdf`, reportRef.current);
+      toast({ title: "PDF gerado", description: "Relatório de previsão exportado." });
+    } catch (e) {
+      toast({ title: "Erro ao gerar PDF", description: String(e), variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
+      <Button
+        onClick={handleExportPDF}
+        disabled={exporting}
+        className="w-full bg-emerald-accent hover:bg-emerald-accent/90"
+      >
+        <Download className="w-4 h-4 mr-2" />
+        {exporting ? "Gerando PDF..." : "Exportar Relatório PDF"}
+      </Button>
+
+      <div ref={reportRef} className="space-y-4">
       {/* Modo Crise */}
       {crisisActive && (
         <Card className="p-4 bg-gradient-to-br from-red-500/15 to-transparent border border-red-500/50">
