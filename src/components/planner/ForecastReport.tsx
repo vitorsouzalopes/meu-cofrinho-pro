@@ -90,10 +90,15 @@ function calcScore(args: {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
-export default function ForecastReport() {
+interface ForecastReportProps {
+  debts?: import("@/financial/types").Debt[];
+}
+
+export default function ForecastReport({ debts: debtsProp }: ForecastReportProps = {}) {
   const { user } = useAuth();
   const my = monthYear();
-  const { data: debts = [] } = useDebts();
+  const { data: debtsHook = [] } = useDebts();
+  const debts = (debtsProp && debtsProp.length > 0) ? debtsProp : debtsHook;
   const { data: goals = [] } = useGoals();
   const [strategy, setStrategy] = useState<Strategy>(
     () => (localStorage.getItem("cofrinho:strategy") as Strategy) || "avalanche",
