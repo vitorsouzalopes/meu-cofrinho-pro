@@ -126,7 +126,7 @@ const Planner = () => {
         </TabsContent>
 
         <TabsContent value="forecast" className="space-y-4 animate-in fade-in-50">
-          <ForecastReport />
+          <ForecastReport debts={initialDebts} />
         </TabsContent>
 
         <TabsContent value="debts" className="space-y-4 animate-in fade-in-50">

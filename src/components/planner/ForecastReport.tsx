@@ -90,10 +90,15 @@ function calcScore(args: {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
-export default function ForecastReport() {
+interface ForecastReportProps {
+  debts?: import("@/financial/types").Debt[];
+}
+
+export default function ForecastReport({ debts: debtsProp }: ForecastReportProps = {}) {
   const { user } = useAuth();
   const my = monthYear();
-  const { data: debts = [] } = useDebts();
+  const { data: debtsHook = [] } = useDebts();
+  const debts = (debtsProp && debtsProp.length > 0) ? debtsProp : debtsHook;
   const { data: goals = [] } = useGoals();
   const [strategy, setStrategy] = useState<Strategy>(
     () => (localStorage.getItem("cofrinho:strategy") as Strategy) || "avalanche",
@@ -219,17 +224,6 @@ export default function ForecastReport() {
       .slice(0, 3);
   }, [debts, guardado, saldoUtilizavel]);
 
-  if (!debts.length) {
-    return (
-      <Card className="p-6 text-center bg-card/50 border-dashed">
-        <Sparkles className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
-        <p className="text-sm text-muted-foreground">
-          Cadastre suas dívidas para gerar a previsão financeira.
-        </p>
-      </Card>
-    );
-  }
-
   const reportRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
 
@@ -245,6 +239,17 @@ export default function ForecastReport() {
       setExporting(false);
     }
   };
+
+  if (!debts.length) {
+    return (
+      <Card className="p-6 text-center bg-card/50 border-dashed">
+        <Sparkles className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
+        <p className="text-sm text-muted-foreground">
+          Cadastre suas dívidas para gerar a previsão financeira.
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">
