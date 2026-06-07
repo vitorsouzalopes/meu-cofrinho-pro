@@ -121,6 +121,7 @@ function simulate(input: SimInput, useExtra: boolean) {
       let pagamento = s.parcelaOriginal;
       if (useExtra && s.id === prioridadeAtual.id) {
         pagamento += extraDisponivel;
+        s.extraRecebido += extraDisponivel;
       }
       pagamento = Math.min(pagamento, s.saldo);
       s.saldo -= pagamento;
