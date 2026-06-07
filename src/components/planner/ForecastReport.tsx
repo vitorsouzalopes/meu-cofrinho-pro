@@ -224,17 +224,6 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
       .slice(0, 3);
   }, [debts, guardado, saldoUtilizavel]);
 
-  if (!debts.length) {
-    return (
-      <Card className="p-6 text-center bg-card/50 border-dashed">
-        <Sparkles className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
-        <p className="text-sm text-muted-foreground">
-          Cadastre suas dívidas para gerar a previsão financeira.
-        </p>
-      </Card>
-    );
-  }
-
   const reportRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
 
@@ -250,6 +239,17 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
       setExporting(false);
     }
   };
+
+  if (!debts.length) {
+    return (
+      <Card className="p-6 text-center bg-card/50 border-dashed">
+        <Sparkles className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
+        <p className="text-sm text-muted-foreground">
+          Cadastre suas dívidas para gerar a previsão financeira.
+        </p>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">
