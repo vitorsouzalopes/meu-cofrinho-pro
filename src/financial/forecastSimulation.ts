@@ -8,6 +8,10 @@ export interface DebtTimelineItem {
   banco: string;
   saldoAtual: number;
   parcela: number;
+  jurosMensal: number;
+  extraRecebido: number;
+  jurosTotalBaseline: number;
+  economiaJuros: number;
   mesTermino: string; // "YYYY-MM" or "—"
   mesesAteQuitar: number; // 9999 if not paid in horizon
   jurosTotalPagos: number;
