@@ -165,16 +165,24 @@ export function runForecast(input: SimInput): ForecastResult {
   const totalJurosEstrategia = withStrat.state.reduce((s, d) => s + d.jurosPagos, 0);
   const totalJurosBaseline = baseline.state.reduce((s, d) => s + d.jurosPagos, 0);
 
-  const timeline: DebtTimelineItem[] = withStrat.state.map((s) => ({
-    id: s.id,
-    nome: s.nome,
-    banco: s.banco,
-    saldoAtual: 0,
-    parcela: s.parcelaOriginal,
-    mesTermino: s.quitadoMes ?? "—",
-    mesesAteQuitar: s.mesesAteQuitar,
-    jurosTotalPagos: s.jurosPagos,
-  }));
+  const baselineById = new Map(baseline.state.map((s) => [s.id, s.jurosPagos]));
+  const timeline: DebtTimelineItem[] = withStrat.state.map((s) => {
+    const jurosBase = baselineById.get(s.id) ?? 0;
+    return {
+      id: s.id,
+      nome: s.nome,
+      banco: s.banco,
+      saldoAtual: 0,
+      parcela: s.parcelaOriginal,
+      jurosMensal: s.jurosMensalPct,
+      extraRecebido: s.extraRecebido,
+      jurosTotalBaseline: jurosBase,
+      economiaJuros: Math.max(0, jurosBase - s.jurosPagos),
+      mesTermino: s.quitadoMes ?? "—",
+      mesesAteQuitar: s.mesesAteQuitar,
+      jurosTotalPagos: s.jurosPagos,
+    };
+  });
 
   // saldo atual = saldo original (pre-sim) — pull from input.debts
   const byId = new Map(input.debts.map((d) => [d.id, d.valorTotal]));
