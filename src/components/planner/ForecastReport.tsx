@@ -1,4 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
+import { exportToPDF } from "@/lib/export";
+import { Download } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -227,8 +230,34 @@ export default function ForecastReport() {
     );
   }
 
+  const reportRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportPDF = async () => {
+    if (!reportRef.current) return;
+    try {
+      setExporting(true);
+      await exportToPDF(`Relatorio-Previsao-${new Date().toISOString().split("T")[0]}.pdf`, reportRef.current);
+      toast({ title: "PDF gerado", description: "Relatório de previsão exportado." });
+    } catch (e) {
+      toast({ title: "Erro ao gerar PDF", description: String(e), variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
+      <Button
+        onClick={handleExportPDF}
+        disabled={exporting}
+        className="w-full bg-emerald-accent hover:bg-emerald-accent/90"
+      >
+        <Download className="w-4 h-4 mr-2" />
+        {exporting ? "Gerando PDF..." : "Exportar Relatório PDF"}
+      </Button>
+
+      <div ref={reportRef} className="space-y-4">
       {/* Modo Crise */}
       {crisisActive && (
         <Card className="p-4 bg-gradient-to-br from-red-500/15 to-transparent border border-red-500/50">
@@ -512,17 +541,16 @@ export default function ForecastReport() {
                 <TableHead className="text-xs">Dívida</TableHead>
                 <TableHead className="text-xs text-right">Saldo</TableHead>
                 <TableHead className="text-xs text-right">Parcela</TableHead>
-                <TableHead className="text-xs text-right">Restam</TableHead>
+                <TableHead className="text-xs text-right">Juros</TableHead>
+                <TableHead className="text-xs text-right">Extra</TableHead>
                 <TableHead className="text-xs text-right">Término</TableHead>
+                <TableHead className="text-xs text-right">Economia</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {[...forecast.timeline]
                 .sort((a, b) => a.mesesAteQuitar - b.mesesAteQuitar)
-                .map((t) => {
-                  const debt = debts.find((d) => d.id === t.id);
-                  const restam = debt?.parcelasRestantes ?? 0;
-                  return (
+                .map((t) => (
                   <TableRow key={t.id}>
                     <TableCell className="py-2">
                       <div className="text-sm font-medium text-foreground truncate max-w-[120px]">{t.nome}</div>
@@ -531,7 +559,10 @@ export default function ForecastReport() {
                     <TableCell className="py-2 text-right text-sm text-foreground">{fmt(t.saldoAtual)}</TableCell>
                     <TableCell className="py-2 text-right text-sm text-foreground">{fmt(t.parcela)}</TableCell>
                     <TableCell className="py-2 text-right text-xs text-muted-foreground tabular-nums">
-                      {restam > 0 ? `${restam}x` : "—"}
+                      {t.jurosMensal.toFixed(2)}%
+                    </TableCell>
+                    <TableCell className="py-2 text-right text-xs text-amber-300 tabular-nums">
+                      {t.extraRecebido > 0 ? fmt(t.extraRecebido) : "—"}
                     </TableCell>
                     <TableCell className="py-2 text-right">
                       <Badge
@@ -546,9 +577,11 @@ export default function ForecastReport() {
                         {t.mesTermino}
                       </Badge>
                     </TableCell>
+                    <TableCell className="py-2 text-right text-xs text-emerald-accent tabular-nums">
+                      {t.economiaJuros > 0 ? fmt(t.economiaJuros) : "—"}
+                    </TableCell>
                   </TableRow>
-                  );
-                })}
+                ))}
             </TableBody>
           </Table>
         </div>
@@ -633,6 +666,7 @@ export default function ForecastReport() {
           })}
         </div>
       </Card>
+      </div>
     </div>
   );
 }
