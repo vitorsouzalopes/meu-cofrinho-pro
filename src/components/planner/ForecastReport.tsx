@@ -662,6 +662,7 @@ export default function ForecastReport() {
           })}
         </div>
       </Card>
+      </div>
     </div>
   );
 }
