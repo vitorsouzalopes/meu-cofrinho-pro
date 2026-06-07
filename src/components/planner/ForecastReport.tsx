@@ -541,17 +541,16 @@ export default function ForecastReport() {
                 <TableHead className="text-xs">Dívida</TableHead>
                 <TableHead className="text-xs text-right">Saldo</TableHead>
                 <TableHead className="text-xs text-right">Parcela</TableHead>
-                <TableHead className="text-xs text-right">Restam</TableHead>
+                <TableHead className="text-xs text-right">Juros</TableHead>
+                <TableHead className="text-xs text-right">Extra</TableHead>
                 <TableHead className="text-xs text-right">Término</TableHead>
+                <TableHead className="text-xs text-right">Economia</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {[...forecast.timeline]
                 .sort((a, b) => a.mesesAteQuitar - b.mesesAteQuitar)
-                .map((t) => {
-                  const debt = debts.find((d) => d.id === t.id);
-                  const restam = debt?.parcelasRestantes ?? 0;
-                  return (
+                .map((t) => (
                   <TableRow key={t.id}>
                     <TableCell className="py-2">
                       <div className="text-sm font-medium text-foreground truncate max-w-[120px]">{t.nome}</div>
@@ -560,7 +559,10 @@ export default function ForecastReport() {
                     <TableCell className="py-2 text-right text-sm text-foreground">{fmt(t.saldoAtual)}</TableCell>
                     <TableCell className="py-2 text-right text-sm text-foreground">{fmt(t.parcela)}</TableCell>
                     <TableCell className="py-2 text-right text-xs text-muted-foreground tabular-nums">
-                      {restam > 0 ? `${restam}x` : "—"}
+                      {t.jurosMensal.toFixed(2)}%
+                    </TableCell>
+                    <TableCell className="py-2 text-right text-xs text-amber-300 tabular-nums">
+                      {t.extraRecebido > 0 ? fmt(t.extraRecebido) : "—"}
                     </TableCell>
                     <TableCell className="py-2 text-right">
                       <Badge
@@ -575,9 +577,11 @@ export default function ForecastReport() {
                         {t.mesTermino}
                       </Badge>
                     </TableCell>
+                    <TableCell className="py-2 text-right text-xs text-emerald-accent tabular-nums">
+                      {t.economiaJuros > 0 ? fmt(t.economiaJuros) : "—"}
+                    </TableCell>
                   </TableRow>
-                  );
-                })}
+                ))}
             </TableBody>
           </Table>
         </div>
