@@ -23,9 +23,10 @@ const Planner = () => {
       const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 
       try {
-        const [instancesRes, templatesRes, salaryResponse, extraResponse] = await Promise.all([
+        const [instancesRes, templatesRes, debtsResponse, salaryResponse, extraResponse] = await Promise.all([
           supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
           supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
+          supabase.from("debts" as any).select("*").eq("user_id", user.id),
           supabase.from("salary" as any).select("amount").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
           supabase.from("extra_income").select("amount").eq("user_id", user.id).eq("month_year", currentMonthYear)
         ]);
@@ -50,12 +51,12 @@ const Planner = () => {
 
         // Extrair dívidas para o MultiDebtPayoff
         const debtAccounts = syncAccounts.filter(a => a.billing_type === 'debt' || a.tipo === 'divida');
-        const debtsForPayoff = debtAccounts.map((debt: any) => ({
+        const debtsFromAccounts = debtAccounts.map((debt: any) => ({
           id: debt.id || '',
           nome: debt.name || debt.description || '',
-          banco: debt.institution || debt.bank || debt.nome || 'Banco',
-          valorTotal: Number(debt.amount || debt.total || debt.saldo || 0),
-          valorParcela: Number(debt.monthly_value || debt.monthly_payment || debt.parcela || 0),
+          banco: debt.institution || debt.bank || debt.nome || 'Instituição',
+          valorTotal: Number(debt.total_debt_amount || debt.total || debt.saldo || debt.amount || 0),
+          valorParcela: Number(debt.monthly_value || debt.monthly_payment || debt.parcela || debt.amount || 0),
           parcelasRestantes: Number(debt.remaining_months || debt.installments || 1),
           jurosMensal: Number(debt.interest_rate || debt.juros || 0),
           tipo: debt.type || debt.tipo || 'credito',
@@ -63,6 +64,27 @@ const Planner = () => {
           permiteAmortizacao: true,
           permiteQuitacao: true,
         }));
+        const debtsFromTable = ((debtsResponse.data ?? []) as any[]).map((debt: any) => ({
+          id: debt.id || '',
+          nome: debt.nome || 'Dívida',
+          banco: debt.banco || debt.nome || 'Instituição',
+          valorTotal: Number(debt.valor_restante ?? debt.valor_total ?? 0),
+          valorParcela: Number(debt.parcela_mensal ?? 0),
+          parcelasRestantes: Number(debt.parcelas_restantes ?? debt.total_parcelas ?? 1),
+          jurosMensal: Number(debt.juros_mensal ?? 0) * 100,
+          tipo: debt.tipo || 'credito',
+          vencimento: String(debt.dia_vencimento || ''),
+          permiteAmortizacao: debt.permite_amortizacao ?? true,
+          permiteQuitacao: debt.permite_antecipacao ?? true,
+        }));
+        const seenDebts = new Set<string>();
+        const debtsForPayoff = [...debtsFromTable, ...debtsFromAccounts].filter((debt) => {
+          if (!debt.valorTotal || !debt.valorParcela) return false;
+          const key = `${debt.id}|${debt.nome}|${debt.valorTotal}|${debt.valorParcela}`;
+          if (seenDebts.has(key)) return false;
+          seenDebts.add(key);
+          return true;
+        });
 
         console.log('📥 Dívidas carregadas do Supabase:', {
           total: debtAccounts.length,
@@ -101,7 +123,7 @@ const Planner = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="smart" className="w-full">
+      <Tabs defaultValue="forecast" className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-6 bg-card border border-border">
           <TabsTrigger value="smart" className="data-[state=active]:bg-amber-400/20 data-[state=active]:text-amber-300">
             <Brain className="w-4 h-4 mr-1" />

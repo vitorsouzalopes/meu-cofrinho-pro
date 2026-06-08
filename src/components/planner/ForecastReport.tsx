@@ -38,7 +38,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebts, useGoals } from "@/hooks/use-finance-data";
-import { runForecast, Strategy } from "@/financial/forecastSimulation";
+import { runForecast, Strategy, type DebtTimelineItem } from "@/financial/forecastSimulation";
+import type { Debt } from "@/financial/types";
 import { cn } from "@/lib/utils";
 
 const fmt = (v: number) =>
@@ -52,7 +53,13 @@ const monthYear = () => {
 const STRATEGY_LABEL: Record<Strategy, string> = {
   avalanche: "Avalanche (maior juro)",
   snowball: "Snowball (menor saldo)",
-  smart: "Smart (IA híbrida)",
+  smart: "Fluxo de Caixa (maior parcela)",
+};
+
+const STRATEGY_SHORT_LABEL: Record<Strategy, string> = {
+  avalanche: "Avalanche",
+  snowball: "Snowball",
+  smart: "Fluxo de Caixa",
 };
 
 type Profile = "conservador" | "moderado" | "agressivo";
@@ -64,6 +71,18 @@ const PROFILE_PCT: Record<Profile, number> = {
   agressivo: 0.10,
 };
 const USAGE_PCT: Record<Usage, number> = { hard: 0.9, mista: 0.5 };
+
+function getProjectionStatus(item: DebtTimelineItem, horizon: number) {
+  if (item.mesesAteQuitar <= horizon) return "Quitada";
+  if (item.prioridade === 1) return "Prioritária";
+  return "Em andamento";
+}
+
+function statusClass(status: string) {
+  if (status === "Prioritária") return "border-amber-500/40 text-amber-300 bg-amber-500/10";
+  if (status === "Quitada") return "border-emerald-accent/40 text-emerald-accent bg-emerald-accent/10";
+  return "border-sky-accent/40 text-sky-accent bg-sky-accent/10";
+}
 
 function calcScore(args: {
   saldoLivre: number;
@@ -91,14 +110,42 @@ function calcScore(args: {
 }
 
 interface ForecastReportProps {
-  debts?: import("@/financial/types").Debt[];
+  debts?: Debt[];
 }
 
 export default function ForecastReport({ debts: debtsProp }: ForecastReportProps = {}) {
   const { user } = useAuth();
   const my = monthYear();
   const { data: debtsHook = [] } = useDebts();
-  const debts = (debtsProp && debtsProp.length > 0) ? debtsProp : debtsHook;
+  const debts = useMemo(() => {
+    const seenIds = new Set<string>();
+    const seenKeys = new Set<string>();
+    return [...(debtsProp ?? []), ...debtsHook]
+      .map((debt) => {
+        const parcela = Number(debt.valorParcela || 0);
+        const saldo = Number(debt.valorTotal || 0) || parcela * Math.max(1, Number(debt.parcelasRestantes || 1));
+        return {
+          ...debt,
+          nome: debt.nome || debt.banco || "Dívida",
+          banco: debt.banco || debt.nome || "Instituição",
+          valorTotal: saldo,
+          valorParcela: parcela,
+          parcelasRestantes: Math.max(1, Number(debt.parcelasRestantes || Math.ceil(saldo / Math.max(1, parcela)))),
+          jurosMensal: Number(debt.jurosMensal || 0),
+        };
+      })
+      .filter((debt) => debt.valorTotal > 0 && debt.valorParcela > 0)
+      .filter((debt) => {
+        if (debt.id) {
+          if (seenIds.has(debt.id)) return false;
+          seenIds.add(debt.id);
+        }
+        const key = `${debt.id || ""}|${debt.nome.toLowerCase()}|${debt.banco.toLowerCase()}|${debt.valorTotal}|${debt.valorParcela}`;
+        if (seenKeys.has(key)) return false;
+        seenKeys.add(key);
+        return true;
+      });
+  }, [debtsProp, debtsHook]);
   const { data: goals = [] } = useGoals();
   const [strategy, setStrategy] = useState<Strategy>(
     () => (localStorage.getItem("cofrinho:strategy") as Strategy) || "avalanche",
@@ -192,7 +239,11 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
     investimentos: finance?.investimentos ?? 0,
   });
 
-  const priorityDebt = forecast.timeline.sort((a, b) => a.mesesAteQuitar - b.mesesAteQuitar)[0];
+  const sortedTimeline = useMemo(
+    () => [...forecast.timeline].sort((a, b) => a.prioridade - b.prioridade),
+    [forecast.timeline],
+  );
+  const priorityDebt = sortedTimeline[0];
   const scoreLabel =
     score >= 80 ? "Excelente" : score >= 60 ? "Bom" : score >= 40 ? "Atenção" : "Crítico";
   const scoreColor =
@@ -253,15 +304,6 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
 
   return (
     <div className="space-y-4">
-      <Button
-        onClick={handleExportPDF}
-        disabled={exporting}
-        className="w-full bg-emerald-accent hover:bg-emerald-accent/90"
-      >
-        <Download className="w-4 h-4 mr-2" />
-        {exporting ? "Gerando PDF..." : "Exportar Relatório PDF"}
-      </Button>
-
       <div ref={reportRef} className="space-y-4">
       {/* Modo Crise */}
       {crisisActive && (
@@ -287,9 +329,20 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
 
       {/* Header / Controles */}
       <Card className="p-4 bg-gradient-to-br from-emerald-accent/10 via-sky-accent/5 to-transparent border border-emerald-accent/30">
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp className="w-5 h-5 text-emerald-accent" />
-          <h3 className="font-heading font-bold text-foreground">Relatório de Previsão Financeira</h3>
+        <div className="flex flex-col gap-3 mb-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-emerald-accent" />
+            <h3 className="font-heading font-bold text-foreground">Relatório de Previsão Financeira</h3>
+          </div>
+          <Button
+            data-html2canvas-ignore="true"
+            onClick={handleExportPDF}
+            disabled={exporting}
+            className="w-full bg-emerald-accent hover:bg-emerald-accent/90 sm:w-auto"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            {exporting ? "Gerando PDF..." : "Gerar Relatório PDF"}
+          </Button>
         </div>
 
         <p className="text-[10px] text-muted-foreground uppercase mb-1">Horizonte</p>
@@ -315,9 +368,9 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
               size="sm"
               variant={strategy === s ? "default" : "outline"}
               onClick={() => { setStrategy(s); persist("strategy", s); }}
-              className="text-xs capitalize"
+              className="text-xs"
             >
-              {s}
+              {STRATEGY_SHORT_LABEL[s]}
             </Button>
           ))}
         </div>
@@ -544,22 +597,28 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
             <TableHeader>
               <TableRow>
                 <TableHead className="text-xs">Dívida</TableHead>
+                <TableHead className="text-xs text-right">Prioridade</TableHead>
                 <TableHead className="text-xs text-right">Saldo</TableHead>
                 <TableHead className="text-xs text-right">Parcela</TableHead>
                 <TableHead className="text-xs text-right">Juros</TableHead>
                 <TableHead className="text-xs text-right">Extra</TableHead>
                 <TableHead className="text-xs text-right">Término</TableHead>
                 <TableHead className="text-xs text-right">Economia</TableHead>
+                <TableHead className="text-xs text-right">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {[...forecast.timeline]
-                .sort((a, b) => a.mesesAteQuitar - b.mesesAteQuitar)
-                .map((t) => (
+              {sortedTimeline
+                .map((t) => {
+                  const status = getProjectionStatus(t, horizon);
+                  return (
                   <TableRow key={t.id}>
                     <TableCell className="py-2">
                       <div className="text-sm font-medium text-foreground truncate max-w-[120px]">{t.nome}</div>
                       <div className="text-[10px] text-muted-foreground truncate max-w-[120px]">{t.banco}</div>
+                    </TableCell>
+                    <TableCell className="py-2 text-right text-xs text-foreground tabular-nums">
+                      {t.prioridade}ª
                     </TableCell>
                     <TableCell className="py-2 text-right text-sm text-foreground">{fmt(t.saldoAtual)}</TableCell>
                     <TableCell className="py-2 text-right text-sm text-foreground">{fmt(t.parcela)}</TableCell>
@@ -585,8 +644,14 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
                     <TableCell className="py-2 text-right text-xs text-emerald-accent tabular-nums">
                       {t.economiaJuros > 0 ? fmt(t.economiaJuros) : "—"}
                     </TableCell>
+                    <TableCell className="py-2 text-right">
+                      <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", statusClass(status))}>
+                        {status}
+                      </Badge>
+                    </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
             </TableBody>
           </Table>
         </div>
