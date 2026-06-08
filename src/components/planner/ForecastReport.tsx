@@ -597,22 +597,28 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
             <TableHeader>
               <TableRow>
                 <TableHead className="text-xs">Dívida</TableHead>
+                <TableHead className="text-xs text-right">Prioridade</TableHead>
                 <TableHead className="text-xs text-right">Saldo</TableHead>
                 <TableHead className="text-xs text-right">Parcela</TableHead>
                 <TableHead className="text-xs text-right">Juros</TableHead>
                 <TableHead className="text-xs text-right">Extra</TableHead>
                 <TableHead className="text-xs text-right">Término</TableHead>
                 <TableHead className="text-xs text-right">Economia</TableHead>
+                <TableHead className="text-xs text-right">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {[...forecast.timeline]
-                .sort((a, b) => a.mesesAteQuitar - b.mesesAteQuitar)
-                .map((t) => (
+              {sortedTimeline
+                .map((t) => {
+                  const status = getProjectionStatus(t, horizon);
+                  return (
                   <TableRow key={t.id}>
                     <TableCell className="py-2">
                       <div className="text-sm font-medium text-foreground truncate max-w-[120px]">{t.nome}</div>
                       <div className="text-[10px] text-muted-foreground truncate max-w-[120px]">{t.banco}</div>
+                    </TableCell>
+                    <TableCell className="py-2 text-right text-xs text-foreground tabular-nums">
+                      {t.prioridade}ª
                     </TableCell>
                     <TableCell className="py-2 text-right text-sm text-foreground">{fmt(t.saldoAtual)}</TableCell>
                     <TableCell className="py-2 text-right text-sm text-foreground">{fmt(t.parcela)}</TableCell>
@@ -638,8 +644,14 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
                     <TableCell className="py-2 text-right text-xs text-emerald-accent tabular-nums">
                       {t.economiaJuros > 0 ? fmt(t.economiaJuros) : "—"}
                     </TableCell>
+                    <TableCell className="py-2 text-right">
+                      <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", statusClass(status))}>
+                        {status}
+                      </Badge>
+                    </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
             </TableBody>
           </Table>
         </div>
