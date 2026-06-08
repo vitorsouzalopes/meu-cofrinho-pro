@@ -123,7 +123,7 @@ const Planner = () => {
         </p>
       </div>
 
-      <Tabs defaultValue="smart" className="w-full">
+      <Tabs defaultValue="forecast" className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-6 bg-card border border-border">
           <TabsTrigger value="smart" className="data-[state=active]:bg-amber-400/20 data-[state=active]:text-amber-300">
             <Brain className="w-4 h-4 mr-1" />
