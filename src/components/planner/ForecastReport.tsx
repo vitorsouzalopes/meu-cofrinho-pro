@@ -53,7 +53,13 @@ const monthYear = () => {
 const STRATEGY_LABEL: Record<Strategy, string> = {
   avalanche: "Avalanche (maior juro)",
   snowball: "Snowball (menor saldo)",
-  smart: "Smart (IA híbrida)",
+  smart: "Fluxo de Caixa (maior parcela)",
+};
+
+const STRATEGY_SHORT_LABEL: Record<Strategy, string> = {
+  avalanche: "Avalanche",
+  snowball: "Snowball",
+  smart: "Fluxo de Caixa",
 };
 
 type Profile = "conservador" | "moderado" | "agressivo";
@@ -100,7 +106,8 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
   const my = monthYear();
   const { data: debtsHook = [] } = useDebts();
   const debts = useMemo(() => {
-    const seen = new Set<string>();
+    const seenIds = new Set<string>();
+    const seenKeys = new Set<string>();
     return [...(debtsProp ?? []), ...debtsHook]
       .map((debt) => {
         const parcela = Number(debt.valorParcela || 0);
@@ -117,9 +124,13 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
       })
       .filter((debt) => debt.valorTotal > 0 && debt.valorParcela > 0)
       .filter((debt) => {
+        if (debt.id) {
+          if (seenIds.has(debt.id)) return false;
+          seenIds.add(debt.id);
+        }
         const key = `${debt.id || ""}|${debt.nome.toLowerCase()}|${debt.banco.toLowerCase()}|${debt.valorTotal}|${debt.valorParcela}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
+        if (seenKeys.has(key)) return false;
+        seenKeys.add(key);
         return true;
       });
   }, [debtsProp, debtsHook]);
@@ -216,7 +227,11 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
     investimentos: finance?.investimentos ?? 0,
   });
 
-  const priorityDebt = forecast.timeline.sort((a, b) => a.mesesAteQuitar - b.mesesAteQuitar)[0];
+  const sortedTimeline = useMemo(
+    () => [...forecast.timeline].sort((a, b) => a.prioridade - b.prioridade),
+    [forecast.timeline],
+  );
+  const priorityDebt = sortedTimeline[0];
   const scoreLabel =
     score >= 80 ? "Excelente" : score >= 60 ? "Bom" : score >= 40 ? "Atenção" : "Crítico";
   const scoreColor =
