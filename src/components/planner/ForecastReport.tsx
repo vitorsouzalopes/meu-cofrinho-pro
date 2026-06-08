@@ -72,6 +72,18 @@ const PROFILE_PCT: Record<Profile, number> = {
 };
 const USAGE_PCT: Record<Usage, number> = { hard: 0.9, mista: 0.5 };
 
+function getProjectionStatus(item: DebtTimelineItem, horizon: number) {
+  if (item.mesesAteQuitar <= horizon) return "Quitada";
+  if (item.prioridade === 1) return "Prioritária";
+  return "Em andamento";
+}
+
+function statusClass(status: string) {
+  if (status === "Prioritária") return "border-amber-500/40 text-amber-300 bg-amber-500/10";
+  if (status === "Quitada") return "border-emerald-accent/40 text-emerald-accent bg-emerald-accent/10";
+  return "border-sky-accent/40 text-sky-accent bg-sky-accent/10";
+}
+
 function calcScore(args: {
   saldoLivre: number;
   receita: number;
@@ -356,9 +368,9 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
               size="sm"
               variant={strategy === s ? "default" : "outline"}
               onClick={() => { setStrategy(s); persist("strategy", s); }}
-              className="text-xs capitalize"
+              className="text-xs"
             >
-              {s}
+              {STRATEGY_SHORT_LABEL[s]}
             </Button>
           ))}
         </div>
