@@ -6,6 +6,7 @@ export interface DebtTimelineItem {
   id: string;
   nome: string;
   banco: string;
+  prioridade: number;
   saldoAtual: number;
   parcela: number;
   jurosMensal: number;
@@ -71,14 +72,15 @@ interface SimInput {
 }
 
 /** Simulates month-by-month with cascade: extra goes to top priority remaining */
-function simulate(input: SimInput, useExtra: boolean) {
+function simulate(input: SimInput, useExtra: boolean, recordMonths = input.horizonMonths) {
   const { debts, receita, contas, saldoLivre, strategy, horizonMonths } = input;
   const sorted = sortByStrategy(debts, strategy);
   // state per debt
-  const state = sorted.map((d) => ({
+  const state = sorted.map((d, index) => ({
     id: d.id,
     nome: d.nome,
     banco: d.banco,
+    prioridade: index + 1,
     saldo: d.valorTotal,
     parcela: d.valorParcela,
     juros: d.jurosMensal / 100,
@@ -139,28 +141,32 @@ function simulate(input: SimInput, useExtra: boolean) {
     const saldoDevedorTotal = state.reduce((sum, s) => sum + s.saldo, 0);
     const saldoMes = receita - contas - totalPagoDividas;
 
-    months.push({
-      monthYear: my,
-      label,
-      receita,
-      contas,
-      dividas: totalPagoDividas,
-      saldo: saldoMes,
-      prioridades: state
-        .filter((s) => s.saldo > 0.01)
-        .slice(0, 3)
-        .map((s) => ({ id: s.id, nome: s.nome })),
-      quitadas: quitadasMes,
-      saldoDevedorTotal,
-    });
+    if (m < recordMonths) {
+      months.push({
+        monthYear: my,
+        label,
+        receita,
+        contas,
+        dividas: totalPagoDividas,
+        saldo: saldoMes,
+        prioridades: state
+          .filter((s) => s.saldo > 0.01)
+          .slice(0, 3)
+          .map((s) => ({ id: s.id, nome: s.nome })),
+        quitadas: quitadasMes,
+        saldoDevedorTotal,
+      });
+    }
   }
 
   return { state, months };
 }
 
 export function runForecast(input: SimInput): ForecastResult {
-  const withStrat = simulate(input, true);
-  const baseline = simulate(input, false);
+  const payoffHorizon = Math.max(input.horizonMonths, 360);
+  const fullInput = { ...input, horizonMonths: payoffHorizon };
+  const withStrat = simulate(fullInput, true, input.horizonMonths);
+  const baseline = simulate(fullInput, false, input.horizonMonths);
 
   const totalJurosEstrategia = withStrat.state.reduce((s, d) => s + d.jurosPagos, 0);
   const totalJurosBaseline = baseline.state.reduce((s, d) => s + d.jurosPagos, 0);
@@ -172,6 +178,7 @@ export function runForecast(input: SimInput): ForecastResult {
       id: s.id,
       nome: s.nome,
       banco: s.banco,
+      prioridade: s.prioridade,
       saldoAtual: 0,
       parcela: s.parcelaOriginal,
       jurosMensal: s.jurosMensalPct,
