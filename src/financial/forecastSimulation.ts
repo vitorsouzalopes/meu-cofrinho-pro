@@ -55,11 +55,8 @@ function sortByStrategy(debts: Debt[], strat: Strategy): Debt[] {
   const arr = [...debts];
   if (strat === "avalanche") return arr.sort((a, b) => b.jurosMensal - a.jurosMensal);
   if (strat === "snowball") return arr.sort((a, b) => a.valorTotal - b.valorTotal);
-  // smart: high interest * remaining
-  return arr.sort(
-    (a, b) =>
-      b.jurosMensal * b.parcelasRestantes - a.jurosMensal * a.parcelasRestantes,
-  );
+  // smart/fluxo de caixa: maior parcela primeiro para liberar caixa mais rápido
+  return arr.sort((a, b) => b.valorParcela - a.valorParcela || b.jurosMensal - a.jurosMensal);
 }
 
 interface SimInput {
