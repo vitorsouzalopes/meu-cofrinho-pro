@@ -38,7 +38,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebts, useGoals } from "@/hooks/use-finance-data";
-import { runForecast, Strategy } from "@/financial/forecastSimulation";
+import { runForecast, Strategy, type DebtTimelineItem } from "@/financial/forecastSimulation";
+import type { Debt } from "@/financial/types";
 import { cn } from "@/lib/utils";
 
 const fmt = (v: number) =>
@@ -91,14 +92,37 @@ function calcScore(args: {
 }
 
 interface ForecastReportProps {
-  debts?: import("@/financial/types").Debt[];
+  debts?: Debt[];
 }
 
 export default function ForecastReport({ debts: debtsProp }: ForecastReportProps = {}) {
   const { user } = useAuth();
   const my = monthYear();
   const { data: debtsHook = [] } = useDebts();
-  const debts = (debtsProp && debtsProp.length > 0) ? debtsProp : debtsHook;
+  const debts = useMemo(() => {
+    const seen = new Set<string>();
+    return [...(debtsProp ?? []), ...debtsHook]
+      .map((debt) => {
+        const parcela = Number(debt.valorParcela || 0);
+        const saldo = Number(debt.valorTotal || 0) || parcela * Math.max(1, Number(debt.parcelasRestantes || 1));
+        return {
+          ...debt,
+          nome: debt.nome || debt.banco || "Dívida",
+          banco: debt.banco || debt.nome || "Instituição",
+          valorTotal: saldo,
+          valorParcela: parcela,
+          parcelasRestantes: Math.max(1, Number(debt.parcelasRestantes || Math.ceil(saldo / Math.max(1, parcela)))),
+          jurosMensal: Number(debt.jurosMensal || 0),
+        };
+      })
+      .filter((debt) => debt.valorTotal > 0 && debt.valorParcela > 0)
+      .filter((debt) => {
+        const key = `${debt.id || ""}|${debt.nome.toLowerCase()}|${debt.banco.toLowerCase()}|${debt.valorTotal}|${debt.valorParcela}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }, [debtsProp, debtsHook]);
   const { data: goals = [] } = useGoals();
   const [strategy, setStrategy] = useState<Strategy>(
     () => (localStorage.getItem("cofrinho:strategy") as Strategy) || "avalanche",
