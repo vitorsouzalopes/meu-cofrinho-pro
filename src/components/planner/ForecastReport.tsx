@@ -292,15 +292,6 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
 
   return (
     <div className="space-y-4">
-      <Button
-        onClick={handleExportPDF}
-        disabled={exporting}
-        className="w-full bg-emerald-accent hover:bg-emerald-accent/90"
-      >
-        <Download className="w-4 h-4 mr-2" />
-        {exporting ? "Gerando PDF..." : "Exportar Relatório PDF"}
-      </Button>
-
       <div ref={reportRef} className="space-y-4">
       {/* Modo Crise */}
       {crisisActive && (
@@ -326,9 +317,20 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
 
       {/* Header / Controles */}
       <Card className="p-4 bg-gradient-to-br from-emerald-accent/10 via-sky-accent/5 to-transparent border border-emerald-accent/30">
-        <div className="flex items-center gap-2 mb-3">
-          <TrendingUp className="w-5 h-5 text-emerald-accent" />
-          <h3 className="font-heading font-bold text-foreground">Relatório de Previsão Financeira</h3>
+        <div className="flex flex-col gap-3 mb-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-emerald-accent" />
+            <h3 className="font-heading font-bold text-foreground">Relatório de Previsão Financeira</h3>
+          </div>
+          <Button
+            data-html2canvas-ignore="true"
+            onClick={handleExportPDF}
+            disabled={exporting}
+            className="w-full bg-emerald-accent hover:bg-emerald-accent/90 sm:w-auto"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            {exporting ? "Gerando PDF..." : "Gerar Relatório PDF"}
+          </Button>
         </div>
 
         <p className="text-[10px] text-muted-foreground uppercase mb-1">Horizonte</p>
