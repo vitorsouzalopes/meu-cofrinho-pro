@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef } from "react";
-import { exportToPDF } from "@/lib/export";
+import { exportForecastPDF } from "@/lib/forecast-pdf";
 import { Download } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
