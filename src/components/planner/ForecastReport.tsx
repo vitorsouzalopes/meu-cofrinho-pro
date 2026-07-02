@@ -305,46 +305,48 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
   const saldoUtilizavel = Math.max(0, saldoLivre - reservaMinima);
   const extraDirigido = saldoUtilizavel * USAGE_PCT[usage];
 
-  const forecast = useMemo(
-    () =>
-      runForecast({
-        debts,
-        receita,
-        contas: contasMensais,
-        saldoLivre: extraDirigido,
-        strategy,
-        horizonMonths: horizon,
-      }),
-    [debts, receita, contasMensais, extraDirigido, strategy, horizon],
+  const debtSimulations = useMemo(
+    () => sortSimulations(debts.map((debt) => buildDebtSimulation(debt, saldoLivre, saldoUtilizavel)), strategy),
+    [debts, saldoLivre, saldoUtilizavel, strategy],
   );
 
-  // Comparação Hard x Mista (mesma estratégia de ataque)
-  const forecastHard = useMemo(
+  const selectedScenario = usage;
+  const selectedScenarioLabel = usage === "hard" ? "Hard" : "Mista";
+  const totalSaldoDevedor = debts.reduce((s, d) => s + d.valorTotal, 0);
+  const normalQuitacaoMeses = Math.max(0, ...debtSimulations.map((d) => d.normal.meses));
+  const hardQuitacaoMeses = Math.max(0, ...debtSimulations.map((d) => d.hard.meses));
+  const mistaQuitacaoMeses = Math.max(0, ...debtSimulations.map((d) => d.mista.meses));
+  const selectedQuitacaoMeses = selectedScenario === "hard" ? hardQuitacaoMeses : mistaQuitacaoMeses;
+  const selectedTermino = selectedQuitacaoMeses ? formatMonthFromNow(selectedQuitacaoMeses) : "—";
+  const hardEconomiaJuros = debtSimulations.reduce((s, d) => s + d.hard.economiaJuros, 0);
+  const mistaEconomiaJuros = debtSimulations.reduce((s, d) => s + d.mista.economiaJuros, 0);
+  const selectedEconomiaJuros = selectedScenario === "hard" ? hardEconomiaJuros : mistaEconomiaJuros;
+  const selectedEconomiaTempo = Math.max(0, normalQuitacaoMeses - selectedQuitacaoMeses);
+  const selectedValorLivrePreservado = Math.max(0, saldoLivre - extraDirigido);
+
+  const evolutionData = useMemo<EvolutionRow[]>(
     () =>
-      runForecast({
-        debts,
-        receita,
-        contas: contasMensais,
-        saldoLivre: saldoUtilizavel * USAGE_PCT.hard,
-        strategy,
-        horizonMonths: 24,
+      Array.from({ length: horizon }, (_, index) => {
+        const monthIndex = index + 1;
+        const normal = debtSimulations.reduce((sum, debt) => sum + (debt.normal.balances[monthIndex - 1] ?? 0), 0);
+        const hard = debtSimulations.reduce((sum, debt) => sum + (debt.hard.balances[monthIndex - 1] ?? 0), 0);
+        const mista = debtSimulations.reduce((sum, debt) => sum + (debt.mista.balances[monthIndex - 1] ?? 0), 0);
+        return {
+          label: formatMonthLabel(index),
+          normal,
+          hard,
+          mista,
+          selected: selectedScenario === "hard" ? hard : mista,
+        };
       }),
-    [debts, receita, contasMensais, saldoUtilizavel, strategy],
-  );
-  const forecastMista = useMemo(
-    () =>
-      runForecast({
-        debts,
-        receita,
-        contas: contasMensais,
-        saldoLivre: saldoUtilizavel * USAGE_PCT.mista,
-        strategy,
-        horizonMonths: 24,
-      }),
-    [debts, receita, contasMensais, saldoUtilizavel, strategy],
+    [debtSimulations, horizon, selectedScenario],
   );
 
-  const maxSaldoDevedor = Math.max(1, ...forecast.months.map((m) => m.saldoDevedorTotal));
+  const maxSaldoDevedor = Math.max(
+    1,
+    totalSaldoDevedor,
+    ...evolutionData.flatMap((m) => [m.normal, m.hard, m.mista, m.selected]),
+  );
 
   const score = calcScore({
     saldoLivre,
@@ -356,11 +358,6 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
     investimentos: finance?.investimentos ?? 0,
   });
 
-  const sortedTimeline = useMemo(
-    () => [...forecast.timeline].sort((a, b) => a.prioridade - b.prioridade),
-    [forecast.timeline],
-  );
-  const priorityDebt = sortedTimeline[0];
   const scoreLabel =
     score >= 80 ? "Excelente" : score >= 60 ? "Bom" : score >= 40 ? "Atenção" : "Crítico";
   const scoreColor =
@@ -370,11 +367,11 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
   const ratio = receita > 0 ? (parcelasTotais + contasMensais) / receita : 1;
   const crisisActive = saldoLivre <= 0 || ratio >= 0.9;
 
-  // Previsão de sobra futura (saldo livre + parcelas liberadas acumuladas)
+  // Previsão de sobra futura (saldo livre + parcelas liberadas nas simulações individuais)
   const surplusFuture = (m: number) => {
-    const liberado = forecast.timeline
-      .filter((t) => t.mesesAteQuitar <= m)
-      .reduce((s, t) => s + t.parcela, 0);
+    const liberado = debtSimulations
+      .filter((debt) => debt[selectedScenario].meses <= m)
+      .reduce((s, debt) => s + debt.parcelaMensal, 0);
     return saldoLivre + liberado;
   };
 
