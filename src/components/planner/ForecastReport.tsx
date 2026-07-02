@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef } from "react";
-import { exportToPDF } from "@/lib/export";
+import { exportForecastPDF } from "@/lib/forecast-pdf";
 import { Download } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
@@ -279,12 +279,27 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
   const [exporting, setExporting] = useState(false);
 
   const handleExportPDF = async () => {
-    if (!reportRef.current) return;
     try {
       setExporting(true);
-      await exportToPDF(`Relatorio-Previsao-${new Date().toISOString().split("T")[0]}.pdf`, reportRef.current);
-      toast({ title: "PDF gerado", description: "Relatório de previsão exportado." });
+      await exportForecastPDF({
+        debts,
+        forecast,
+        receita,
+        contas: contasMensais,
+        parcelas: parcelasTotais,
+        saldoLivre,
+        reservaMinima,
+        saldoUtilizavel,
+        extraDirigido,
+        strategy,
+        usage,
+        profile,
+        horizon,
+        score,
+      });
+      toast({ title: "PDF gerado", description: `Relatório com ${debts.length} dívida(s) exportado.` });
     } catch (e) {
+      console.error("Erro PDF:", e);
       toast({ title: "Erro ao gerar PDF", description: String(e), variant: "destructive" });
     } finally {
       setExporting(false);
@@ -591,6 +606,7 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
         <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2">
           <Calendar className="w-5 h-5 text-sky-accent" />
           Linha do Tempo das Dívidas
+          <Badge variant="outline" className="ml-auto text-[10px]">{sortedTimeline.length} dívida(s)</Badge>
         </h3>
         <div className="overflow-x-auto -mx-2">
           <Table>
