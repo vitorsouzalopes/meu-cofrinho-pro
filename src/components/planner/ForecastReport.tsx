@@ -495,7 +495,7 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
           ))}
         </div>
 
-        <p className="text-[10px] text-muted-foreground uppercase mb-1">Estratégia de ataque</p>
+        <p className="text-[10px] text-muted-foreground uppercase mb-1">Ordenação das simulações</p>
         <div className="flex flex-wrap gap-2 mb-3">
           {(["avalanche", "snowball", "smart"] as const).map((s) => (
             <Button
@@ -755,6 +755,15 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
           })}
         </div>
       </Card>
+      <Button
+        data-html2canvas-ignore="true"
+        onClick={handleExportPDF}
+        disabled={exporting}
+        className="w-full bg-emerald-accent hover:bg-emerald-accent/90"
+      >
+        <Download className="w-4 h-4 mr-2" />
+        {exporting ? "Gerando PDF..." : "Gerar Relatório PDF"}
+      </Button>
 
       {/* Cronograma de Término */}
       <Card className="p-5 bg-card border border-border">
@@ -815,15 +824,6 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
           })}
         </div>
       </Card>
-      <Button
-        data-html2canvas-ignore="true"
-        onClick={handleExportPDF}
-        disabled={exporting}
-        className="w-full bg-emerald-accent hover:bg-emerald-accent/90"
-      >
-        <Download className="w-4 h-4 mr-2" />
-        {exporting ? "Gerando PDF..." : "Gerar Relatório PDF"}
-      </Button>
       </div>
     </div>
   );
