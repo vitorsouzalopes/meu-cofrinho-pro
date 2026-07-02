@@ -279,12 +279,27 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
   const [exporting, setExporting] = useState(false);
 
   const handleExportPDF = async () => {
-    if (!reportRef.current) return;
     try {
       setExporting(true);
-      await exportToPDF(`Relatorio-Previsao-${new Date().toISOString().split("T")[0]}.pdf`, reportRef.current);
-      toast({ title: "PDF gerado", description: "Relatório de previsão exportado." });
+      await exportForecastPDF({
+        debts,
+        forecast,
+        receita,
+        contas: contasMensais,
+        parcelas: parcelasTotais,
+        saldoLivre,
+        reservaMinima,
+        saldoUtilizavel,
+        extraDirigido,
+        strategy,
+        usage,
+        profile,
+        horizon,
+        score,
+      });
+      toast({ title: "PDF gerado", description: `Relatório com ${debts.length} dívida(s) exportado.` });
     } catch (e) {
+      console.error("Erro PDF:", e);
       toast({ title: "Erro ao gerar PDF", description: String(e), variant: "destructive" });
     } finally {
       setExporting(false);
