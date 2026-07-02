@@ -6,14 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   TrendingUp,
   Wallet,
@@ -22,11 +15,9 @@ import {
   PiggyBank,
   Trophy,
   Flame,
-  ArrowRight,
   Calendar,
   Sparkles,
   Gauge,
-  Lightbulb,
   ShieldAlert,
   ShieldCheck,
   Shield,
@@ -38,7 +29,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebts, useGoals } from "@/hooks/use-finance-data";
-import { runForecast, Strategy, type DebtTimelineItem } from "@/financial/forecastSimulation";
+import type { Strategy } from "@/financial/forecastSimulation";
 import type { Debt } from "@/financial/types";
 import { cn } from "@/lib/utils";
 
@@ -71,17 +62,37 @@ const PROFILE_PCT: Record<Profile, number> = {
   agressivo: 0.10,
 };
 const USAGE_PCT: Record<Usage, number> = { hard: 0.9, mista: 0.5 };
+const MAX_SIMULATION_MONTHS = 360;
 
-function getProjectionStatus(item: DebtTimelineItem, horizon: number) {
-  if (item.mesesAteQuitar <= horizon) return "Quitada";
-  if (item.prioridade === 1) return "Prioritária";
-  return "Em andamento";
+interface PayoffProjection {
+  meses: number;
+  termino: string;
+  jurosTotal: number;
+  extraMensal: number;
+  economiaTempo: number;
+  economiaJuros: number;
+  valorLivrePreservado: number;
+  balances: number[];
 }
 
-function statusClass(status: string) {
-  if (status === "Prioritária") return "border-amber-500/40 text-amber-300 bg-amber-500/10";
-  if (status === "Quitada") return "border-emerald-accent/40 text-emerald-accent bg-emerald-accent/10";
-  return "border-sky-accent/40 text-sky-accent bg-sky-accent/10";
+export interface DebtSimulation {
+  id: string;
+  nome: string;
+  banco: string;
+  saldoDevedor: number;
+  parcelaMensal: number;
+  jurosMensal: number;
+  normal: PayoffProjection;
+  hard: PayoffProjection;
+  mista: PayoffProjection;
+}
+
+export interface EvolutionRow {
+  label: string;
+  normal: number;
+  hard: number;
+  mista: number;
+  selected: number;
 }
 
 function calcScore(args: {
@@ -107,6 +118,110 @@ function calcScore(args: {
   if (goalsCount > 0) score += 5;
   if (debtsCount === 0) score += 15;
   return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function addMonths(d: Date, n: number) {
+  return new Date(d.getFullYear(), d.getMonth() + n, 1);
+}
+
+function formatMonthFromNow(months: number) {
+  if (months >= MAX_SIMULATION_MONTHS) return "—";
+  const d = addMonths(new Date(new Date().getFullYear(), new Date().getMonth(), 1), months - 1);
+  const labels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  return `${labels[d.getMonth()]}/${d.getFullYear()}`;
+}
+
+function formatMonthLabel(offset: number) {
+  const d = addMonths(new Date(new Date().getFullYear(), new Date().getMonth(), 1), offset);
+  const labels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  return `${labels[d.getMonth()]}/${d.getFullYear()}`;
+}
+
+function simulateSingleDebt(debt: Debt, extraMensal: number, saldoLivre: number) {
+  let saldo = Math.max(0, Number(debt.valorTotal || 0));
+  const parcela = Math.max(0, Number(debt.valorParcela || 0));
+  const juros = Math.max(0, Number(debt.jurosMensal || 0)) / 100;
+  const pagamentoBase = parcela + Math.max(0, extraMensal);
+  let jurosTotal = 0;
+  const balances: number[] = [];
+
+  if (saldo <= 0 || pagamentoBase <= 0) {
+    return {
+      meses: MAX_SIMULATION_MONTHS,
+      termino: "—",
+      jurosTotal: 0,
+      balances: Array.from({ length: MAX_SIMULATION_MONTHS }, () => saldo),
+    };
+  }
+
+  for (let mes = 1; mes <= MAX_SIMULATION_MONTHS; mes++) {
+    const jurosMes = saldo * juros;
+    saldo += jurosMes;
+    jurosTotal += jurosMes;
+
+    const pagamento = Math.min(pagamentoBase, saldo);
+    saldo = Math.max(0, saldo - pagamento);
+    balances.push(saldo);
+
+    if (saldo <= 0.01) {
+      while (balances.length < MAX_SIMULATION_MONTHS) balances.push(0);
+      return {
+        meses: mes,
+        termino: formatMonthFromNow(mes),
+        jurosTotal,
+        balances,
+      };
+    }
+  }
+
+  return {
+    meses: MAX_SIMULATION_MONTHS,
+    termino: "—",
+    jurosTotal,
+    balances,
+  };
+}
+
+function buildProjection(debt: Debt, extraMensal: number, saldoLivre: number, normal?: PayoffProjection): PayoffProjection {
+  const raw = simulateSingleDebt(debt, extraMensal, saldoLivre);
+  const normalProjection = normal;
+  return {
+    ...raw,
+    extraMensal,
+    economiaTempo: normalProjection ? Math.max(0, normalProjection.meses - raw.meses) : 0,
+    economiaJuros: normalProjection ? Math.max(0, normalProjection.jurosTotal - raw.jurosTotal) : 0,
+    valorLivrePreservado: Math.max(0, saldoLivre - extraMensal),
+  };
+}
+
+function buildDebtSimulation(debt: Debt, saldoLivre: number, saldoUtilizavel: number): DebtSimulation {
+  const normal = buildProjection(debt, 0, saldoLivre);
+  const hard = buildProjection(debt, saldoUtilizavel * USAGE_PCT.hard, saldoLivre, normal);
+  const mista = buildProjection(debt, saldoUtilizavel * USAGE_PCT.mista, saldoLivre, normal);
+  return {
+    id: debt.id,
+    nome: debt.nome,
+    banco: debt.banco,
+    saldoDevedor: debt.valorTotal,
+    parcelaMensal: debt.valorParcela,
+    jurosMensal: debt.jurosMensal,
+    normal,
+    hard,
+    mista,
+  };
+}
+
+function formatDuration(months: number) {
+  if (months >= MAX_SIMULATION_MONTHS) return `> ${MAX_SIMULATION_MONTHS}m`;
+  if (months <= 1) return "1 mês";
+  return `${months} meses`;
+}
+
+function sortSimulations(items: DebtSimulation[], strategy: Strategy) {
+  const arr = [...items];
+  if (strategy === "avalanche") return arr.sort((a, b) => b.jurosMensal - a.jurosMensal);
+  if (strategy === "snowball") return arr.sort((a, b) => a.saldoDevedor - b.saldoDevedor);
+  return arr.sort((a, b) => b.parcelaMensal - a.parcelaMensal || b.jurosMensal - a.jurosMensal);
 }
 
 interface ForecastReportProps {
@@ -188,46 +303,48 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
   const saldoUtilizavel = Math.max(0, saldoLivre - reservaMinima);
   const extraDirigido = saldoUtilizavel * USAGE_PCT[usage];
 
-  const forecast = useMemo(
-    () =>
-      runForecast({
-        debts,
-        receita,
-        contas: contasMensais,
-        saldoLivre: extraDirigido,
-        strategy,
-        horizonMonths: horizon,
-      }),
-    [debts, receita, contasMensais, extraDirigido, strategy, horizon],
+  const debtSimulations = useMemo(
+    () => sortSimulations(debts.map((debt) => buildDebtSimulation(debt, saldoLivre, saldoUtilizavel)), strategy),
+    [debts, saldoLivre, saldoUtilizavel, strategy],
   );
 
-  // Comparação Hard x Mista (mesma estratégia de ataque)
-  const forecastHard = useMemo(
+  const selectedScenario = usage;
+  const selectedScenarioLabel = usage === "hard" ? "Hard" : "Mista";
+  const totalSaldoDevedor = debts.reduce((s, d) => s + d.valorTotal, 0);
+  const normalQuitacaoMeses = Math.max(0, ...debtSimulations.map((d) => d.normal.meses));
+  const hardQuitacaoMeses = Math.max(0, ...debtSimulations.map((d) => d.hard.meses));
+  const mistaQuitacaoMeses = Math.max(0, ...debtSimulations.map((d) => d.mista.meses));
+  const selectedQuitacaoMeses = selectedScenario === "hard" ? hardQuitacaoMeses : mistaQuitacaoMeses;
+  const selectedTermino = selectedQuitacaoMeses ? formatMonthFromNow(selectedQuitacaoMeses) : "—";
+  const hardEconomiaJuros = debtSimulations.reduce((s, d) => s + d.hard.economiaJuros, 0);
+  const mistaEconomiaJuros = debtSimulations.reduce((s, d) => s + d.mista.economiaJuros, 0);
+  const selectedEconomiaJuros = selectedScenario === "hard" ? hardEconomiaJuros : mistaEconomiaJuros;
+  const selectedEconomiaTempo = Math.max(0, normalQuitacaoMeses - selectedQuitacaoMeses);
+  const selectedValorLivrePreservado = Math.max(0, saldoLivre - extraDirigido);
+
+  const evolutionData = useMemo<EvolutionRow[]>(
     () =>
-      runForecast({
-        debts,
-        receita,
-        contas: contasMensais,
-        saldoLivre: saldoUtilizavel * USAGE_PCT.hard,
-        strategy,
-        horizonMonths: 24,
+      Array.from({ length: horizon }, (_, index) => {
+        const monthIndex = index + 1;
+        const normal = debtSimulations.reduce((sum, debt) => sum + (debt.normal.balances[monthIndex - 1] ?? 0), 0);
+        const hard = debtSimulations.reduce((sum, debt) => sum + (debt.hard.balances[monthIndex - 1] ?? 0), 0);
+        const mista = debtSimulations.reduce((sum, debt) => sum + (debt.mista.balances[monthIndex - 1] ?? 0), 0);
+        return {
+          label: formatMonthLabel(index),
+          normal,
+          hard,
+          mista,
+          selected: selectedScenario === "hard" ? hard : mista,
+        };
       }),
-    [debts, receita, contasMensais, saldoUtilizavel, strategy],
-  );
-  const forecastMista = useMemo(
-    () =>
-      runForecast({
-        debts,
-        receita,
-        contas: contasMensais,
-        saldoLivre: saldoUtilizavel * USAGE_PCT.mista,
-        strategy,
-        horizonMonths: 24,
-      }),
-    [debts, receita, contasMensais, saldoUtilizavel, strategy],
+    [debtSimulations, horizon, selectedScenario],
   );
 
-  const maxSaldoDevedor = Math.max(1, ...forecast.months.map((m) => m.saldoDevedorTotal));
+  const maxSaldoDevedor = Math.max(
+    1,
+    totalSaldoDevedor,
+    ...evolutionData.flatMap((m) => [m.normal, m.hard, m.mista, m.selected]),
+  );
 
   const score = calcScore({
     saldoLivre,
@@ -239,11 +356,6 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
     investimentos: finance?.investimentos ?? 0,
   });
 
-  const sortedTimeline = useMemo(
-    () => [...forecast.timeline].sort((a, b) => a.prioridade - b.prioridade),
-    [forecast.timeline],
-  );
-  const priorityDebt = sortedTimeline[0];
   const scoreLabel =
     score >= 80 ? "Excelente" : score >= 60 ? "Bom" : score >= 40 ? "Atenção" : "Crítico";
   const scoreColor =
@@ -253,11 +365,11 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
   const ratio = receita > 0 ? (parcelasTotais + contasMensais) / receita : 1;
   const crisisActive = saldoLivre <= 0 || ratio >= 0.9;
 
-  // Previsão de sobra futura (saldo livre + parcelas liberadas acumuladas)
+  // Previsão de sobra futura (saldo livre + parcelas liberadas nas simulações individuais)
   const surplusFuture = (m: number) => {
-    const liberado = forecast.timeline
-      .filter((t) => t.mesesAteQuitar <= m)
-      .reduce((s, t) => s + t.parcela, 0);
+    const liberado = debtSimulations
+      .filter((debt) => debt[selectedScenario].meses <= m)
+      .reduce((s, debt) => s + debt.parcelaMensal, 0);
     return saldoLivre + liberado;
   };
 
@@ -283,10 +395,12 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
       setExporting(true);
       await exportForecastPDF({
         debts,
-        forecast,
+        debtSimulations,
+        evolutionData,
         receita,
         contas: contasMensais,
         parcelas: parcelasTotais,
+        totalSaldoDevedor,
         saldoLivre,
         reservaMinima,
         saldoUtilizavel,
@@ -296,6 +410,12 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
         profile,
         horizon,
         score,
+        normalQuitacaoMeses,
+        hardQuitacaoMeses,
+        mistaQuitacaoMeses,
+        selectedEconomiaJuros,
+        selectedEconomiaTempo,
+        selectedValorLivrePreservado,
       });
       toast({ title: "PDF gerado", description: `Relatório com ${debts.length} dívida(s) exportado.` });
     } catch (e) {
@@ -334,7 +454,7 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
               <ul className="text-xs text-muted-foreground mt-2 space-y-0.5 list-disc list-inside">
                 <li>Suspenda metas e novos investimentos</li>
                 <li>Pague apenas parcelas mínimas</li>
-                <li>Negocie a dívida de maior parcela ({priorityDebt?.nome})</li>
+                <li>Negocie juros, vencimentos ou parcelas das dívidas mais pesadas</li>
                 <li>Priorize sobrevivência financeira</li>
               </ul>
             </div>
@@ -375,7 +495,7 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
           ))}
         </div>
 
-        <p className="text-[10px] text-muted-foreground uppercase mb-1">Estratégia de ataque</p>
+        <p className="text-[10px] text-muted-foreground uppercase mb-1">Ordenação das simulações</p>
         <div className="flex flex-wrap gap-2 mb-3">
           {(["avalanche", "snowball", "smart"] as const).map((s) => (
             <Button
@@ -448,7 +568,7 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
           Comparação Hard x Mista
         </h3>
         <p className="text-[11px] text-muted-foreground mb-3">
-          Mesma estratégia de ataque ({strategy}), variando apenas o % do saldo utilizável.
+          Simulação individual de todas as dívidas variando apenas o uso do saldo utilizável.
         </p>
         <Table>
           <TableHeader>
@@ -463,36 +583,18 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
             <TableRow className={cn(usage === "hard" && "bg-emerald-accent/10")}>
               <TableCell className="py-2 text-sm font-medium">Hard (90%)</TableCell>
               <TableCell className="py-2 text-right text-sm">{fmt(saldoUtilizavel * 0.9)}</TableCell>
-              <TableCell className="py-2 text-right text-sm">{forecastHard.mesQuitacaoFinal ?? "> 24m"}</TableCell>
-              <TableCell className="py-2 text-right text-sm text-emerald-accent">{fmt(forecastHard.economiaJuros)}</TableCell>
+              <TableCell className="py-2 text-right text-sm">{formatDuration(hardQuitacaoMeses)}</TableCell>
+              <TableCell className="py-2 text-right text-sm text-emerald-accent">{fmt(hardEconomiaJuros)}</TableCell>
             </TableRow>
             <TableRow className={cn(usage === "mista" && "bg-sky-accent/10")}>
               <TableCell className="py-2 text-sm font-medium">Mista (50%)</TableCell>
               <TableCell className="py-2 text-right text-sm">{fmt(saldoUtilizavel * 0.5)}</TableCell>
-              <TableCell className="py-2 text-right text-sm">{forecastMista.mesQuitacaoFinal ?? "> 24m"}</TableCell>
-              <TableCell className="py-2 text-right text-sm text-emerald-accent">{fmt(forecastMista.economiaJuros)}</TableCell>
+              <TableCell className="py-2 text-right text-sm">{formatDuration(mistaQuitacaoMeses)}</TableCell>
+              <TableCell className="py-2 text-right text-sm text-emerald-accent">{fmt(mistaEconomiaJuros)}</TableCell>
             </TableRow>
           </TableBody>
         </Table>
       </Card>
-
-      {/* Central de Recomendações */}
-      {priorityDebt && extraDirigido > 0 && (
-        <Card className="p-5 bg-gradient-to-br from-amber-500/10 via-red-500/5 to-transparent border border-amber-500/40">
-          <h3 className="font-heading font-bold text-foreground mb-2 flex items-center gap-2">
-            <Lightbulb className="w-5 h-5 text-amber-300" />
-            🔥 Melhor ação hoje
-          </h3>
-          <p className="text-sm text-foreground">
-            Adicionar <span className="font-bold text-amber-300">{fmt(extraDirigido)}</span> extras na dívida{" "}
-            <span className="font-bold">{priorityDebt.nome}</span>.
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Economia estimada de juros no horizonte:{" "}
-            <span className="font-bold text-emerald-accent">{fmt(forecast.economiaJuros)}</span>
-          </p>
-        </Card>
-      )}
 
       {/* Motor de Oportunidades */}
       {oportunidades.length > 0 && (
@@ -586,143 +688,113 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
             <div>
               <p className="text-[10px] text-muted-foreground uppercase">Previsão de quitação total</p>
               <p className="text-sm font-bold text-foreground">
-                {forecast.mesQuitacaoFinal ?? `> ${horizon} meses`}
+                {selectedTermino === "—" ? formatDuration(selectedQuitacaoMeses) : selectedTermino}
               </p>
             </div>
             <Calendar className="w-5 h-5 text-sky-accent" />
           </div>
           <div className="flex items-center justify-between bg-emerald-accent/5 rounded-lg p-3 border border-emerald-accent/30">
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase">Economia estimada em juros</p>
-              <p className="text-lg font-bold text-emerald-accent">{fmt(forecast.economiaJuros)}</p>
+              <p className="text-[10px] text-muted-foreground uppercase">Economia estimada ({selectedScenarioLabel})</p>
+              <p className="text-lg font-bold text-emerald-accent">{fmt(selectedEconomiaJuros)}</p>
             </div>
             <Sparkles className="w-5 h-5 text-emerald-accent" />
           </div>
         </div>
       </Card>
 
-      {/* Linha do Tempo das Dívidas */}
+      {/* Simulação Individual das Dívidas */}
       <Card className="p-5 bg-card border border-border">
         <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2">
           <Calendar className="w-5 h-5 text-sky-accent" />
-          Linha do Tempo das Dívidas
-          <Badge variant="outline" className="ml-auto text-[10px]">{sortedTimeline.length} dívida(s)</Badge>
+          Simulação Individual das Dívidas
+          <Badge variant="outline" className="ml-auto text-[10px]">{debtSimulations.length} dívida(s)</Badge>
+        </h3>
+        <div className="space-y-3">
+          {debtSimulations.map((debt) => {
+            const selected = debt[selectedScenario];
+            return (
+              <div key={debt.id} className="rounded-lg border border-border/60 bg-background/40 p-3">
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <div>
+                    <p className="text-sm font-bold text-foreground">{debt.nome}</p>
+                    <p className="text-[11px] text-muted-foreground">{debt.banco}</p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] border-emerald-accent/40 text-emerald-accent bg-emerald-accent/10">
+                    {selectedScenarioLabel}: {selected.termino}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <Stat icon={<CreditCard className="w-4 h-4 text-red-400" />} label="Saldo" value={fmt(debt.saldoDevedor)} />
+                  <Stat icon={<Receipt className="w-4 h-4 text-sky-accent" />} label="Parcela" value={fmt(debt.parcelaMensal)} />
+                  <Stat icon={<TrendingUp className="w-4 h-4 text-amber-300" />} label="Juros" value={`${debt.jurosMensal.toFixed(2)}%`} />
+                </div>
+
+                <div className="overflow-x-auto -mx-1">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Cenário</TableHead>
+                        <TableHead className="text-xs text-right">Extra/mês</TableHead>
+                        <TableHead className="text-xs text-right">Prazo</TableHead>
+                        <TableHead className="text-xs text-right">Término</TableHead>
+                        <TableHead className="text-xs text-right">Economia tempo</TableHead>
+                        <TableHead className="text-xs text-right">Livre preservado</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <ScenarioRow label="Normal" projection={debt.normal} />
+                      <ScenarioRow label="Hard" projection={debt.hard} highlight={selectedScenario === "hard"} />
+                      <ScenarioRow label="Mista" projection={debt.mista} highlight={selectedScenario === "mista"} />
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+      <Button
+        data-html2canvas-ignore="true"
+        onClick={handleExportPDF}
+        disabled={exporting}
+        className="w-full bg-emerald-accent hover:bg-emerald-accent/90"
+      >
+        <Download className="w-4 h-4 mr-2" />
+        {exporting ? "Gerando PDF..." : "Gerar Relatório PDF"}
+      </Button>
+
+      {/* Cronograma de Término */}
+      <Card className="p-5 bg-card border border-border">
+        <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2">
+          <Flame className="w-5 h-5 text-red-400" />
+          Cronograma de Término
         </h3>
         <div className="overflow-x-auto -mx-2">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="text-xs">Dívida</TableHead>
-                <TableHead className="text-xs text-right">Prioridade</TableHead>
-                <TableHead className="text-xs text-right">Saldo</TableHead>
-                <TableHead className="text-xs text-right">Parcela</TableHead>
-                <TableHead className="text-xs text-right">Juros</TableHead>
-                <TableHead className="text-xs text-right">Extra</TableHead>
-                <TableHead className="text-xs text-right">Término</TableHead>
-                <TableHead className="text-xs text-right">Economia</TableHead>
-                <TableHead className="text-xs text-right">Status</TableHead>
+                <TableHead className="text-xs text-right">Normal</TableHead>
+                <TableHead className="text-xs text-right">Hard</TableHead>
+                <TableHead className="text-xs text-right">Mista</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedTimeline
-                .map((t) => {
-                  const status = getProjectionStatus(t, horizon);
-                  return (
-                  <TableRow key={t.id}>
-                    <TableCell className="py-2">
-                      <div className="text-sm font-medium text-foreground truncate max-w-[120px]">{t.nome}</div>
-                      <div className="text-[10px] text-muted-foreground truncate max-w-[120px]">{t.banco}</div>
-                    </TableCell>
-                    <TableCell className="py-2 text-right text-xs text-foreground tabular-nums">
-                      {t.prioridade}ª
-                    </TableCell>
-                    <TableCell className="py-2 text-right text-sm text-foreground">{fmt(t.saldoAtual)}</TableCell>
-                    <TableCell className="py-2 text-right text-sm text-foreground">{fmt(t.parcela)}</TableCell>
-                    <TableCell className="py-2 text-right text-xs text-muted-foreground tabular-nums">
-                      {t.jurosMensal.toFixed(2)}%
-                    </TableCell>
-                    <TableCell className="py-2 text-right text-xs text-amber-300 tabular-nums">
-                      {t.extraRecebido > 0 ? fmt(t.extraRecebido) : "—"}
-                    </TableCell>
-                    <TableCell className="py-2 text-right">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "text-[10px]",
-                          t.mesTermino === "—"
-                            ? "border-amber-500/40 text-amber-300 bg-amber-500/10"
-                            : "border-emerald-accent/40 text-emerald-accent bg-emerald-accent/10",
-                        )}
-                      >
-                        {t.mesTermino}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="py-2 text-right text-xs text-emerald-accent tabular-nums">
-                      {t.economiaJuros > 0 ? fmt(t.economiaJuros) : "—"}
-                    </TableCell>
-                    <TableCell className="py-2 text-right">
-                      <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", statusClass(status))}>
-                        {status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                  );
-                })}
+              {debtSimulations.map((debt) => (
+                <TableRow key={debt.id}>
+                  <TableCell className="py-2">
+                    <div className="text-sm font-medium text-foreground truncate max-w-[140px]">{debt.nome}</div>
+                    <div className="text-[10px] text-muted-foreground truncate max-w-[140px]">{debt.banco}</div>
+                  </TableCell>
+                  <TableCell className="py-2 text-right text-xs">{debt.normal.termino}</TableCell>
+                  <TableCell className="py-2 text-right text-xs text-emerald-accent">{debt.hard.termino}</TableCell>
+                  <TableCell className="py-2 text-right text-xs text-sky-accent">{debt.mista.termino}</TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
-        </div>
-      </Card>
-
-      {/* Prioridade dos Próximos Meses + Efeito Cascata */}
-      <Card className="p-5 bg-card border border-border">
-        <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2">
-          <Flame className="w-5 h-5 text-red-400" />
-          Prioridade & Efeito Cascata
-        </h3>
-        <div className="space-y-2">
-          {forecast.months.map((m) => (
-            <div
-              key={m.monthYear}
-              className={cn(
-                "rounded-lg p-3 border",
-                m.quitadas.length
-                  ? "border-emerald-accent/40 bg-emerald-accent/5"
-                  : "border-border/60 bg-background/40",
-              )}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-sm font-bold text-foreground">{m.label}</p>
-                <span className="text-[10px] text-muted-foreground">
-                  Saldo devedor: {fmt(m.saldoDevedorTotal)}
-                </span>
-              </div>
-              {m.quitadas.length > 0 && (
-                <div className="mb-1.5 flex flex-wrap gap-1.5">
-                  {m.quitadas.map((q) => (
-                    <Badge
-                      key={q.id}
-                      className="text-[10px] bg-emerald-accent/20 text-emerald-accent border border-emerald-accent/40"
-                    >
-                      <Trophy className="w-3 h-3 mr-1" />
-                      {q.nome} quitada · libera {fmt(q.parcelaLiberada)}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-              <ol className="text-xs text-muted-foreground space-y-0.5">
-                {m.prioridades.map((p, i) => (
-                  <li key={p.id} className="flex items-center gap-1.5">
-                    <span className="text-foreground/70 font-semibold">{i + 1}°</span>
-                    <span className="truncate">{p.nome}</span>
-                    {i === 0 && <ArrowRight className="w-3 h-3 text-amber-300 ml-auto" />}
-                  </li>
-                ))}
-                {m.prioridades.length === 0 && (
-                  <li className="text-emerald-accent font-medium">🎉 Todas as dívidas quitadas!</li>
-                )}
-              </ol>
-            </div>
-          ))}
         </div>
       </Card>
 
@@ -733,10 +805,10 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
           Evolução do Saldo Devedor
         </h3>
         <div className="space-y-1.5">
-          {forecast.months.map((m) => {
-            const pct = (m.saldoDevedorTotal / maxSaldoDevedor) * 100;
+          {evolutionData.map((m) => {
+            const pct = (m.selected / maxSaldoDevedor) * 100;
             return (
-              <div key={m.monthYear} className="flex items-center gap-2">
+              <div key={m.label} className="flex items-center gap-2">
                 <span className="text-[10px] text-muted-foreground w-16 shrink-0">{m.label}</span>
                 <div className="flex-1 h-5 bg-background/40 rounded-md overflow-hidden border border-border/40">
                   <div
@@ -745,7 +817,7 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
                   />
                 </div>
                 <span className="text-[10px] text-foreground/80 w-20 text-right tabular-nums">
-                  {fmt(m.saldoDevedorTotal)}
+                  {fmt(m.selected)}
                 </span>
               </div>
             );
@@ -754,6 +826,29 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
       </Card>
       </div>
     </div>
+  );
+}
+
+function ScenarioRow({
+  label,
+  projection,
+  highlight,
+}: {
+  label: string;
+  projection: PayoffProjection;
+  highlight?: boolean;
+}) {
+  return (
+    <TableRow className={cn(highlight && "bg-emerald-accent/10")}>
+      <TableCell className="py-2 text-xs font-medium">{label}</TableCell>
+      <TableCell className="py-2 text-right text-xs tabular-nums">{fmt(projection.extraMensal)}</TableCell>
+      <TableCell className="py-2 text-right text-xs tabular-nums">{formatDuration(projection.meses)}</TableCell>
+      <TableCell className="py-2 text-right text-xs tabular-nums">{projection.termino}</TableCell>
+      <TableCell className="py-2 text-right text-xs tabular-nums text-emerald-accent">
+        {projection.economiaTempo > 0 ? `${projection.economiaTempo}m` : "—"}
+      </TableCell>
+      <TableCell className="py-2 text-right text-xs tabular-nums">{fmt(projection.valorLivrePreservado)}</TableCell>
+    </TableRow>
   );
 }
 
