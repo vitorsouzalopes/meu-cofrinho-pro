@@ -6,14 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   TrendingUp,
   Wallet,
@@ -38,7 +31,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebts, useGoals } from "@/hooks/use-finance-data";
-import { runForecast, Strategy, type DebtTimelineItem } from "@/financial/forecastSimulation";
+import type { Strategy } from "@/financial/forecastSimulation";
 import type { Debt } from "@/financial/types";
 import { cn } from "@/lib/utils";
 
@@ -71,17 +64,37 @@ const PROFILE_PCT: Record<Profile, number> = {
   agressivo: 0.10,
 };
 const USAGE_PCT: Record<Usage, number> = { hard: 0.9, mista: 0.5 };
+const MAX_SIMULATION_MONTHS = 360;
 
-function getProjectionStatus(item: DebtTimelineItem, horizon: number) {
-  if (item.mesesAteQuitar <= horizon) return "Quitada";
-  if (item.prioridade === 1) return "Prioritária";
-  return "Em andamento";
+interface PayoffProjection {
+  meses: number;
+  termino: string;
+  jurosTotal: number;
+  extraMensal: number;
+  economiaTempo: number;
+  economiaJuros: number;
+  valorLivrePreservado: number;
+  balances: number[];
 }
 
-function statusClass(status: string) {
-  if (status === "Prioritária") return "border-amber-500/40 text-amber-300 bg-amber-500/10";
-  if (status === "Quitada") return "border-emerald-accent/40 text-emerald-accent bg-emerald-accent/10";
-  return "border-sky-accent/40 text-sky-accent bg-sky-accent/10";
+export interface DebtSimulation {
+  id: string;
+  nome: string;
+  banco: string;
+  saldoDevedor: number;
+  parcelaMensal: number;
+  jurosMensal: number;
+  normal: PayoffProjection;
+  hard: PayoffProjection;
+  mista: PayoffProjection;
+}
+
+export interface EvolutionRow {
+  label: string;
+  normal: number;
+  hard: number;
+  mista: number;
+  selected: number;
 }
 
 function calcScore(args: {
@@ -107,6 +120,110 @@ function calcScore(args: {
   if (goalsCount > 0) score += 5;
   if (debtsCount === 0) score += 15;
   return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function addMonths(d: Date, n: number) {
+  return new Date(d.getFullYear(), d.getMonth() + n, 1);
+}
+
+function formatMonthFromNow(months: number) {
+  if (months >= MAX_SIMULATION_MONTHS) return "—";
+  const d = addMonths(new Date(new Date().getFullYear(), new Date().getMonth(), 1), months - 1);
+  const labels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  return `${labels[d.getMonth()]}/${d.getFullYear()}`;
+}
+
+function formatMonthLabel(offset: number) {
+  const d = addMonths(new Date(new Date().getFullYear(), new Date().getMonth(), 1), offset);
+  const labels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+  return `${labels[d.getMonth()]}/${d.getFullYear()}`;
+}
+
+function simulateSingleDebt(debt: Debt, extraMensal: number, saldoLivre: number) {
+  let saldo = Math.max(0, Number(debt.valorTotal || 0));
+  const parcela = Math.max(0, Number(debt.valorParcela || 0));
+  const juros = Math.max(0, Number(debt.jurosMensal || 0)) / 100;
+  const pagamentoBase = parcela + Math.max(0, extraMensal);
+  let jurosTotal = 0;
+  const balances: number[] = [];
+
+  if (saldo <= 0 || pagamentoBase <= 0) {
+    return {
+      meses: MAX_SIMULATION_MONTHS,
+      termino: "—",
+      jurosTotal: 0,
+      balances: Array.from({ length: MAX_SIMULATION_MONTHS }, () => saldo),
+    };
+  }
+
+  for (let mes = 1; mes <= MAX_SIMULATION_MONTHS; mes++) {
+    const jurosMes = saldo * juros;
+    saldo += jurosMes;
+    jurosTotal += jurosMes;
+
+    const pagamento = Math.min(pagamentoBase, saldo);
+    saldo = Math.max(0, saldo - pagamento);
+    balances.push(saldo);
+
+    if (saldo <= 0.01) {
+      while (balances.length < MAX_SIMULATION_MONTHS) balances.push(0);
+      return {
+        meses: mes,
+        termino: formatMonthFromNow(mes),
+        jurosTotal,
+        balances,
+      };
+    }
+  }
+
+  return {
+    meses: MAX_SIMULATION_MONTHS,
+    termino: "—",
+    jurosTotal,
+    balances,
+  };
+}
+
+function buildProjection(debt: Debt, extraMensal: number, saldoLivre: number, normal?: PayoffProjection): PayoffProjection {
+  const raw = simulateSingleDebt(debt, extraMensal, saldoLivre);
+  const normalProjection = normal;
+  return {
+    ...raw,
+    extraMensal,
+    economiaTempo: normalProjection ? Math.max(0, normalProjection.meses - raw.meses) : 0,
+    economiaJuros: normalProjection ? Math.max(0, normalProjection.jurosTotal - raw.jurosTotal) : 0,
+    valorLivrePreservado: Math.max(0, saldoLivre - extraMensal),
+  };
+}
+
+function buildDebtSimulation(debt: Debt, saldoLivre: number, saldoUtilizavel: number): DebtSimulation {
+  const normal = buildProjection(debt, 0, saldoLivre);
+  const hard = buildProjection(debt, saldoUtilizavel * USAGE_PCT.hard, saldoLivre, normal);
+  const mista = buildProjection(debt, saldoUtilizavel * USAGE_PCT.mista, saldoLivre, normal);
+  return {
+    id: debt.id,
+    nome: debt.nome,
+    banco: debt.banco,
+    saldoDevedor: debt.valorTotal,
+    parcelaMensal: debt.valorParcela,
+    jurosMensal: debt.jurosMensal,
+    normal,
+    hard,
+    mista,
+  };
+}
+
+function formatDuration(months: number) {
+  if (months >= MAX_SIMULATION_MONTHS) return `> ${MAX_SIMULATION_MONTHS}m`;
+  if (months <= 1) return "1 mês";
+  return `${months} meses`;
+}
+
+function sortSimulations(items: DebtSimulation[], strategy: Strategy) {
+  const arr = [...items];
+  if (strategy === "avalanche") return arr.sort((a, b) => b.jurosMensal - a.jurosMensal);
+  if (strategy === "snowball") return arr.sort((a, b) => a.saldoDevedor - b.saldoDevedor);
+  return arr.sort((a, b) => b.parcelaMensal - a.parcelaMensal || b.jurosMensal - a.jurosMensal);
 }
 
 interface ForecastReportProps {
