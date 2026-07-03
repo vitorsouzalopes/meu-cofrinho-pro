@@ -92,7 +92,7 @@ export async function exportForecastPDF(args: ExportArgs) {
 
   y = 30;
   addSectionTitle("Resumo Executivo");
-  autoTable(doc, {
+  runAutoTable({
     startY: y,
     theme: "grid",
     margin: { left: marginX, right: marginX },
@@ -121,7 +121,7 @@ export async function exportForecastPDF(args: ExportArgs) {
   y = (doc as any).lastAutoTable.finalY + 8;
 
   addSectionTitle("Todas as Dívidas — Simulação Hard e Mista");
-  autoTable(doc, {
+  runAutoTable({
     startY: y,
     theme: "striped",
     margin: { left: marginX, right: marginX },
@@ -142,7 +142,7 @@ export async function exportForecastPDF(args: ExportArgs) {
   y = (doc as any).lastAutoTable.finalY + 8;
 
   addSectionTitle("Comparação entre Cenários de Quitação");
-  autoTable(doc, {
+  runAutoTable({
     startY: y,
     theme: "grid",
     margin: { left: marginX, right: marginX },
@@ -158,7 +158,7 @@ export async function exportForecastPDF(args: ExportArgs) {
   y = (doc as any).lastAutoTable.finalY + 8;
 
   addSectionTitle("Cronograma de Término de Cada Dívida");
-  autoTable(doc, {
+  runAutoTable({
     startY: y,
     theme: "striped",
     margin: { left: marginX, right: marginX },
@@ -177,7 +177,7 @@ export async function exportForecastPDF(args: ExportArgs) {
   y = (doc as any).lastAutoTable.finalY + 8;
 
   addSectionTitle("Linha do Tempo e Evolução das Dívidas");
-  autoTable(doc, {
+  runAutoTable({
     startY: y,
     theme: "grid",
     margin: { left: marginX, right: marginX },
