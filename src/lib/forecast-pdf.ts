@@ -38,17 +38,28 @@ interface ExportArgs {
 }
 
 const duration = (months: number) => {
-  if (months >= 360) return "> 360m";
-  if (months <= 1) return "1 mês";
-  return `${months} meses`;
+  const m = safe(months);
+  if (!m || m >= 360) return "> 360m";
+  if (m <= 1) return "1 mês";
+  return `${Math.round(m)} meses`;
 };
 
 export async function exportForecastPDF(args: ExportArgs) {
   const { jsPDF } = await import("jspdf");
-  const autoTableMod = await import("jspdf-autotable");
-  const autoTable = (autoTableMod as any).default || (autoTableMod as any).autoTable;
+  const autoTableMod: any = await import("jspdf-autotable");
+  const autoTableFn: any =
+    autoTableMod?.default || autoTableMod?.autoTable || autoTableMod;
 
   const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const runAutoTable = (options: any) => {
+    if (typeof autoTableFn === "function") {
+      autoTableFn(doc, options);
+    } else if (typeof (doc as any).autoTable === "function") {
+      (doc as any).autoTable(options);
+    } else {
+      throw new Error("jspdf-autotable não disponível");
+    }
+  };
   const pageWidth = doc.internal.pageSize.getWidth();
   const marginX = 14;
   let y = 16;
