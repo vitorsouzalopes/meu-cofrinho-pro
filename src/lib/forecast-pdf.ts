@@ -2,8 +2,9 @@ import type { DebtSimulation, EvolutionRow } from "@/components/planner/Forecast
 import type { Strategy } from "@/financial/forecastSimulation";
 import type { Debt } from "@/financial/types";
 
+const safe = (v: number) => (Number.isFinite(v) ? v : 0);
 const fmt = (v: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(safe(v));
 
 const STRATEGY_LABEL: Record<Strategy, string> = {
   avalanche: "Avalanche (maior juro)",
@@ -37,17 +38,28 @@ interface ExportArgs {
 }
 
 const duration = (months: number) => {
-  if (months >= 360) return "> 360m";
-  if (months <= 1) return "1 mês";
-  return `${months} meses`;
+  const m = safe(months);
+  if (!m || m >= 360) return "> 360m";
+  if (m <= 1) return "1 mês";
+  return `${Math.round(m)} meses`;
 };
 
 export async function exportForecastPDF(args: ExportArgs) {
   const { jsPDF } = await import("jspdf");
-  const autoTableMod = await import("jspdf-autotable");
-  const autoTable = (autoTableMod as any).default || (autoTableMod as any).autoTable;
+  const autoTableMod: any = await import("jspdf-autotable");
+  const autoTableFn: any =
+    autoTableMod?.default || autoTableMod?.autoTable || autoTableMod;
 
   const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const runAutoTable = (options: any) => {
+    if (typeof autoTableFn === "function") {
+      autoTableFn(doc, options);
+    } else if (typeof (doc as any).autoTable === "function") {
+      (doc as any).autoTable(options);
+    } else {
+      throw new Error("jspdf-autotable não disponível");
+    }
+  };
   const pageWidth = doc.internal.pageSize.getWidth();
   const marginX = 14;
   let y = 16;
@@ -80,7 +92,7 @@ export async function exportForecastPDF(args: ExportArgs) {
 
   y = 30;
   addSectionTitle("Resumo Executivo");
-  autoTable(doc, {
+  runAutoTable({
     startY: y,
     theme: "grid",
     margin: { left: marginX, right: marginX },
@@ -109,7 +121,7 @@ export async function exportForecastPDF(args: ExportArgs) {
   y = (doc as any).lastAutoTable.finalY + 8;
 
   addSectionTitle("Todas as Dívidas — Simulação Hard e Mista");
-  autoTable(doc, {
+  runAutoTable({
     startY: y,
     theme: "striped",
     margin: { left: marginX, right: marginX },
@@ -130,7 +142,7 @@ export async function exportForecastPDF(args: ExportArgs) {
   y = (doc as any).lastAutoTable.finalY + 8;
 
   addSectionTitle("Comparação entre Cenários de Quitação");
-  autoTable(doc, {
+  runAutoTable({
     startY: y,
     theme: "grid",
     margin: { left: marginX, right: marginX },
@@ -146,7 +158,7 @@ export async function exportForecastPDF(args: ExportArgs) {
   y = (doc as any).lastAutoTable.finalY + 8;
 
   addSectionTitle("Cronograma de Término de Cada Dívida");
-  autoTable(doc, {
+  runAutoTable({
     startY: y,
     theme: "striped",
     margin: { left: marginX, right: marginX },
@@ -165,7 +177,7 @@ export async function exportForecastPDF(args: ExportArgs) {
   y = (doc as any).lastAutoTable.finalY + 8;
 
   addSectionTitle("Linha do Tempo e Evolução das Dívidas");
-  autoTable(doc, {
+  runAutoTable({
     startY: y,
     theme: "grid",
     margin: { left: marginX, right: marginX },

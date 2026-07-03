@@ -393,6 +393,12 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
   const handleExportPDF = async () => {
     try {
       setExporting(true);
+      console.log("[PDF] Exportando relatório", {
+        debts: debts.length,
+        simulations: debtSimulations.length,
+        strategy,
+        usage,
+      });
       await exportForecastPDF({
         debts,
         debtSimulations,
@@ -420,7 +426,7 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
       toast({ title: "PDF gerado", description: `Relatório com ${debts.length} dívida(s) exportado.` });
     } catch (e) {
       console.error("Erro PDF:", e);
-      toast({ title: "Erro ao gerar PDF", description: String(e), variant: "destructive" });
+      toast({ title: "Erro ao gerar PDF", description: String((e as Error)?.message || e), variant: "destructive" });
     } finally {
       setExporting(false);
     }
@@ -470,7 +476,7 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
             <h3 className="font-heading font-bold text-foreground">Relatório de Previsão Financeira</h3>
           </div>
           <Button
-            data-html2canvas-ignore="true"
+            type="button" data-html2canvas-ignore="true"
             onClick={handleExportPDF}
             disabled={exporting}
             className="w-full bg-emerald-accent hover:bg-emerald-accent/90 sm:w-auto"
@@ -756,7 +762,7 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
         </div>
       </Card>
       <Button
-        data-html2canvas-ignore="true"
+        type="button" data-html2canvas-ignore="true"
         onClick={handleExportPDF}
         disabled={exporting}
         className="w-full bg-emerald-accent hover:bg-emerald-accent/90"
