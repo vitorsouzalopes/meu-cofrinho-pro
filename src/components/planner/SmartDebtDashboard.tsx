@@ -84,33 +84,47 @@ export default function SmartDebtDashboard() {
 
   return (
     <div className="space-y-4">
-      {/* Prioridade */}
-      {prioritaria && (
+      {/* Ranking de dívidas (sem eleger prioritária única) */}
+      {smart.length > 0 && (
         <Card className="p-5 bg-gradient-to-br from-red-500/10 via-amber-500/5 to-transparent border border-red-500/30">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex items-center gap-2">
-              <Flame className="w-5 h-5 text-red-400" />
-              <h3 className="font-heading font-bold text-foreground">Dívida prioritária</h3>
-            </div>
-            <Badge variant="outline" className="border-red-400/40 text-red-300 bg-red-500/10">
-              Score {Math.round(debtScore(prioritaria))}
+          <div className="flex items-center gap-2 mb-3">
+            <Flame className="w-5 h-5 text-red-400" />
+            <h3 className="font-heading font-bold text-foreground">Ranking de dívidas</h3>
+            <Badge variant="outline" className="ml-auto border-red-400/40 text-red-300 bg-red-500/10 text-[10px]">
+              {smart.length} dívida(s)
             </Badge>
           </div>
-          <p className="text-xl font-bold text-foreground">{prioritaria.nome}</p>
-          <p className="text-xs text-muted-foreground mb-3">{prioritaria.banco}</p>
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="bg-background/40 rounded-lg p-2">
-              <p className="text-[10px] text-muted-foreground">Juros</p>
-              <p className="text-sm font-bold text-red-300">{prioritaria.jurosMensal.toFixed(1)}%</p>
-            </div>
-            <div className="bg-background/40 rounded-lg p-2">
-              <p className="text-[10px] text-muted-foreground">Parcela</p>
-              <p className="text-sm font-bold text-foreground">{fmt(prioritaria.valorParcela)}</p>
-            </div>
-            <div className="bg-background/40 rounded-lg p-2">
-              <p className="text-[10px] text-muted-foreground">Restante</p>
-              <p className="text-sm font-bold text-foreground">{prioritaria.parcelasRestantes}x</p>
-            </div>
+          <div className="space-y-2">
+            {smart.map((d, i) => (
+              <div key={d.id} className="p-3 rounded-lg bg-background/40 border border-border/60">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs font-bold text-muted-foreground w-5 shrink-0">#{i + 1}</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-foreground truncate">{d.nome}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{d.banco}</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="border-red-400/40 text-red-300 bg-red-500/10 text-[10px] shrink-0">
+                    Score {Math.round(debtScore(d))}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="bg-background/40 rounded p-1.5">
+                    <p className="text-[9px] text-muted-foreground">Juros</p>
+                    <p className="text-xs font-bold text-red-300">{d.jurosMensal.toFixed(1)}%</p>
+                  </div>
+                  <div className="bg-background/40 rounded p-1.5">
+                    <p className="text-[9px] text-muted-foreground">Parcela</p>
+                    <p className="text-xs font-bold text-foreground">{fmt(d.valorParcela)}</p>
+                  </div>
+                  <div className="bg-background/40 rounded p-1.5">
+                    <p className="text-[9px] text-muted-foreground">Restante</p>
+                    <p className="text-xs font-bold text-foreground">{d.parcelasRestantes}x</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
       )}
