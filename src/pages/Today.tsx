@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { TrendingUp, Wallet, Clock, AlertCircle, Sparkles, CheckCircle2, Target, Menu, Settings, Pencil, Trash2, Calendar as CalendarIcon } from "lucide-react";
+import { TrendingUp, Wallet, Clock, AlertCircle, Sparkles, CheckCircle2, Target, Menu, Settings, Pencil, Trash2, Calendar as CalendarIcon, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,6 @@ import { calcularTotaisFinanceiros, resolverContasDoMes } from "@/lib/finance-ut
 import type { Tables } from "@/integrations/supabase/types";
 import { notifyEvent } from "@/lib/notify";
 import { useDebts } from "@/hooks/use-finance-data";
-import { smartPriority, shouldAmortize, shouldNegotiate, debtScore } from "@/financial/debtEngine";
 import { forecastMonth } from "@/financial/forecastEngine";
 import { analyzeFinancialRisk } from "@/financial/notificationEngine";
 import { cn } from "@/lib/utils";
@@ -460,92 +459,77 @@ const Today = () => {
         })()}
       </div>
 
-      {/* Seção Dívida Prioritária */}
+      {/* Seção Dívidas */}
       {(() => {
         if (!debts || debts.length === 0) return null;
-        const sorted = smartPriority(debts);
-        const priorityDebt = sorted[0];
-        if (!priorityDebt) return null;
-
-        const saldo = totais.disponivel;
-        
-        let prioritySuggestion;
-        if (shouldNegotiate(priorityDebt, saldo)) {
-          prioritySuggestion = {
-            label: "Negociação Recomendada",
-            description: `Seu saldo livre de ${formatCurrency(saldo)} é suficiente para negociar à vista (cobre mais de 30% do total de ${formatCurrency(priorityDebt.valorTotal)}).`,
-            color: "bg-sky-500/10 border-sky-500/30 text-sky-400 border",
-            icon: Wallet
-          };
-        } else if (shouldAmortize(priorityDebt, saldo)) {
-          prioritySuggestion = {
-            label: "Amortização Recomendada",
-            description: `Juros altos (${priorityDebt.jurosMensal}% a.m.) e prazo longo. Abata parcelas com seu saldo de ${formatCurrency(saldo)}.`,
-            color: "bg-amber-500/10 border-amber-500/30 text-amber-400 border",
-            icon: Sparkles
-          };
-        } else if (priorityDebt.permiteQuitacao && saldo >= priorityDebt.valorTotal) {
-          prioritySuggestion = {
-            label: "Quitação Recomendada",
-            description: `Seu saldo atual de ${formatCurrency(saldo)} cobre o valor total de ${formatCurrency(priorityDebt.valorTotal)}. Livre-se desta dívida!`,
-            color: "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 border",
-            icon: CheckCircle2
-          };
-        } else {
-          prioritySuggestion = {
-            label: "Foco no Pagamento",
-            description: `Evite atrasos para não acumular juros abusivos de ${priorityDebt.jurosMensal}% a.m.`,
-            color: "bg-muted/50 border-border text-muted-foreground border",
-            icon: Clock
-          };
-        }
+        const totalAberto = debts.reduce((sum, debt) => sum + Number(debt.valorTotal || 0), 0);
+        const totalParcelas = debts.reduce((sum, debt) => sum + Number(debt.valorParcela || 0), 0);
 
         return (
           <div className="mb-8 animate-slide-up" style={{ animationDelay: "0.45s" }}>
             <div className="flex items-center justify-between mb-4 px-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">💳 Dívida Prioritária</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">💳 Dívidas em Planejamento</p>
               <button
                 className="text-[9px] text-primary font-bold hover:underline"
-                onClick={() => navigate("/goals")}
+                onClick={() => navigate("/planner")}
               >
                 Planejamento Completo
               </button>
             </div>
             <Card className="p-5 border border-border/50 bg-gradient-to-br from-card to-card/70 relative overflow-hidden group hover:border-primary/30 transition-all rounded-3xl">
-              <div className="relative z-10 flex flex-col gap-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-[9px] uppercase font-bold text-muted-foreground mb-1">Banco / Credor</p>
-                    <h4 className="text-lg font-bold text-foreground">{priorityDebt.banco || priorityDebt.nome}</h4>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[9px] uppercase font-bold text-muted-foreground mb-1">Prioridade</p>
-                    <span className="text-xs font-bold text-destructive font-mono bg-destructive/10 px-2.5 py-1 rounded-lg border border-destructive/20">
-                      {debtScore(priorityDebt).toFixed(0)} pts
-                    </span>
-                  </div>
-                </div>
-
+              <div className="relative z-10 space-y-4">
                 <div className="grid grid-cols-3 gap-2">
                   <div className="bg-muted/30 border border-border/30 rounded-2xl p-2.5 text-center">
-                    <p className="text-[8px] uppercase font-bold text-muted-foreground mb-1">Juros</p>
-                    <p className="text-xs font-bold text-amber-500 font-mono">{priorityDebt.jurosMensal.toFixed(1)}% a.m.</p>
+                    <p className="text-[8px] uppercase font-bold text-muted-foreground mb-1">Total</p>
+                    <p className="text-xs font-bold text-foreground font-mono">{formatCurrency(totalAberto)}</p>
                   </div>
                   <div className="bg-muted/30 border border-border/30 rounded-2xl p-2.5 text-center">
-                    <p className="text-[8px] uppercase font-bold text-muted-foreground mb-1">Valor Total</p>
-                    <p className="text-xs font-bold text-foreground font-mono">{formatCurrency(priorityDebt.valorTotal)}</p>
+                    <p className="text-[8px] uppercase font-bold text-muted-foreground mb-1">Parcelas</p>
+                    <p className="text-xs font-bold text-foreground font-mono">{formatCurrency(totalParcelas)}</p>
                   </div>
                   <div className="bg-muted/30 border border-border/30 rounded-2xl p-2.5 text-center">
-                    <p className="text-[8px] uppercase font-bold text-muted-foreground mb-1">Parcela</p>
-                    <p className="text-xs font-bold text-foreground font-mono">{formatCurrency(priorityDebt.valorParcela)}</p>
+                    <p className="text-[8px] uppercase font-bold text-muted-foreground mb-1">Sobra</p>
+                    <p className="text-xs font-bold text-primary font-mono">{formatCurrency(totais.disponivel)}</p>
                   </div>
                 </div>
 
-                <div className={cn("p-3 rounded-2xl flex gap-3 items-start", prioritySuggestion.color)}>
-                  <prioritySuggestion.icon className="w-5 h-5 shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                  {debts.map((debt) => (
+                    <div key={debt.id} className="rounded-2xl border border-border/40 bg-muted/20 p-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                          <CreditCard className="w-4 h-4 text-primary" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold text-foreground truncate">{debt.nome}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{debt.banco}</p>
+                          <div className="grid grid-cols-3 gap-2 mt-2 text-center">
+                            <div>
+                              <p className="text-[8px] uppercase font-bold text-muted-foreground">Saldo</p>
+                              <p className="text-[10px] font-bold text-foreground font-mono">{formatCurrency(debt.valorTotal)}</p>
+                            </div>
+                            <div>
+                              <p className="text-[8px] uppercase font-bold text-muted-foreground">Parcela</p>
+                              <p className="text-[10px] font-bold text-foreground font-mono">{formatCurrency(debt.valorParcela)}</p>
+                            </div>
+                            <div>
+                              <p className="text-[8px] uppercase font-bold text-muted-foreground">Juros</p>
+                              <p className="text-[10px] font-bold text-amber-500 font-mono">{debt.jurosMensal.toFixed(1)}%</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="p-3 rounded-2xl flex gap-3 items-start bg-primary/5 border border-primary/20 text-primary">
+                  <Sparkles className="w-5 h-5 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-xs font-bold uppercase">{prioritySuggestion.label}</p>
-                    <p className="text-[11px] opacity-90 mt-0.5 leading-relaxed">{prioritySuggestion.description}</p>
+                    <p className="text-xs font-bold uppercase">Simulação Completa</p>
+                    <p className="text-[11px] opacity-90 mt-0.5 leading-relaxed">
+                      Acesse o planejamento para ver Hard, Mista e relatório PDF de todas as dívidas cadastradas.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -707,7 +691,7 @@ const Today = () => {
             <Card
               className="p-5 bg-card border border-border/50 flex flex-col items-center animate-slide-up hover:border-primary/30 transition-colors cursor-pointer"
               style={{ animationDelay: "0.5s" }}
-              onClick={() => navigate("/goals")}
+              onClick={() => navigate("/planner")}
             >
               <p className="text-[10px] font-bold uppercase text-muted-foreground self-start mb-6">Dívidas Ativas</p>
               <DonutChart

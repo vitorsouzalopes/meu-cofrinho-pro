@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calculator, Target, BrainCircuit, Brain, TrendingUp } from "lucide-react";
-import MultiDebtPayoff from "@/components/planner/MultiDebtPayoff";
+import { Target, BrainCircuit, Brain, TrendingUp } from "lucide-react";
 import FinancialGoals from "@/components/planner/FinancialGoals";
 import SmartDebtDashboard from "@/components/planner/SmartDebtDashboard";
 import ForecastReport from "@/components/planner/ForecastReport";
@@ -124,7 +123,7 @@ const Planner = () => {
       </div>
 
       <Tabs defaultValue="forecast" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-6 bg-card border border-border">
+        <TabsList className="grid w-full grid-cols-3 mb-6 bg-card border border-border">
           <TabsTrigger value="smart" className="data-[state=active]:bg-amber-400/20 data-[state=active]:text-amber-300">
             <Brain className="w-4 h-4 mr-1" />
             <span className="text-xs">IA</span>
@@ -132,10 +131,6 @@ const Planner = () => {
           <TabsTrigger value="forecast" className="data-[state=active]:bg-emerald-accent/20 data-[state=active]:text-emerald-accent">
             <TrendingUp className="w-4 h-4 mr-1" />
             <span className="text-xs">Previsão</span>
-          </TabsTrigger>
-          <TabsTrigger value="debts" className="data-[state=active]:bg-emerald-accent/20 data-[state=active]:text-emerald-accent">
-            <Calculator className="w-4 h-4 mr-1" />
-            <span className="text-xs">Quitar</span>
           </TabsTrigger>
           <TabsTrigger value="goals" className="data-[state=active]:bg-sky-accent/20 data-[state=active]:text-sky-accent">
             <Target className="w-4 h-4 mr-1" />
@@ -149,14 +144,6 @@ const Planner = () => {
 
         <TabsContent value="forecast" className="space-y-4 animate-in fade-in-50">
           <ForecastReport debts={initialDebts} />
-        </TabsContent>
-
-        <TabsContent value="debts" className="space-y-4 animate-in fade-in-50">
-          <MultiDebtPayoff 
-            initialIncome={initialIncome} 
-            initialExpenses={initialExpenses}
-            initialDebts={initialDebts}
-          />
         </TabsContent>
 
         <TabsContent value="goals" className="space-y-4 animate-in fade-in-50">
