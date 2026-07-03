@@ -2,8 +2,9 @@ import type { DebtSimulation, EvolutionRow } from "@/components/planner/Forecast
 import type { Strategy } from "@/financial/forecastSimulation";
 import type { Debt } from "@/financial/types";
 
+const safe = (v: number) => (Number.isFinite(v) ? v : 0);
 const fmt = (v: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(safe(v));
 
 const STRATEGY_LABEL: Record<Strategy, string> = {
   avalanche: "Avalanche (maior juro)",
