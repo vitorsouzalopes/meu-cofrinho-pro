@@ -68,7 +68,7 @@ export default function SmartDebtDashboard() {
   const smart = useMemo(() => smartPriority([...debts]), [debts]);
   const avalanche = useMemo(() => avalancheStrategy([...debts]), [debts]);
   const snowball = useMemo(() => snowballStrategy([...debts]), [debts]);
-  const prioritaria = smart[0];
+  const risco = analyzeFinancialRisk(previsao);
   const risco = analyzeFinancialRisk(previsao);
 
   if (!debts.length) {
