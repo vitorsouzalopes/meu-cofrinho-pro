@@ -15,7 +15,6 @@ import {
   smartPriority,
   shouldAmortize,
   shouldNegotiate,
-  debtScore,
 } from "@/financial/debtEngine";
 import { forecastMonth } from "@/financial/forecastEngine";
 import { analyzeFinancialRisk } from "@/financial/notificationEngine";
@@ -29,6 +28,7 @@ import {
   formatBRL,
 } from "@/lib/debt-utils";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
+import ForecastReport from "@/components/planner/ForecastReport";
 
 interface Props {
   initialIncome: number;
@@ -94,12 +94,6 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
       return snowballStrategy(debtsData);
     }
   }, [debtsData, sortingStrategy]);
-
-  const priorityDebtId = useMemo(() => {
-    if (debtsData.length === 0) return null;
-    const prioritized = smartPriority(debtsData);
-    return prioritized[0]?.id;
-  }, [debtsData]);
 
   const forecast = useMemo(() => {
     const forecastInput = {
@@ -232,16 +226,19 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
         </div>
         <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
           <p className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
-            <Flame className="w-3 h-3" /> Regra: atacar 1 dívida por vez
+            <Flame className="w-3 h-3" /> Regra: simular todas as dívidas
           </p>
           <ol className="text-[10px] text-foreground/80 mt-1 space-y-0.5 list-decimal list-inside">
-            <li>Manter a parcela mínima de TODAS as dívidas.</li>
-            <li>Escolher UMA dívida prioritária (marcada abaixo).</li>
-            <li>Direcionar todo o valor extra apenas nela.</li>
-            <li>Ao quitar, mover o extra para a próxima da fila.</li>
+            <li>Calcular o cenário atual de cada dívida cadastrada.</li>
+            <li>Aplicar Hard e Mista individualmente em todas as dívidas.</li>
+            <li>Preservar o saldo livre restante conforme cada simulação.</li>
           </ol>
         </div>
       </Card>
+
+      {debtsData.length > 0 && (
+        <ForecastReport debts={debtsData} />
+      )}
 
       {/* Alerta de Risco Financeiro */}
       {riskAlert && (
@@ -296,11 +293,8 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
             const localDebt = mapToLocalDebt(d);
             const expanded = expandedId === d.id;
 
-            // Regra oficial: atacar UMA dívida por vez.
-            // Apenas a dívida prioritária recebe o extra. As demais pagam só a parcela mínima.
-            const isPriority = d.id === priorityDebtId;
-            const extraHard = isPriority ? estrategiaHard(rendaDisponivel) : 0;
-            const extraMista = isPriority ? estrategiaMista(rendaDisponivel) : 0;
+            const extraHard = estrategiaHard(rendaDisponivel);
+            const extraMista = estrategiaMista(rendaDisponivel);
             const pagamentoHard = pagamentoPlanejado(localDebt.parcela_mensal, extraHard);
             const pagamentoMista = pagamentoPlanejado(localDebt.parcela_mensal, extraMista);
             const simAtual = simular(localDebt, localDebt.parcela_mensal);
@@ -332,18 +326,11 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
             }
 
             return (
-              <Card key={d.id} className={`bg-card border-border/50 overflow-hidden ${
-                d.id === priorityDebtId ? "border-destructive/40 shadow-sm" : ""
-              }`}>
+              <Card key={d.id} className="bg-card border-border/50 overflow-hidden">
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        {d.id === priorityDebtId && (
-                          <span className="text-[9px] font-bold uppercase bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded flex items-center gap-1">
-                            <Flame className="w-3 h-3 animate-pulse" /> Prioridade (Score: {debtScore(d).toFixed(0)})
-                          </span>
-                        )}
                         <h3 className="font-bold text-foreground truncate">{d.nome}</h3>
                       </div>
                       <p className="text-[11px] text-muted-foreground capitalize">
