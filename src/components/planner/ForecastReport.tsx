@@ -476,7 +476,7 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
             <h3 className="font-heading font-bold text-foreground">Relatório de Previsão Financeira</h3>
           </div>
           <Button
-            data-html2canvas-ignore="true"
+            type="button" data-html2canvas-ignore="true"
             onClick={handleExportPDF}
             disabled={exporting}
             className="w-full bg-emerald-accent hover:bg-emerald-accent/90 sm:w-auto"
@@ -762,7 +762,7 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
         </div>
       </Card>
       <Button
-        data-html2canvas-ignore="true"
+        type="button" data-html2canvas-ignore="true"
         onClick={handleExportPDF}
         disabled={exporting}
         className="w-full bg-emerald-accent hover:bg-emerald-accent/90"
