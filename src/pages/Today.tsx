@@ -471,7 +471,7 @@ const Today = () => {
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">💳 Dívidas em Planejamento</p>
               <button
                 className="text-[9px] text-primary font-bold hover:underline"
-                onClick={() => navigate("/goals")}
+                onClick={() => navigate("/planner")}
               >
                 Planejamento Completo
               </button>
@@ -691,7 +691,7 @@ const Today = () => {
             <Card
               className="p-5 bg-card border border-border/50 flex flex-col items-center animate-slide-up hover:border-primary/30 transition-colors cursor-pointer"
               style={{ animationDelay: "0.5s" }}
-              onClick={() => navigate("/goals")}
+              onClick={() => navigate("/planner")}
             >
               <p className="text-[10px] font-bold uppercase text-muted-foreground self-start mb-6">Dívidas Ativas</p>
               <DonutChart
