@@ -1,5 +1,5 @@
 // service-worker.js — cache-first for images, network-first for everything else
-const CACHE_NAME = 'cofrinho-cache-v1';
+const CACHE_NAME = 'cofrinho-cache-v2';
 
 self.addEventListener('install', event => {
   console.log('[SW] Installing');
