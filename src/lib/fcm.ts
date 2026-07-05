@@ -2,6 +2,8 @@ import { initializeApp, getApps } from "firebase/app";
 import { getMessaging, getToken, isSupported, deleteToken } from "firebase/messaging";
 import { supabase } from "@/integrations/supabase/client";
 import { FIREBASE_CONFIG, VAPID_KEY, isFirebaseConfigured } from "@/constants/firebase";
+import { Capacitor } from '@capacitor/core';
+import { registerNativePush } from './native-push';
 
 let appInstance: ReturnType<typeof initializeApp> | null = null;
 
@@ -13,6 +15,11 @@ const getApp = () => {
 
 export async function enableFcmPush(userId: string): Promise<{ ok: boolean; reason?: string; token?: string }> {
   try {
+    if (Capacitor.isNativePlatform()) {
+      await registerNativePush(userId);
+      return { ok: true };
+    }
+
     if (!isFirebaseConfigured()) {
       return { ok: false, reason: "Firebase não está configurado. Atualize src/constants/firebase.ts e public/firebase-messaging-sw.js." };
     }

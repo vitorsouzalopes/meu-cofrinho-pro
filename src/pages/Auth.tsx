@@ -3,8 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Wallet, Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Wallet, Mail, Lock, User, ArrowRight, Fingerprint } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { hapticImpact, hapticNotification } from "@/lib/native-ui";
+import { NotificationType } from "@capacitor/haptics";
+import { useEffect, useState } from "react";
+import { checkBiometric, authenticateBiometric, getBiometricCredentials, setBiometricCredentials } from "@/lib/biometric";
+import { Capacitor } from "@capacitor/core";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -12,8 +17,46 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hasBiometric, setHasBiometric] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const checkBio = async () => {
+      const bio = await checkBiometric();
+      if (bio.available) {
+        const creds = await getBiometricCredentials();
+        if (creds) {
+          setHasBiometric(true);
+        }
+      }
+    };
+    checkBio();
+  }, []);
+
+  const handleBiometricLogin = async () => {
+    const success = await authenticateBiometric();
+    if (success) {
+      const creds = await getBiometricCredentials();
+      if (creds) {
+        setLoading(true);
+        try {
+          const { error } = await supabase.auth.signInWithPassword({
+            email: creds.username,
+            password: creds.password
+          });
+          if (error) throw error;
+          hapticNotification(NotificationType.Success);
+          navigate("/");
+        } catch (error: any) {
+          hapticNotification(NotificationType.Error);
+          toast({ title: "Erro na biometria", description: error.message, variant: "destructive" });
+        } finally {
+          setLoading(false);
+        }
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,6 +66,15 @@ const Auth = () => {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+
+        if (Capacitor.isNativePlatform()) {
+          const bio = await checkBiometric();
+          if (bio.available) {
+            await setBiometricCredentials(email, password);
+          }
+        }
+
+        hapticNotification(NotificationType.Success);
         navigate("/");
       } else {
         const { error } = await supabase.auth.signUp({
@@ -31,6 +83,7 @@ const Auth = () => {
           options: { data: { display_name: displayName } },
         });
         if (error) throw error;
+        hapticNotification(NotificationType.Success);
         toast({
           title: "Conta criada! 🎉",
           description: "Você já está logado. Bom desafio!",
@@ -38,6 +91,7 @@ const Auth = () => {
         navigate("/");
       }
     } catch (error) {
+      hapticNotification(NotificationType.Error);
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast({
         title: "Erro",
@@ -104,6 +158,19 @@ const Auth = () => {
             {loading ? "Carregando..." : isLogin ? "Entrar" : "Criar Conta"}
             <ArrowRight className="w-4 h-4" />
           </Button>
+
+          {isLogin && hasBiometric && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full border-gold/30 text-gold"
+              onClick={handleBiometricLogin}
+              disabled={loading}
+            >
+              Entrar com Biometria
+              <Fingerprint className="w-4 h-4 ml-2" />
+            </Button>
+          )}
         </form>
 
         {/* Toggle */}

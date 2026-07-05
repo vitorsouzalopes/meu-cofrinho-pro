@@ -9,6 +9,9 @@ import BottomNav from "@/components/BottomNav";
 import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
 import { useGestureBack } from "@/hooks/use-gesture-back";
 import { checkForUpdates } from "@/lib/version";
+import { registerNativePush } from "@/lib/native-push";
+import { App as CapacitorApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 import Today from "./pages/Today.tsx";
 import Accounts from "./pages/Accounts.tsx";
 import History from "./pages/History.tsx";
@@ -75,11 +78,33 @@ const AppRoutes = () => (
 
 const AppContent = () => {
   const { session } = useAuth();
+  const navigate = useNavigate();
   const [updateConfig, setUpdateConfig] = useState<{ min_version: string; download_url: string; message: string } | null>(null);
   const [needsUpdate, setNeedsUpdate] = useState(false);
 
   useScrollRestoration();
   useGestureBack();
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      const backListener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+        if (!canGoBack) {
+          CapacitorApp.exitApp();
+        } else {
+          window.history.back();
+        }
+      });
+      return () => {
+        backListener.then(l => l.remove());
+      };
+    }
+  }, []);
+
+  useEffect(() => {
+    if (session?.user) {
+      registerNativePush(session.user.id);
+    }
+  }, [session]);
 
   useEffect(() => {
     const checkVersion = async () => {

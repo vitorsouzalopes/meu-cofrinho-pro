@@ -1,5 +1,7 @@
 import { Home, Wallet, Target, TrendingUp, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { hapticImpact } from "@/lib/native-ui";
+import { ImpactStyle } from "@capacitor/haptics";
 
 const navItems = [
   { path: "/", icon: Home, label: "Hoje" },
@@ -21,7 +23,10 @@ const BottomNav = () => {
           return (
             <button
               key={path}
-              onClick={() => navigate(path)}
+              onClick={() => {
+                hapticImpact(ImpactStyle.Light);
+                navigate(path);
+              }}
               className={`flex flex-col items-center justify-center gap-1 flex-1 h-full transition-all duration-300 relative ${
                 isActive ? "text-primary" : "text-muted-foreground/40 hover:text-foreground"
               }`}
