@@ -32,6 +32,15 @@ const now = Date.now();
 const lastReload = Number(localStorage.getItem(RELOAD_GUARD_KEY) || '0');
 const canReload = now - lastReload > 10_000;
 
+// Initialize app without blocking on update check
+const renderApp = () => {
+  const rootElement = document.getElementById("root");
+  if (rootElement) {
+    createRoot(rootElement).render(<App />);
+  }
+};
+
+// Check for updates in a non-blocking way
 checkForUpdates().then((updated) => {
   if (updated && canReload) {
     localStorage.setItem(RELOAD_GUARD_KEY, String(now));
@@ -39,10 +48,14 @@ checkForUpdates().then((updated) => {
     setTimeout(() => window.location.reload(), 1500);
     return;
   }
-  createRoot(document.getElementById("root")!).render(<App />);
+  renderApp();
+}).catch((err) => {
+  console.error("Update check failed, rendering app anyway:", err);
+  renderApp();
 });
 
-// Guard: never register SW in iframes or Lovable preview
+// Guard: never register SW in iframes, Lovable preview, or Native Capacitor
+const isNative = Capacitor.isNativePlatform();
 const isInIframe = (() => {
   try { return window.self !== window.top; } catch { return true; }
 })();
@@ -51,7 +64,7 @@ const isPreviewHost =
   window.location.hostname.includes("lovableproject.com") ||
   window.location.hostname.includes("lovable.app");
 
-if (isPreviewHost || isInIframe) {
+if (isPreviewHost || isInIframe || isNative) {
   navigator.serviceWorker?.getRegistrations().then((regs) => {
     regs.forEach((r) => r.unregister());
   });
