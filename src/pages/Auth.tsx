@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,6 @@ import { Wallet, Mail, Lock, User, ArrowRight, Fingerprint } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
 import { hapticImpact, hapticNotification } from "@/lib/native-ui";
 import { NotificationType } from "@capacitor/haptics";
-import { useEffect, useState } from "react";
 import { checkBiometric, authenticateBiometric, getBiometricCredentials, setBiometricCredentials } from "@/lib/biometric";
 import { Capacitor } from "@capacitor/core";
 

@@ -6,7 +6,7 @@ export async function checkBiometric() {
 
   try {
     const result = await NativeBiometric.isAvailable();
-    return { available: true, touchId: result.touchId, faceId: result.faceId, fingerprint: result.fingerprint };
+    return { available: result.isAvailable, biometryType: result.biometryType };
   } catch (e) {
     return { available: false };
   }
