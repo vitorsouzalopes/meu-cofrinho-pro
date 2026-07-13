@@ -348,7 +348,7 @@ const ProfilePage = () => {
         {[
           { icon: <Clock className="w-5 h-5" />, label: "Histórico Completo", onClick: () => navigate("/history") },
           { icon: <Settings className="w-5 h-5" />, label: "Configurações da conta", onClick: () => setEditing(true) },
-          { icon: <Bell className="w-5 h-5" />, label: "Notificações (Push e Telegram)", onClick: () => navigate("/telegram") },
+          { icon: <Bell className="w-5 h-5" />, label: "Notificações Push", onClick: () => navigate("/telegram") },
           { icon: <Target className="w-5 h-5" />, label: "Metas Financeiras", onClick: () => navigate("/goals") },
           { icon: <FileDown className="w-5 h-5" />, label: "Exportar Relatório Mensal (PDF)", onClick: () => setExportDialogOpen(true) },
           { icon: <HelpCircle className="w-5 h-5" />, label: "Ajuda e Suporte", onClick: () => setHelpOpen(true) },
