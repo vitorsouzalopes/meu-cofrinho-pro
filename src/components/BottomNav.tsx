@@ -1,4 +1,4 @@
-import { Home, Wallet, Target, TrendingUp, User } from "lucide-react";
+import { HeartPulse, Home, Wallet, Target, TrendingUp, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { hapticImpact } from "@/lib/native-ui";
 import { ImpactStyle } from "@capacitor/haptics";
@@ -8,6 +8,7 @@ const navItems = [
   { path: "/accounts", icon: Wallet, label: "Contas" },
   { path: "/progress", icon: TrendingUp, label: "Progresso" },
   { path: "/goals", icon: Target, label: "Metas" },
+  { path: "/vidafit", icon: HeartPulse, label: "VidaFit" },
   { path: "/profile", icon: User, label: "Perfil" },
 ];
 
