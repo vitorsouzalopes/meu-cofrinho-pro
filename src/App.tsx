@@ -28,6 +28,7 @@ import NotFound from "./pages/NotFound.tsx";
 import MonthlyAccounts from "./pages/MonthlyAccounts.tsx";
 import Goals from "./pages/Goals.tsx";
 import Planner from "./pages/Planner.tsx";
+import VidaFit from "./pages/VidaFit.tsx";
 import UpdateModal from "./components/UpdateModal";
 import { CURRENT_VERSION } from "./constants/version";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,6 +72,7 @@ const AppRoutes = () => (
     <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
     <Route path="/telegram" element={<ProtectedRoute><TelegramSettings /></ProtectedRoute>} />
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+    <Route path="/vidafit" element={<ProtectedRoute><VidaFit /></ProtectedRoute>} />
     <Route path="/download" element={<Download />} />
     <Route path="*" element={<NotFound />} />
   </Routes>
