@@ -6,11 +6,11 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.4.2'
+        classpath 'com.android.tools.build:gradle:8.7.3'
         classpath 'com.google.firebase:firebase-appdistribution-gradle:5.3.0'
-        classpath 'com.google.firebase:firebase-crashlytics-gradle:2.9.9'
+        classpath 'com.google.firebase:firebase-crashlytics-gradle:3.0.7'
         classpath 'com.google.firebase:perf-plugin:2.0.2'
-        classpath 'com.google.gms:google-services:4.3.13'
+        classpath 'com.google.gms:google-services:4.5.0'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -27,18 +27,45 @@ allprojects {
 }
 
 subprojects {
-    configurations.all {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    configurations.configureEach {
         resolutionStrategy.eachDependency { details ->
             if (details.requested.group == 'org.jetbrains.kotlin' && details.requested.name.startsWith('kotlin-stdlib')) {
-                details.useVersion '1.8.22'
+                details.useVersion '1.9.24'
             }
         }
         resolutionStrategy.force(
-            'org.jetbrains.kotlin:kotlin-stdlib:1.8.22',
-            'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22',
-            'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22',
-            'org.jetbrains.kotlin:kotlin-stdlib-common:1.8.22'
+            'org.jetbrains.kotlin:kotlin-stdlib:1.9.24',
+            'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.24',
+            'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24',
+            'org.jetbrains.kotlin:kotlin-stdlib-common:1.9.24',
+            'androidx.biometric:biometric:1.0.1'
         )
+    }
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                if (namespace == null) {
+                    try {
+                        def manifestFile = project.file("src/main/AndroidManifest.xml")
+                        if (manifestFile.exists()) {
+                            def manifest = new XmlSlurper().parse(manifestFile)
+                            namespace = manifest.'@package'.text()
+                        }
+                    } catch (Exception ignored) {
+                        namespace = "com.capacitor.plugin.${project.name.replace('-', '.')}"
+                    }
+                }
+            }
+            if (project.plugins.hasPlugin('com.google.gms.google-services')) {
+                project.tasks.matching { it.name.contains('GoogleServices') }.configureEach {
+                    enabled = false
+                }
+            }
+        }
     }
 }
 

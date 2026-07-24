@@ -1,0 +1,9 @@
+- [x] Update `variables.gradle` with new dependency versions
+- [x] Modernize `app/build.gradle` (SDK properties, aaptOptions)
+- [x] Fix Proguard configuration in `app/build.gradle`
+- [x] Remove redundant plugin application in `app/build.gradle`
+- [x] Fix unused catch parameter in `app/build.gradle`
+- [x] Upgrade AGP to 8.7.3 and Kotlin to 1.9.24
+- [x] Inject namespaces for Capacitor subprojects
+- [x] Resolve duplicate vision classes and biometric constants
+- [x] Verify build with `./gradlew :app:assembleDebug`
