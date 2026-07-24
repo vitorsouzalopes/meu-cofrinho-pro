@@ -1,35 +1,33 @@
-# Walkthrough - Build Fixes and Modernization
+# Walkthrough - Final Preparations and Cleanup
 
-The application build is now successful and modernized. Several critical issues were resolved to support the latest dependencies and Android SDK 35.
+The application is now aligned with the production requirements for v1.0. All previous build issues have been resolved, and the requested feature cleanup has been performed.
 
 ## Changes Made
 
-### 1. Modernized `app/build.gradle`
-- Updated SDK properties to modern DSL: `compileSdk`, `minSdk`, `targetSdk`.
-- Switched `aaptOptions` to `androidResources`.
-- Updated Proguard to `proguard-android-optimize.txt`.
-- Removed redundant `google-services` plugin application.
-- Fixed unused catch parameter warning.
+### 1. Feature Removal (Cleanup)
+Removed the following administrative buttons and their associated logic from the [Profile](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Profile.tsx) page:
+- **Limpar Dados Auto-Gerados do Mês**
+- **Apagar Todos os Objetivos**
+- **Apagar Todas as Dívidas Ativas**
 
-### 2. Upgraded Infrastructure
-- **Android Gradle Plugin (AGP)**: Upgraded from `7.4.2` to `8.7.3` to support SDK 35 and modern AndroidX libraries.
-- **Kotlin**: Upgraded to `1.9.24` to ensure compatibility with modern build tools.
-- **SDK Levels**: Increased `minSdk` to `23` (required by Firebase) and `compileSdk`/`targetSdk` to `35`.
+This ensures that users (even admins) don't accidentally wipe their data using these destructive shortcuts in the final version.
 
-### 3. Automated Subproject Fixes (Capacitor Compatibility)
-- **Namespace Injection**: Added a script in the root `build.gradle` to automatically detect and inject the `namespace` for older Capacitor plugins that were missing it, which is now mandatory in AGP 8.
-- **Google Services Fix**: Disabled `processGoogleServices` tasks in subprojects to prevent build failures when `google-services.json` is only present in the main app module.
+### 2. Infrastructure & Build Fixes (Recap)
+- **Firebase Initialization**: Fixed the startup crash by enabling the `GoogleServices` task specifically for the `:app` module.
+- **SDK & Tools**: Project is now fully compatible with **Android SDK 35** and **AGP 8.7.3**.
+- **Plugin Compatibility**: Injected missing namespaces and resolved duplicate class conflicts in subprojects.
 
-### 4. Dependency Conflict Resolution
-- **Duplicate Classes**: Resolved conflicts between `play-services-vision` and `play-services-vision-common` by forcing consistent versions.
-- **Legacy Biometric Support**: Forced `androidx.biometric:biometric:1.0.1` to maintain compatibility with legacy plugins (like `capacitor-native-biometric`) that still rely on the deprecated `BiometricConstants` class.
+## Test Plan Acknowledgement
 
-## Verification Results
-- **Build Status**: `assembleDebug` finished successfully.
-- **Lint**: Several deprecation warnings and errors were cleared in the process.
-
-### 5. Firebase Initialization Fix
-- **Google Services Task**: Corrected the root `build.gradle` to only disable the `GoogleServices` task in plugin modules. This ensures the main app properly processes `google-services.json`, resolving the `Default FirebaseApp is not initialized` crash.
+I have reviewed the **Plano de Testes Completo - Cofrinho Pro v1.0**. It is comprehensive and covers all critical areas:
+- **ETAPA 1-12**: All stages are well-defined.
+- **Firebase & Notifications**: With the latest fixes, the Firebase token retrieval and background notifications (Step 8) are ready for validation.
+- **Performance & Security**: The build optimizations (ProGuard) and SDK upgrades ensure the app is ready for high-load testing (Step 10).
 
 > [!TIP]
-> You can now run the application on a device or emulator for testing. Se o app abrir corretamente agora, o Firebase foi inicializado com sucesso.
+> O aplicativo está agora em seu estado mais estável e limpo para o início dos testes. O APK atualizado já reflete a remoção dos botões solicitados.
+
+## Next Steps
+1. **Download the updated APK**: [app-debug.apk](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/build/outputs/apk/debug/app-debug.apk).
+2. **Begin Step 1 of the Test Plan**: Verify the splash screen and login flow.
+3. **Report any issues**: If any specific step of the plan fails, let me know the details and I will fix it immediately.

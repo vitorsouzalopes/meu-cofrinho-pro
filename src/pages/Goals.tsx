@@ -42,8 +42,15 @@ const Goals = () => {
 
   const [name, setName] = useState("");
   const [targetAmount, setTargetAmount] = useState("");
-  const [monthlyAmount, setMonthlyAmount] = useState("");
+  const [deadline, setDeadline] = useState("");
   const [priority, setPriority] = useState("2");
+
+  const monthlyAmount = useMemo(() => {
+    const target = parseFloat(targetAmount);
+    const months = parseInt(deadline);
+    if (isNaN(target) || isNaN(months) || months <= 0) return 0;
+    return target / months;
+  }, [targetAmount, deadline]);
 
   const loadGoals = useCallback(async () => {
     if (!user) return;
@@ -106,12 +113,12 @@ const Goals = () => {
   };
 
   const saveGoal = async () => {
-    if (!user || !name || !targetAmount || !monthlyAmount) return;
+    if (!user || !name || !targetAmount || !deadline) return;
     const goalData: any = {
       user_id: user.id,
       name,
       target_amount: parseFloat(targetAmount),
-      monthly_amount: parseFloat(monthlyAmount),
+      monthly_amount: monthlyAmount,
       priority: parseInt(priority),
       current_amount: 0,
     };
@@ -316,10 +323,17 @@ const Goals = () => {
                 <Input type="number" value={targetAmount} onChange={(e) => setTargetAmount(e.target.value)} placeholder="0.00" className="bg-muted border-border h-12 px-4 rounded-xl" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Quanto por mês?</label>
-                <Input type="number" value={monthlyAmount} onChange={(e) => setMonthlyAmount(e.target.value)} placeholder="0.00" className="bg-muted border-border h-12 px-4 rounded-xl" />
+                <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Prazo (meses)</label>
+                <Input type="number" value={deadline} onChange={(e) => setDeadline(e.target.value)} placeholder="Ex: 12" className="bg-muted border-border h-12 px-4 rounded-xl" />
               </div>
             </div>
+
+            {monthlyAmount > 0 && (
+              <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl animate-in fade-in zoom-in duration-300">
+                <p className="text-[10px] uppercase font-bold text-primary mb-1">Para atingir essa meta:</p>
+                <p className="text-sm font-bold text-foreground">Guardar <span className="text-primary">{formatCurrency(monthlyAmount)}</span> por mês.</p>
+              </div>
+            )}
             <div className="space-y-1.5">
               <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Prioridade</label>
               <select title="Prioridade" value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full h-12 rounded-xl border border-border bg-muted px-4 text-sm text-foreground outline-none focus:border-primary">

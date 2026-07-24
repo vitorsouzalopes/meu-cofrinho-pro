@@ -169,14 +169,14 @@ export default function SimulacaoGlobal({
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <TrendingDown className="w-4 h-4 text-destructive" />
-                  <h4 className="font-semibold text-foreground">Avalanche</h4>
+                  <h4 className="font-semibold text-foreground">Foco em Juros</h4>
                   {melhor.tipo === 'estrategia' && melhor.estrategia === 'avalanche' && (
                     <span className="px-2 py-0.5 bg-destructive/20 text-destructive rounded text-xs font-bold">
-                      MELHOR
+                      MAIOR ECONOMIA
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">Maior taxa de juros primeiro</p>
+                <p className="text-xs text-muted-foreground">Prioriza dívidas mais caras</p>
               </div>
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </div>
@@ -215,14 +215,14 @@ export default function SimulacaoGlobal({
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <Zap className="w-4 h-4 text-emerald-accent" />
-                  <h4 className="font-semibold text-foreground">Snowball</h4>
+                  <h4 className="font-semibold text-foreground">Bola de Neve</h4>
                   {melhor.tipo === 'estrategia' && melhor.estrategia === 'snowball' && (
                     <span className="px-2 py-0.5 bg-emerald-accent/20 text-emerald-accent rounded text-xs font-bold">
-                      MELHOR
+                      RECOMENDADO
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">Menor saldo primeiro</p>
+                <p className="text-xs text-muted-foreground">Prioriza dívidas menores</p>
               </div>
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </div>
@@ -261,14 +261,14 @@ export default function SimulacaoGlobal({
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <Award className="w-4 h-4 text-gold" />
-                  <h4 className="font-semibold text-foreground">Fluxo de Caixa</h4>
+                  <h4 className="font-semibold text-foreground">Libera Saldo</h4>
                   {melhor.tipo === 'estrategia' && melhor.estrategia === 'fluxo-caixa' && (
                     <span className="px-2 py-0.5 bg-gold/20 text-gold rounded text-xs font-bold">
-                      MELHOR
+                      MAIOR FOLGA
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">Maior parcela liberada primeiro</p>
+                <p className="text-xs text-muted-foreground">Libera dinheiro livre mais rápido</p>
               </div>
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
             </div>

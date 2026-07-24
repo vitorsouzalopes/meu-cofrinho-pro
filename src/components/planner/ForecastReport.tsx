@@ -42,14 +42,14 @@ const monthYear = () => {
 };
 
 const STRATEGY_LABEL: Record<Strategy, string> = {
-  avalanche: "Avalanche (maior juro)",
-  snowball: "Snowball (menor saldo)",
-  smart: "Fluxo de Caixa (maior parcela)",
+  avalanche: "Foco em Juros (Rápido)",
+  snowball: "Bola de Neve (Menor Saldo)",
+  smart: "Libera Saldo (Fluxo de Caixa)",
 };
 
 const STRATEGY_SHORT_LABEL: Record<Strategy, string> = {
-  avalanche: "Avalanche",
-  snowball: "Snowball",
+  avalanche: "Juros",
+  snowball: "Bola de Neve",
   smart: "Fluxo de Caixa",
 };
 
@@ -309,7 +309,7 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
   );
 
   const selectedScenario = usage;
-  const selectedScenarioLabel = usage === "hard" ? "Hard" : "Mista";
+  const selectedScenarioLabel = usage === "hard" ? "Plano Acelerado" : "Plano Equilibrado";
   const totalSaldoDevedor = debts.reduce((s, d) => s + d.valorTotal, 0);
   const normalQuitacaoMeses = Math.max(0, ...debtSimulations.map((d) => d.normal.meses));
   const hardQuitacaoMeses = Math.max(0, ...debtSimulations.map((d) => d.hard.meses));
@@ -571,10 +571,10 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
       <Card className="p-5 bg-card border border-border">
         <h3 className="font-heading font-bold text-foreground mb-3 flex items-center gap-2">
           <Scale className="w-5 h-5 text-sky-accent" />
-          Comparação Hard x Mista
+          Planos de Quitação
         </h3>
         <p className="text-[11px] text-muted-foreground mb-3">
-          Simulação individual de todas as dívidas variando apenas o uso do saldo utilizável.
+          Simulação individual de todas as dívidas variando apenas o uso do seu Dinheiro Livre.
         </p>
         <Table>
           <TableHeader>
@@ -587,13 +587,13 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
           </TableHeader>
           <TableBody>
             <TableRow className={cn(usage === "hard" && "bg-emerald-accent/10")}>
-              <TableCell className="py-2 text-sm font-medium">Hard (90%)</TableCell>
+              <TableCell className="py-2 text-sm font-medium">Acelerado (90%)</TableCell>
               <TableCell className="py-2 text-right text-sm">{fmt(saldoUtilizavel * 0.9)}</TableCell>
               <TableCell className="py-2 text-right text-sm">{formatDuration(hardQuitacaoMeses)}</TableCell>
               <TableCell className="py-2 text-right text-sm text-emerald-accent">{fmt(hardEconomiaJuros)}</TableCell>
             </TableRow>
             <TableRow className={cn(usage === "mista" && "bg-sky-accent/10")}>
-              <TableCell className="py-2 text-sm font-medium">Mista (50%)</TableCell>
+              <TableCell className="py-2 text-sm font-medium">Equilibrado (50%)</TableCell>
               <TableCell className="py-2 text-right text-sm">{fmt(saldoUtilizavel * 0.5)}</TableCell>
               <TableCell className="py-2 text-right text-sm">{formatDuration(mistaQuitacaoMeses)}</TableCell>
               <TableCell className="py-2 text-right text-sm text-emerald-accent">{fmt(mistaEconomiaJuros)}</TableCell>
@@ -751,8 +751,8 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
                     </TableHeader>
                     <TableBody>
                       <ScenarioRow label="Normal" projection={debt.normal} />
-                      <ScenarioRow label="Hard" projection={debt.hard} highlight={selectedScenario === "hard"} />
-                      <ScenarioRow label="Mista" projection={debt.mista} highlight={selectedScenario === "mista"} />
+                      <ScenarioRow label="Acelerado" projection={debt.hard} highlight={selectedScenario === "hard"} />
+                      <ScenarioRow label="Equilibrado" projection={debt.mista} highlight={selectedScenario === "mista"} />
                     </TableBody>
                   </Table>
                 </div>
@@ -783,8 +783,8 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
               <TableRow>
                 <TableHead className="text-xs">Dívida</TableHead>
                 <TableHead className="text-xs text-right">Normal</TableHead>
-                <TableHead className="text-xs text-right">Hard</TableHead>
-                <TableHead className="text-xs text-right">Mista</TableHead>
+                <TableHead className="text-xs text-right">Acelerado</TableHead>
+                <TableHead className="text-xs text-right">Equilibrado</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

@@ -53,18 +53,20 @@ export function resolverContasDoMes(instancias: any[], templates: any[], current
 }
 
 /**
- * 💰 Cálculo de Totais (Regra Obrigatória)
+ * 💰 Cálculo de Totais (Regra: Salário -> Contas -> Dívidas -> Metas -> Dinheiro Livre)
  */
 export function calcularTotaisFinanceiros({
   salario = 0,
   extra = 0,
   contas = [],
-  dividas = []
+  dividas = [],
+  metas = []
 }: {
   salario?: number;
   extra?: number;
   contas?: any[];
   dividas?: any[];
+  metas?: any[];
 }) {
   const totalContas = contas
     .filter(c => c.tipo !== "divida" && c.billing_type !== "debt")
@@ -72,13 +74,17 @@ export function calcularTotaisFinanceiros({
 
   const totalDividas = dividas.reduce((s, d) => s + Number(d.valor || d.amount || d.parcelaMensal || 0), 0);
 
+  const totalMetas = metas.reduce((s, m) => s + Number(m.monthly_amount || m.valorMensal || 0), 0);
+
   const renda = Number(salario) + Number(extra);
-  const gastos = totalContas + totalDividas;
+  const gastosObrigatorios = totalContas + totalDividas;
+  const dinheiroLivre = renda - gastosObrigatorios - totalMetas;
 
   return {
     renda,
-    gastos,
-    disponivel: renda - gastos,
+    gastos: gastosObrigatorios,
+    totalMetas,
+    disponivel: dinheiroLivre, // Agora representa o "Dinheiro Livre"
     totalContas,
     totalDividas
   };

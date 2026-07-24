@@ -1,3 +1,7 @@
-- [x] Fix root `build.gradle` to enable `GoogleServices` task for `:app`
-- [x] Verify build with `:app:assembleDebug`
-- [x] Re-generate APK for testing
+- [x] Update `finance-utils.ts` logic
+- [x] Refactor `Today.tsx` (Dashboard) for "Simple Mode"
+- [x] Update `Goals.tsx` with auto-calculation (Deadline instead of monthly value)
+- [/] Simplify `DebtPlanner.tsx` (or equivalent debt components)
+- [ ] Create `AIConsultant.tsx` page
+- [ ] Apply terminology changes globally
+- [ ] Add Premium restrictions for advanced features

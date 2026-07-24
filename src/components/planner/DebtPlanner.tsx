@@ -214,14 +214,14 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
         </div>
         <div className="grid grid-cols-2 gap-2 mt-3 text-[10px]">
           <div className="bg-destructive/10 rounded-lg p-2 border border-destructive/20">
-            <p className="font-bold text-destructive flex items-center gap-1"><Flame className="w-3 h-3" /> HARD (+90% sobra)</p>
+            <p className="font-bold text-destructive flex items-center gap-1"><Flame className="w-3 h-3" /> ACELERADO (+90% sobra)</p>
             <p className="text-foreground font-bold mt-0.5">+{formatBRL(estrategiaHard(rendaDisponivel))}/mês</p>
-            <p className="text-[9px] text-muted-foreground mt-0.5">extra somado à parcela</p>
+            <p className="text-[9px] text-muted-foreground mt-0.5">pagamento máximo</p>
           </div>
           <div className="bg-amber-500/10 rounded-lg p-2 border border-amber-500/20">
-            <p className="font-bold text-amber-500 flex items-center gap-1"><Scale className="w-3 h-3" /> MISTA (+50% sobra)</p>
+            <p className="font-bold text-amber-500 flex items-center gap-1"><Scale className="w-3 h-3" /> EQUILIBRADO (+50% sobra)</p>
             <p className="text-foreground font-bold mt-0.5">+{formatBRL(estrategiaMista(rendaDisponivel))}/mês</p>
-            <p className="text-[9px] text-muted-foreground mt-0.5">extra somado à parcela</p>
+            <p className="text-[9px] text-muted-foreground mt-0.5">pagamento extra</p>
           </div>
         </div>
         <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
@@ -388,22 +388,21 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
                     {/* Estratégias */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <div className="bg-muted/50 rounded-xl p-3">
-                        <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Atual</p>
-                        <p className="text-xs">{isFinite(simAtual.meses) ? `${simAtual.meses} meses` : "—"}</p>
-                        <p className="text-[11px] text-muted-foreground mt-1">Juros: {formatBRL(simAtual.totalJuros)}</p>
+                        <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Pagamento Normal</p>
+                        <p className="text-xs">{isFinite(simAtual.meses) ? `Termina em ${simAtual.meses} meses` : "—"}</p>
+                        <p className="text-[11px] text-muted-foreground mt-1">Juros totais: {formatBRL(simAtual.totalJuros)}</p>
                       </div>
                       <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-3">
-                        <p className="text-[10px] uppercase font-bold text-destructive flex items-center gap-1"><Flame className="w-3 h-3" /> Hard</p>
-                        <p className="text-xs font-bold">{simHard.meses} meses · {formatBRL(pagamentoHard)}/mês</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{formatBRL(localDebt.parcela_mensal)} parcela + {formatBRL(extraHard)} extra</p>
-                        <p className="text-[11px] text-emerald-500 mt-1">Economia: {formatBRL(Math.max(0, economiaHard))}</p>
+                        <p className="text-[10px] uppercase font-bold text-destructive flex items-center gap-1"><Flame className="w-3 h-3" /> Plano Acelerado</p>
+                        <p className="text-xs font-bold">Termina em {simHard.meses} meses</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Pagar {formatBRL(pagamentoHard)}/mês</p>
+                        <p className="text-[11px] text-emerald-500 mt-1">Economia de Juros: {formatBRL(Math.max(0, economiaHard))}</p>
                       </div>
                       <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
-                        <p className="text-[10px] uppercase font-bold text-amber-500 flex items-center gap-1"><Scale className="w-3 h-3" /> Mista</p>
-                        <p className="text-xs font-bold">{simMista.meses} meses · {formatBRL(pagamentoMista)}/mês</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{formatBRL(localDebt.parcela_mensal)} parcela + {formatBRL(extraMista)} extra</p>
-                        <p className="text-[11px] text-emerald-500 mt-1">Sobra: {formatBRL(sobraMista)}</p>
-                        <p className="text-[11px] text-emerald-500">Economia: {formatBRL(Math.max(0, economiaMista))}</p>
+                        <p className="text-[10px] uppercase font-bold text-amber-500 flex items-center gap-1"><Scale className="w-3 h-3" /> Plano Equilibrado</p>
+                        <p className="text-xs font-bold">Termina em {simMista.meses} meses</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Pagar {formatBRL(pagamentoMista)}/mês</p>
+                        <p className="text-[11px] text-emerald-500 mt-1">Economia de Juros: {formatBRL(Math.max(0, economiaMista))}</p>
                       </div>
                     </div>
 

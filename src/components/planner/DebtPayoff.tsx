@@ -248,12 +248,12 @@ export default function DebtPayoff({ initialIncome = 0, initialExpenses = 0 }: {
               <div className="absolute top-0 right-0 p-2 bg-destructive/10 rounded-bl-lg">
                 <Flame className="w-4 h-4 text-destructive" />
               </div>
-              <h3 className="font-bold text-destructive mb-1">Estratégia HARD</h3>
-              <p className="text-xs text-muted-foreground mb-4">Todo o dinheiro disponível vai para a dívida.</p>
+              <h3 className="font-bold text-destructive mb-1">Plano Acelerado</h3>
+              <p className="text-xs text-muted-foreground mb-4">Todo o seu Dinheiro Livre vai para a dívida.</p>
               
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tempo estimado:</span>
+                  <span className="text-muted-foreground">Termina em:</span>
                   <span className="font-semibold text-foreground">{formatMonths(hardResult.months)}</span>
                 </div>
                 <div className="flex justify-between">
@@ -268,7 +268,7 @@ export default function DebtPayoff({ initialIncome = 0, initialExpenses = 0 }: {
 
               <div className="mt-4 p-2 bg-destructive/5 rounded border border-destructive/20">
                 <p className="text-xs text-destructive">
-                  Você quita mais rápido e paga menos juros, mas <span className="font-bold">abre mão de qualquer folga financeira</span>.
+                  Você quita mais rápido e economiza juros, mas <span className="font-bold">não sobra dinheiro livre no mês</span>.
                 </p>
               </div>
 
@@ -312,12 +312,12 @@ export default function DebtPayoff({ initialIncome = 0, initialExpenses = 0 }: {
               <div className="absolute top-0 right-0 p-2 bg-sky-accent/10 rounded-bl-lg">
                 <Scale className="w-4 h-4 text-sky-accent" />
               </div>
-              <h3 className="font-bold text-sky-accent mb-1">Estratégia MISTA</h3>
-              <p className="text-xs text-muted-foreground mb-4">60% para dívida, 40% para folga e reserva.</p>
+              <h3 className="font-bold text-sky-accent mb-1">Plano Equilibrado</h3>
+              <p className="text-xs text-muted-foreground mb-4">Parte para a dívida, parte vira Dinheiro Livre.</p>
               
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tempo estimado:</span>
+                  <span className="text-muted-foreground">Termina em:</span>
                   <span className="font-semibold text-foreground">{formatMonths(mixedResult.months)}</span>
                 </div>
                 <div className="flex justify-between">
@@ -329,14 +329,14 @@ export default function DebtPayoff({ initialIncome = 0, initialExpenses = 0 }: {
                   <span className="font-medium text-foreground">{mixedResult.totalPaid === Infinity ? "—" : formatCurrency(mixedResult.totalPaid)}</span>
                 </div>
                 <div className="pt-2 border-t border-border flex justify-between">
-                  <span className="text-muted-foreground">Livre Mensal:</span>
+                  <span className="text-muted-foreground">Dinheiro Livre:</span>
                   <span className="font-medium text-emerald-accent">{formatCurrency(mixedLeftover)}</span>
                 </div>
               </div>
 
               <div className="mt-4 p-2 bg-sky-accent/5 rounded border border-sky-accent/20">
                 <p className="text-xs text-sky-accent">
-                  Você mantém qualidade de vida e guarda <span className="font-bold">{formatCurrency(mixedSaved)}/mês</span>, mas <span className="font-bold">paga {formatCurrency((mixedResult.totalPaid === Infinity || hardResult.totalPaid === Infinity) ? 0 : mixedResult.totalPaid - hardResult.totalPaid)} a mais em juros</span>.
+                  Você mantém qualidade de vida e ainda tem <span className="font-bold">{formatCurrency(mixedLeftover)}/mês</span> de dinheiro livre.
                 </p>
               </div>
 

@@ -39,6 +39,16 @@ const ProfilePage = () => {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportMonth, setExportMonth] = useState(new Date().toISOString().slice(0, 7));
   const [isAdmin, setIsAdmin] = useState(false);
+  const [uiMode, setUiMode] = useState<"simple" | "advanced">(() =>
+    (localStorage.getItem("cofrinho:ui_mode") as any) || "simple"
+  );
+
+  const toggleUiMode = () => {
+    const next = uiMode === "simple" ? "advanced" : "simple";
+    setUiMode(next);
+    localStorage.setItem("cofrinho:ui_mode", next);
+    toast({ title: `Modo ${next === "simple" ? "Simples" : "Avançado"} ativado!` });
+  };
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -167,94 +177,6 @@ const ProfilePage = () => {
     toast({ title: "✅ CSV exportado com sucesso!" });
   };
 
-  const limparDadosAutoGerados = async () => {
-    if (!user) return;
-    const confirmed = window.confirm(
-      "Isso vai deletar do banco todas as contas do mês atual que foram geradas automaticamente (e ainda não foram pagas). Contas pagas e as que você criou manualmente sem vínculo a template serão preservadas. Deseja continuar?"
-    );
-    if (!confirmed) return;
-
-    const today = new Date();
-    const currentMonthYear = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-
-    const { error, count } = await supabase
-      .from("accounts")
-      .delete({ count: "exact" })
-      .eq("user_id", user.id)
-      .eq("is_template", false)
-      .eq("month_year", currentMonthYear)
-      .eq("paid", false)
-      .not("parent_id", "is", null);
-
-    if (error) {
-      toast({ title: "Erro ao limpar", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: `✅ ${count ?? 0} registro(s) removido(s) com sucesso!` });
-      window.dispatchEvent(new CustomEvent("finance-data-updated"));
-      loadData();
-    }
-  };
-
-  // Apaga TODOS os objetivos do usuário
-  const limparObjetivos = async () => {
-    if (!user) return;
-    if (!window.confirm("⚠️ Isso vai APAGAR TODOS os seus objetivos permanentemente. Deseja continuar?")) return;
-
-    const { error, count } = await supabase
-      .from("goals" as any)
-      .delete({ count: "exact" })
-      .eq("user_id", user.id);
-
-    if (error) {
-      toast({ title: "Erro ao limpar objetivos", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: `🗑️ ${count ?? 0} objetivo(s) removido(s)!` });
-      window.dispatchEvent(new CustomEvent("finance-data-updated"));
-      loadData();
-    }
-  };
-
-  // Apaga TODAS as dívidas (templates + instâncias)
-  const limparDividasAtivas = async () => {
-    if (!user) return;
-    if (!window.confirm("⚠️ Isso vai APAGAR TODAS as dívidas (templates e instâncias mensais). Deseja continuar?")) return;
-
-    // 1. Pega os IDs dos templates de dívida
-    const { data: debtTemplates } = await supabase
-      .from("accounts")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("is_template", true)
-      .eq("billing_type", "debt");
-
-    const templateIds = (debtTemplates ?? []).map((t: any) => t.id);
-
-    // 2. Apaga instâncias filhas das dívidas
-    if (templateIds.length > 0) {
-      await supabase
-        .from("accounts")
-        .delete()
-        .eq("user_id", user.id)
-        .in("parent_id", templateIds);
-    }
-
-    // 3. Apaga os templates de dívida
-    const { error, count } = await supabase
-      .from("accounts")
-      .delete({ count: "exact" })
-      .eq("user_id", user.id)
-      .eq("is_template", true)
-      .eq("billing_type", "debt");
-
-    if (error) {
-      toast({ title: "Erro ao limpar dívidas", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: `🗑️ ${count ?? 0} dívida(s) removida(s)!` });
-      window.dispatchEvent(new CustomEvent("finance-data-updated"));
-      loadData();
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -347,6 +269,7 @@ const ProfilePage = () => {
       <div className="space-y-1 mb-10 animate-slide-up" style={{ animationDelay: "0.3s" }}>
         {[
           { icon: <Clock className="w-5 h-5" />, label: "Histórico Completo", onClick: () => navigate("/history") },
+          { icon: uiMode === "simple" ? <Sparkles className="w-5 h-5" /> : <Settings className="w-5 h-5" />, label: `Modo: ${uiMode === "simple" ? "Simples (Fácil)" : "Avançado (Completo)"}`, onClick: toggleUiMode, color: "text-primary" },
           { icon: <Settings className="w-5 h-5" />, label: "Configurações da conta", onClick: () => setEditing(true) },
           { icon: <Bell className="w-5 h-5" />, label: "Notificações Push", onClick: () => navigate("/telegram") },
           { icon: <Target className="w-5 h-5" />, label: "Metas Financeiras", onClick: () => navigate("/goals") },
@@ -354,9 +277,6 @@ const ProfilePage = () => {
           { icon: <HelpCircle className="w-5 h-5" />, label: "Ajuda e Suporte", onClick: () => setHelpOpen(true) },
           ...(isAdmin ? [
             { icon: <RefreshCcw className="w-5 h-5" />, label: "Sincronizar Mês", onClick: loadData },
-            { icon: <Trash2 className="w-5 h-5" />, label: "Limpar Dados Auto-Gerados do Mês", onClick: limparDadosAutoGerados, color: "text-amber-500" },
-            { icon: <Trash2 className="w-5 h-5" />, label: "Apagar Todos os Objetivos", onClick: limparObjetivos, color: "text-destructive" },
-            { icon: <Trash2 className="w-5 h-5" />, label: "Apagar Todas as Dívidas Ativas", onClick: limparDividasAtivas, color: "text-destructive" },
           ] : []),
           { icon: <LogOut className="w-5 h-5" />, label: "Logout", onClick: handleSignOut, color: "text-destructive" },
         ].map((item, i) => (
