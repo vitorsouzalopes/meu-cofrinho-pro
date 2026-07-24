@@ -60,7 +60,7 @@ subprojects {
                     }
                 }
             }
-            if (project.plugins.hasPlugin('com.google.gms.google-services')) {
+            if (project.plugins.hasPlugin('com.google.gms.google-services') && project.name != 'app') {
                 project.tasks.matching { it.name.contains('GoogleServices') }.configureEach {
                     enabled = false
                 }

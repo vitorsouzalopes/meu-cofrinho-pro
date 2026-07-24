@@ -28,5 +28,8 @@ The application build is now successful and modernized. Several critical issues 
 - **Build Status**: `assembleDebug` finished successfully.
 - **Lint**: Several deprecation warnings and errors were cleared in the process.
 
+### 5. Firebase Initialization Fix
+- **Google Services Task**: Corrected the root `build.gradle` to only disable the `GoogleServices` task in plugin modules. This ensures the main app properly processes `google-services.json`, resolving the `Default FirebaseApp is not initialized` crash.
+
 > [!TIP]
-> You can now run the application on a device or emulator for testing. If you encounter any runtime issues with specific plugins, they might need a proper update via `npm`, but the build system is now fully aligned.
+> You can now run the application on a device or emulator for testing. Se o app abrir corretamente agora, o Firebase foi inicializado com sucesso.
