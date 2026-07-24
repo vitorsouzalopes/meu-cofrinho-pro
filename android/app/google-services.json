@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "69071518647",
+    "project_id": "cofrinho-pro",
+    "storage_bucket": "cofrinho-pro.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:69071518647:android:ffe36a081b427a71e88632",
+        "android_client_info": {
+          "package_name": "com.meucofrinho.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAhU9OdhWZ4bn0FNCegbJDxXxQJT8bNnWc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
