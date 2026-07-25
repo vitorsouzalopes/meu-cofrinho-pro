@@ -12,6 +12,7 @@ import { Capacitor } from "@capacitor/core";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [isResetPassword, setIsResetPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -32,6 +33,24 @@ const Auth = () => {
     };
     checkBio();
   }, []);
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast({ title: "Email enviado", description: "Verifique sua caixa de entrada para redefinir sua senha." });
+      setIsResetPassword(false);
+      setIsLogin(true);
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleBiometricLogin = async () => {
     const success = await authenticateBiometric();
@@ -101,6 +120,43 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  if (isResetPassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="w-full max-w-sm space-y-6">
+          <div className="text-center space-y-3">
+             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto shadow-xl">
+                <Mail className="w-8 h-8 text-primary" />
+             </div>
+             <h1 className="text-2xl font-bold text-foreground">Recuperar Senha</h1>
+             <p className="text-sm text-muted-foreground">Enviaremos um link de acesso para o seu email.</p>
+          </div>
+
+          <form onSubmit={handleResetPassword} className="glass-card p-6 space-y-4">
+            <div className="relative">
+              <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+              <Input
+                type="email"
+                placeholder="Seu email cadastrado"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="pl-10"
+                required
+              />
+            </div>
+            <Button variant="gold" className="w-full h-12 font-bold" type="submit" disabled={loading}>
+              {loading ? "Enviando..." : "Enviar Link de Recuperação"}
+              <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+            <Button variant="ghost" className="w-full" onClick={() => setIsResetPassword(false)}>
+              Voltar para Login
+            </Button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
@@ -173,7 +229,20 @@ const Auth = () => {
               minLength={6}
             />
           </div>
-          <Button variant="gold" className="w-full" type="submit" disabled={loading}>
+
+          {isLogin && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsResetPassword(true)}
+                className="text-xs text-muted-foreground hover:text-primary font-medium"
+              >
+                Esqueci minha senha
+              </button>
+            </div>
+          )}
+
+          <Button variant="gold" className="w-full h-12 font-bold" type="submit" disabled={loading}>
             {loading ? "Carregando..." : isLogin ? "Entrar" : "Criar Conta"}
             <ArrowRight className="w-4 h-4" />
           </Button>
@@ -182,7 +251,7 @@ const Auth = () => {
             <Button
               type="button"
               variant="outline"
-              className="w-full border-gold/30 text-gold"
+              className="w-full h-12 border-gold/30 text-gold"
               onClick={handleBiometricLogin}
               disabled={loading}
             >

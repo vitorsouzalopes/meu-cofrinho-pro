@@ -1,6 +1,6 @@
-- [ ] Update `Profile.tsx` (remove unused `Trash2` import)
-- [ ] Improve error handling in `TelegramSettings.tsx`
-- [ ] Run `npm run build`
-- [ ] Run `npx cap copy android`
-- [ ] Generate new APK via `assembleDebug`
-- [ ] Verify if buttons are finally gone from the resulting bundle
+- [x] Update `native-push.ts` to return permission status
+- [x] Create `NotificationWall.tsx` component
+- [x] Create `ResetPassword.tsx` page
+- [x] Update `App.tsx` (Routes & Notification check)
+- [x] Refactor `Auth.tsx` (Login, Signup, Reset Password)
+- [x] Build and verify (Resolved Kotlin/AdMob compilation issues)

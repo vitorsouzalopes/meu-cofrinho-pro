@@ -61,12 +61,38 @@ const NotificationsSettings = () => {
       return;
     }
     toast({ title: "Enviando teste..." });
-    const { data, error } = await supabase.functions.invoke("send-fcm", {
-      body: { user_id: user.id, title, body, url: "/", force: true },
-    });
-    if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
-    else if (!data?.ok) toast({ title: "Erro", description: data?.error || "Falha", variant: "destructive" });
-    else toast({ title: "✅ Push enviado!" });
+    try {
+      const { data, error } = await supabase.functions.invoke("send-fcm", {
+        body: { user_id: user.id, title, body, url: "/", force: true },
+      });
+
+      if (error) {
+        console.error("FCM Test Error:", error);
+        toast({
+          title: "Erro na Edge Function",
+          description: error.message || "A função retornou um erro inesperado.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!data?.ok) {
+        toast({
+          title: "Falha no Envio",
+          description: data?.error || "O servidor não conseguiu processar o push.",
+          variant: "destructive"
+        });
+      } else {
+        toast({ title: "✅ Push enviado!" });
+      }
+    } catch (e: any) {
+      console.error("FCM Exception:", e);
+      toast({
+        title: "Erro de Conexão",
+        description: "Não foi possível conectar ao servidor de notificações.",
+        variant: "destructive"
+      });
+    }
   };
 
   if (loading) {

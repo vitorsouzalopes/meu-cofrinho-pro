@@ -30,6 +30,8 @@ import Goals from "./pages/Goals.tsx";
 import Planner from "./pages/Planner.tsx";
 import VidaFit from "./pages/VidaFit.tsx";
 import AIConsultant from "./pages/AIConsultant.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
+import NotificationWall from "./components/NotificationWall.tsx";
 import UpdateModal from "./components/UpdateModal";
 import { CURRENT_VERSION } from "./constants/version";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,6 +40,14 @@ const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
+  const [pushStatus, setPushStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (session?.user) {
+      registerNativePush(session.user.id).then(res => setPushStatus(res.status));
+    }
+  }, [session]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -46,6 +56,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   if (!session) return <Navigate to="/auth" replace />;
+
+  if (Capacitor.isNativePlatform() && pushStatus && pushStatus !== 'granted') {
+    return <NotificationWall onRetry={() => window.location.reload()} />;
+  }
+
   return <>{children}</>;
 };
 
@@ -75,6 +90,7 @@ const AppRoutes = () => (
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
     <Route path="/vidafit" element={<ProtectedRoute><VidaFit /></ProtectedRoute>} />
     <Route path="/ai-consultant" element={<ProtectedRoute><AIConsultant /></ProtectedRoute>} />
+    <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/download" element={<Download />} />
     <Route path="*" element={<NotFound />} />
   </Routes>

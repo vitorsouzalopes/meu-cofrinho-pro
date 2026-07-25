@@ -1,40 +1,41 @@
-# Correção de Sincronização de Build e Erro de Push
+# Notificações Obrigatórias e Recuperação de Senha
 
-Identificamos que os botões administrativos (Limpar Dados, etc.) ainda aparecem no APK porque o build do frontend (Vite) não foi atualizado antes da geração do APK. Além disso, vamos investigar e tratar o erro na função de push.
+Este plano visa implementar duas funcionalidades críticas de segurança e engajamento: a obrigatoriedade de notificações push para uso do app e o fluxo de recuperação de senha via Supabase.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> Vou forçar uma reconstrução completa do aplicativo (Frontend + Capacitor + Android) para garantir que as remoções de código que fizemos estejam presentes no seu dispositivo.
+> **Notificações**: Se o usuário negar a permissão, ele ficará em uma tela de bloqueio.
+> **Recuperação de Senha**: O link de reset enviado por e-mail precisará redirecionar o usuário de volta para o app ou para a URL de produção (Deep Link).
 
 ## Proposta de Mudanças
 
-### [Build & Sincronização]
+### [Autenticação e Recuperação]
 
-#### [ACTION] Reconstrução Completa
-1. Executar `npm run build` para atualizar os arquivos em `dist/`.
-2. Executar `npx cap copy android` para sincronizar o código novo com o projeto nativo.
-3. Gerar um novo APK.
+#### [MODIFY] [Auth.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Auth.tsx)
+- Adicionar estado `isResetPassword` para mostrar o formulário de "Esqueci minha senha".
+- Implementar `supabase.auth.resetPasswordForEmail` para enviar o link de recuperação.
+- Adicionar link "Esqueci minha senha" abaixo do formulário de Login.
 
-### [Notificações Push]
-
-#### [MODIFY] [TelegramSettings.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/TelegramSettings.tsx)
-- Melhorar o tratamento de erro no `triggerTest`.
-- Adicionar logs para identificar se o erro vem de falta de permissão ou falha na Edge Function.
+#### [NEW] [ResetPassword.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/ResetPassword.tsx)
+- Criar página para definir a nova senha após o usuário clicar no link do e-mail.
 
 ---
 
-### [Limpeza de Código]
+### [Notificações Push Obrigatórias]
 
-#### [MODIFY] [Profile.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Profile.tsx)
-- Remover importação não utilizada do ícone `Trash2`.
+#### [MODIFY] [native-push.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/lib/native-push.ts)
+- Retornar o status da permissão para controle da UI.
+
+#### [NEW] [NotificationWall.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/components/NotificationWall.tsx)
+- Tela de bloqueio que explica a necessidade das notificações e oferece link para as configurações do sistema.
+
+#### [MODIFY] [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx)
+- Adicionar a rota `/reset-password`.
+- Integrar a verificação de notificações no fluxo global do app.
 
 ## Plano de Verificação
 
-### Automated Tests
-- Validar se o comando de build do Vite termina com sucesso.
-- Gerar o APK e verificar o log de compilação.
-
 ### Manual Verification
-- Instalar o novo APK e confirmar que os botões "Limpar Dados..." sumiram.
-- Tentar enviar o push de teste e observar os novos logs/mensagens de erro.
+- **Recuperação**: Solicitar reset -> Receber e-mail -> Clicar no link -> Alterar senha -> Logar com nova senha.
+- **Notificações**: Negar permissão -> Ver tela de bloqueio -> Ativar nas configurações -> Ver app liberado.
