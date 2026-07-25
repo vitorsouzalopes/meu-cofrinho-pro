@@ -9,6 +9,7 @@ android {
 
 apply from: "../capacitor-cordova-android-plugins/cordova.variables.gradle"
 dependencies {
+    implementation 'com.google.android.gms:play-services-ads:25.4.0'
     implementation 'com.google.firebase:firebase-config:23.1.0'
     implementation 'com.google.firebase:firebase-inappmessaging-display:22.0.3'
     implementation 'com.google.firebase:firebase-perf:22.0.6'
