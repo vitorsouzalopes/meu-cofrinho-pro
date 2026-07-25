@@ -1,5 +1,5 @@
-- [ ] Add missing colors to `colors.xml`
-- [ ] Fix resource references in `styles.xml`
-- [ ] Update `capacitor.config.ts` with SplashScreen settings
-- [ ] Generate native assets (Icon & Splash) using Capacitor Assets
-- [ ] Final build and APK generation
+- [x] Add missing colors to `colors.xml` (Branding colors)
+- [x] Fix resource references in `styles.xml` (Window background fix)
+- [x] Update `capacitor.config.ts` with SplashScreen settings
+- [x] Fix duplicate resource conflicts in Android project
+- [x] Build APK with updated branding and stability fixes
