@@ -286,6 +286,8 @@ const ProfilePage = () => {
           { icon: <HelpCircle className="w-5 h-5" />, label: "Ajuda e Suporte", onClick: () => setHelpOpen(true) },
           ...(isAdmin ? [
             { icon: <RefreshCcw className="w-5 h-5" />, label: "Sincronizar Mês", onClick: loadData },
+            { icon: <Sparkles className="w-5 h-5" />, label: "Testar Anúncio (Intersticial)", onClick: showInterstitialAd, color: "text-amber-500" },
+            { icon: <Bell className="w-5 h-5" />, label: "Testar Push (Ir para Menu)", onClick: () => navigate("/telegram"), color: "text-blue-500" },
           ] : []),
           { icon: <LogOut className="w-5 h-5" />, label: "Logout", onClick: handleSignOut, color: "text-destructive" },
         ].map((item, i) => (

@@ -1,5 +1,6 @@
-- [x] Restrict access to `AIConsultant.tsx` for non-premium users
-- [x] Add Premium/Free status badge to `Profile.tsx`
-- [x] Final verification of "Dinheiro Livre" calculation in `Today.tsx`
-- [x] Ensure nomenclature consistency in `DebtPlanner.tsx` and `ForecastReport.tsx`
-- [x] Run build and verify no regressions
+- [x] Add AdMob App ID to `AndroidManifest.xml`
+- [x] Install `@capacitor-community/admob` dependency
+- [x] Implement `src/lib/ads.ts` for AdMob management
+- [x] Add "Testar Anúncio" button to `Profile.tsx` for admins
+- [x] Add Banner support to `Today.tsx` for free users
+- [x] Re-sync Capacitor and build new APK

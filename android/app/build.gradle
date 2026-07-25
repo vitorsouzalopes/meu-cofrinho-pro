@@ -72,11 +72,6 @@ apply plugin: 'com.google.firebase.firebase-perf'
 apply plugin: 'com.google.firebase.appdistribution'
 apply plugin: 'com.google.gms.google-services'
 
-try {
-    def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
-        apply plugin: 'com.google.gms.google-services'
-    }
-} catch(Exception ignore) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+if (!file('google-services.json').exists()) {
+    logger.info("google-services.json not found. Push Notifications won't work")
 }

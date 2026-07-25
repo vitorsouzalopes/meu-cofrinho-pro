@@ -157,6 +157,20 @@ const Today = () => {
     return () => window.removeEventListener("finance-data-updated", handleSync);
   }, [user?.id, fetchData]);
 
+  // Ads initialization
+  useEffect(() => {
+    const handleAds = async () => {
+      await initializeAds();
+      if (!premiumLoading && !isPremium) {
+        showBannerAd();
+      } else {
+        hideBannerAd();
+      }
+    };
+    handleAds();
+    return () => { hideBannerAd(); };
+  }, [isPremium, premiumLoading]);
+
   const totais = useMemo(() => {
     const totalExtra = extraIncomes.reduce((s, e) => s + Number(e.amount), 0);
     const dividasParaSoma = debts.map((d: any) => ({ amount: d.parcela_mensal }));

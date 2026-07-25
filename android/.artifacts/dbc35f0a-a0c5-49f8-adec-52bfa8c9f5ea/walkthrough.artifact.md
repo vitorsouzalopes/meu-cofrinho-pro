@@ -1,32 +1,33 @@
-# Walkthrough - Restrição Premium e Validação de Fluxo
+# Walkthrough - Integração de Anúncios e Facilitação de Testes
 
-Concluí a implementação das restrições de acesso e validei o fluxo completo da aplicação v1.0. Agora o sistema distingue corretamente entre usuários Free e Pro, protegendo as funcionalidades de inteligência artificial.
+A integração com o **Google AdMob** foi concluída e o sistema de testes foi simplificado para permitir a validação rápida de anúncios e notificações push no ambiente Android.
 
 ## Alterações Realizadas
 
-### 1. Restrição do Consultor IA (Premium)
-- **Bloqueio de Acesso**: A página [AIConsultant.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/AIConsultant.tsx) agora utiliza o hook `usePremium`.
-- **Interface de Upgrade**: Usuários sem plano Pro visualizam um card explicativo sobre os benefícios Premium e um botão de ação para a página de assinatura, em vez da interface de chat.
-- **Consultoria Protegida**: A ferramenta "Posso comprar?" está agora 100% restrita a assinantes.
+### 1. Configuração do Google AdMob
+- **Manifesto**: Adicionado o ID de Aplicativo de Teste ao `AndroidManifest.xml`.
+- **Plugin**: Instalada a dependência `@capacitor-community/admob` para controle programático dos anúncios.
+- **Utilitário de Ads**: Criado o arquivo [ads.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/lib/ads.ts) para gerenciar inicialização, banners e anúncios tela-cheia (intersticiais).
 
-### 2. Identificação de Status no Perfil
-- Adicionado um badge visual no cabeçalho da página de [Perfil](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Profile.tsx):
-    - **Pro Member**: Para assinantes e administradores.
-    - **Free Plan**: Para usuários regulares.
+### 2. Monetização Inteligente (Today.tsx)
+- O Dashboard ([Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)) agora verifica automaticamente se o usuário é Premium.
+- **Usuários Free**: Visualizam um banner publicitário no rodapé (acima da navegação).
+- **Usuários Pro**: Têm o banner removido automaticamente para uma experiência limpa.
 
-### 3. Padronização de Nomenclatura
-- Substituídos termos técnicos remanescentes por uma linguagem mais amigável ao usuário:
-    - "Estratégias de Distribuição" ➔ **"Seu planejamento"**.
-    - "Distribuição da Renda" (no PDF) ➔ **"Seu planejamento de Renda"**.
+### 3. Atalhos de Teste para Admin (Profile.tsx)
+- Adicionados botões exclusivos para administradores no menu de [Perfil](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Profile.tsx):
+    - **Testar Anúncio (Intersticial)**: Dispara imediatamente um anúncio de tela cheia para validar a conexão com o AdMob.
+    - **Testar Push**: Atalho para a tela de notificações onde o botão de teste de servidor está localizado.
 
-### 4. Validação da Lógica "Dinheiro Livre"
-- Verificado que o Dashboard ([Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)) exibe o cálculo em cascata corretamente:
-    - `Dinheiro Livre = (Salário + Extras) - Contas - Dívidas - Reserva de Metas`.
+## Como Testar no Dispositivo
 
-## Resultados dos Testes
-- **Compilação**: O build do APK (`assembleDebug`) foi concluído com sucesso.
-- **Navegação**: O fluxo de "Modo Simples" vs "Modo Avançado" está persistindo corretamente no `localStorage`.
-- **Segurança**: Admins (como você) continuam tendo acesso Pro automático para fins de teste.
+1.  **Anúncio**: Abra o Perfil e clique em "Testar Anúncio". Um anúncio de teste da Google deve cobrir a tela.
+2.  **Banner**: No Dashboard, se sua conta for identificada como "Free Plan" (pode testar alterando seu status no Supabase ou usando uma conta nova), o banner aparecerá no rodapé.
+3.  **Notificações**: Vá em Notificações (pelo atalho no Perfil) e clique em "Enviar Push de Teste". Você deve receber o alerta no sistema Android em poucos segundos.
 
-> [!TIP]
-> O aplicativo está agora pronto para a fase de testes beta. O próximo passo recomendado é realizar uma simulação real de meta (ex: notebook em 10 meses) e ver como o "Dinheiro Livre" se comporta no dia a dia.
+> [!WARNING]
+> Os anúncios exibidos são de **Teste**. Lembre-se de substituir o ID no console AdMob e no `AndroidManifest.xml` antes de subir o app oficialmente para a Google Play Store.
+
+## Resultado do Build
+- **APK Gerado**: [app-debug.apk](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/build/outputs/apk/debug/app-debug.apk).
+- **Status**: Compilação concluída sem avisos de compatibilidade.

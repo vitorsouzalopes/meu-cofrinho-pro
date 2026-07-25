@@ -1,43 +1,42 @@
-# Teste de Fluxo Completo e Restrição Premium
+# Configuração e Teste de Anúncios (AdMob) e Notificações Push
 
-Este plano visa validar as novas funcionalidades (Modo Simples, Dinheiro Livre, Metas) e garantir que o acesso ao Consultor IA e outras funções avançadas esteja corretamente restrito ao plano Premium.
+Este plano visa habilitar a exibição de anúncios via Google AdMob e facilitar o teste tanto de anúncios quanto de notificações push no ambiente nativo Android.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> Atualmente, o acesso ao Consultor IA está aberto para todos os usuários. Vou implementar uma trava que redireciona usuários gratuitos para a página de upgrade, permitindo apenas Admins e assinantes Premium.
+> Vou configurar o AdMob com um **ID de Aplicativo de Teste** da Google (`ca-app-pub-3940256099942544~3347511713`). Quando você for para produção, precisará substituir este ID no `AndroidManifest.xml` pelo seu ID real do console AdMob.
 
 ## Proposta de Mudanças
 
-### [Premium & Restrições]
+### [Anúncios - AdMob]
 
-#### [MODIFY] [AIConsultant.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/AIConsultant.tsx)
-- Integrar o hook `usePremium`.
-- Se o usuário não for Premium, exibir um card de bloqueio com link para a página `/premium` em vez da interface de chat.
+#### [MODIFY] [AndroidManifest.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/AndroidManifest.xml)
+- Adicionar o `meta-data` obrigatório para o Google Ads dentro da tag `<application>`.
 
-#### [MODIFY] [Profile.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Profile.tsx)
-- Adicionar um badge visual de "Pro" ou "Free" no cabeçalho do perfil para que o usuário saiba seu status atual.
+#### [MODIFY] [package.json](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/package.json)
+- Adicionar a dependência `@capacitor-community/admob` para permitir o controle via TypeScript.
+
+#### [NEW] [src/lib/ads.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/lib/ads.ts)
+- Criar um utilitário para inicializar o AdMob e exibir banners ou anúncios intersticiais (tela cheia) de teste.
 
 ---
 
-### [Validação de Fluxo]
+### [Interface de Teste]
 
-#### [VERIFY] Lógica de Dinheiro Livre
-- Garantir que no Dashboard (`Today.tsx`), o valor exibido como "Dinheiro Livre" subtraia corretamente:
-    - Renda Total (Salário + Extras)
-    - Contas Mensais (Pagas e Pendentes)
-    - Dívidas (Parcelas do mês)
-    - Metas (Reserva mensal para objetivos)
+#### [MODIFY] [Profile.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Profile.tsx)
+- No menu de administrador (apenas para você), adicionar botões para:
+    - **Testar Anúncio Intersticial**: Exibe um anúncio de tela cheia imediatamente.
+    - **Testar Notificação Push**: Link rápido para a página de configurações de notificações onde já existe o botão de teste.
 
-#### [VERIFY] Metas e Dívidas
-- Testar se a criação de meta com "Prazo" reflete no valor mensal e, consequentemente, no "Dinheiro Livre".
-- Validar se as nomenclaturas "Acelerado" e "Equilibrado" estão consistentes nos relatórios.
+#### [MODIFY] [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)
+- Se o usuário for do plano **Gratuito**, carregar e exibir um banner de anúncio no rodapé ou entre os cards de resumo.
 
 ## Plano de Verificação
 
 ### Automated Tests
-- Simular diferentes cenários de renda e gastos para garantir que o "Dinheiro Livre" nunca fique negativo sem aviso.
+- Validar se o plugin do AdMob inicializa sem erros no logcat.
 
 ### Manual Verification
-- Acessar o Consultor IA com uma conta sem privilégios (Free) e validar o bloqueio.
-- Alternar entre Modo Simples e Avançado no Perfil e verificar as mudanças no Dashboard.
+- Clicar no botão "Testar Anúncio" no Perfil e verificar se o anúncio de teste da Google aparece.
+- Usar o botão "Enviar Push de Teste" na página de Notificações e validar o recebimento no dispositivo Android.
