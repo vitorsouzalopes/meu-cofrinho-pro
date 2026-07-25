@@ -49,8 +49,8 @@ const Index = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 animate-slide-up">
         <div>
-          <h1 className="font-heading text-xl font-bold text-foreground">Cofrinho Pro</h1>
-          <p className="text-xs text-muted-foreground">Sua jornada financeira</p>
+          <h1 className="font-heading text-xl font-bold text-foreground">Cofrinho <span className="text-gold">PRO</span></h1>
+          <p className="text-xs text-muted-foreground">Sua jornada financeira inteligente</p>
         </div>
         <StreakBadge streak={mockStats.currentStreak} />
       </div>

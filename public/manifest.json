@@ -1,7 +1,7 @@
 {
-  "name": "Cofrinho Pro",
-  "short_name": "Cofrinho",
-  "description": "Desafios financeiros gamificados para sua prosperidade",
+  "name": "Cofrinho PRO",
+  "short_name": "Cofrinho PRO",
+  "description": "Seu planejamento financeiro inteligente começa aqui. Assuma o controle das suas finanças com um aplicativo moderno, seguro e inteligente.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0e1a",

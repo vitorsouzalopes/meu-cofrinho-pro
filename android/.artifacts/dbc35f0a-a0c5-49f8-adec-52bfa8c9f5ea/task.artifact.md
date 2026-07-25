@@ -1,6 +1,7 @@
-- [x] Add AdMob App ID to `AndroidManifest.xml`
-- [x] Install `@capacitor-community/admob` dependency
-- [x] Implement `src/lib/ads.ts` for AdMob management
-- [x] Add "Testar Anúncio" button to `Profile.tsx` for admins
-- [x] Add Banner support to `Today.tsx` for free users
-- [x] Re-sync Capacitor and build new APK
+- [x] Update app name in `strings.xml` and `manifest.json`
+- [x] Refactor `Auth.tsx` with new logo placeholder and description
+- [x] Update title in `Index.tsx` and `Today.tsx`
+- [x] Update app name in `capacitor.config.ts`
+- [x] Detect and rename `logo.png.png` to `logo.png`
+- [ ] Generate Android Icon and Splash Screen (Native)
+- [x] Build APK with updated branding

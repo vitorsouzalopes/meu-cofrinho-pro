@@ -106,12 +106,32 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-6">
         {/* Logo */}
-        <div className="text-center space-y-2">
-          <div className="w-16 h-16 rounded-2xl gradient-gold flex items-center justify-center mx-auto glow-gold">
-            <Wallet className="w-8 h-8 text-primary-foreground" />
+        <div className="text-center space-y-4">
+          <div className="w-32 h-32 mx-auto animate-float">
+            <img
+              src="/logo.png"
+              alt="Cofrinho PRO"
+              className="w-full h-full object-contain drop-shadow-2xl"
+              onError={(e) => {
+                // Fallback if image not found
+                e.currentTarget.style.display = 'none';
+                const parent = e.currentTarget.parentElement;
+                if (parent) {
+                  const fallback = document.createElement('div');
+                  fallback.className = "w-16 h-16 rounded-2xl gradient-gold flex items-center justify-center mx-auto glow-gold";
+                  fallback.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary-foreground"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>';
+                  parent.appendChild(fallback);
+                }
+              }}
+            />
           </div>
-          <h1 className="font-heading text-2xl font-bold text-foreground">Cofrinho Pro</h1>
-          <p className="text-sm text-muted-foreground">
+          <div className="space-y-2">
+            <h1 className="font-heading text-3xl font-bold text-foreground">Cofrinho <span className="text-gold">PRO</span></h1>
+            <p className="text-xs text-muted-foreground max-w-[250px] mx-auto leading-relaxed">
+              Seu planejamento financeiro inteligente começa aqui.
+            </p>
+          </div>
+          <p className="text-sm text-muted-foreground pt-2">
             {isLogin ? "Entre na sua conta" : "Crie sua conta gratuita"}
           </p>
         </div>

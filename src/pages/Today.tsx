@@ -260,11 +260,10 @@ const Today = () => {
 
   return (
     <div className="min-h-screen pb-24 px-6 pt-6 max-w-lg mx-auto bg-background overflow-x-hidden">
-      {/* Top Navigation */}
       <div className="flex justify-between items-center mb-8">
         <Menu className="w-6 h-6 text-foreground" />
         <p className="font-heading font-bold text-lg text-foreground">
-          Cofrinho <span className="text-primary">Pro</span>
+          Cofrinho <span className="text-gold">PRO</span>
         </p>
         <div className="bg-card p-2 rounded-xl border border-border/50 cursor-pointer" onClick={() => navigate("/profile")}>
           <Settings className="w-5 h-5 text-foreground" />
