@@ -1,6 +1,5 @@
-- [x] Update `native-push.ts` to return permission status
-- [x] Create `NotificationWall.tsx` component
-- [x] Create `ResetPassword.tsx` page
-- [x] Update `App.tsx` (Routes & Notification check)
-- [x] Refactor `Auth.tsx` (Login, Signup, Reset Password)
-- [x] Build and verify (Resolved Kotlin/AdMob compilation issues)
+- [ ] Add missing colors to `colors.xml`
+- [ ] Fix resource references in `styles.xml`
+- [ ] Update `capacitor.config.ts` with SplashScreen settings
+- [ ] Generate native assets (Icon & Splash) using Capacitor Assets
+- [ ] Final build and APK generation

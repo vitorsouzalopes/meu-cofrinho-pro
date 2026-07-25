@@ -1,41 +1,47 @@
-# Notificações Obrigatórias e Recuperação de Senha
+# Correção do Ícone do App e Tela Preta no Inicialização
 
-Este plano visa implementar duas funcionalidades críticas de segurança e engajamento: a obrigatoriedade de notificações push para uso do app e o fluxo de recuperação de senha via Supabase.
+Este plano visa resolver dois problemas críticos: o ícone do aplicativo que não aparece corretamente e a tela preta que surge após o splash screen.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Notificações**: Se o usuário negar a permissão, ele ficará em uma tela de bloqueio.
-> **Recuperação de Senha**: O link de reset enviado por e-mail precisará redirecionar o usuário de volta para o app ou para a URL de produção (Deep Link).
+> Identificamos que o Android está tentando carregar cores e fundos que não existem ou estão referenciados incorretamente (como tratar um arquivo de imagem como uma cor). Isso causa a falha visual (tela preta) na transição para o conteúdo do app.
 
 ## Proposta de Mudanças
 
-### [Autenticação e Recuperação]
+### [Android Resources]
 
-#### [MODIFY] [Auth.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Auth.tsx)
-- Adicionar estado `isResetPassword` para mostrar o formulário de "Esqueci minha senha".
-- Implementar `supabase.auth.resetPasswordForEmail` para enviar o link de recuperação.
-- Adicionar link "Esqueci minha senha" abaixo do formulário de Login.
+#### [MODIFY] [colors.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/res/values/colors.xml)
+- Adicionar as cores faltantes: `ic_launcher_background` (combinando com a marca) e `windowBackground`.
+- Definir cores de contraste para o modo noturno.
 
-#### [NEW] [ResetPassword.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/ResetPassword.tsx)
-- Criar página para definir a nova senha após o usuário clicar no link do e-mail.
+#### [MODIFY] [styles.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/res/values/styles.xml)
+- Corrigir a referência de `android:windowBackground` para usar uma cor sólida em vez de um drawable que pode estar falhando.
+- Ajustar o `postSplashScreenTheme` para garantir uma transição suave.
+
+#### [MODIFY] [ic_launcher.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml)
+- Garantir que o ícone adaptativo aponte para os recursos corretos (`@drawable/ic_launcher_background`).
 
 ---
 
-### [Notificações Push Obrigatórias]
+### [Capacitor Configuration]
 
-#### [MODIFY] [native-push.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/lib/native-push.ts)
-- Retornar o status da permissão para controle da UI.
+#### [MODIFY] [capacitor.config.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/capacitor.config.ts)
+- Adicionar configurações explícitas para o plugin de Splash Screen.
+- Definir `launchShowDuration: 0` e `launchAutoHide: true` para que o Capacitor gerencie a transição corretamente com o Android 12+.
 
-#### [NEW] [NotificationWall.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/components/NotificationWall.tsx)
-- Tela de bloqueio que explica a necessidade das notificações e oferece link para as configurações do sistema.
+---
 
-#### [MODIFY] [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx)
-- Adicionar a rota `/reset-password`.
-- Integrar a verificação de notificações no fluxo global do app.
+### [Icon Generation]
+
+#### [ACTION] Geração de Ícones Nativos
+- Vou tentar novamente o comando `assets generate` com parâmetros específicos para garantir que a imagem `assets/logo.png` seja convertida nos formatos `mipmap` necessários (hdpi, xhdpi, etc).
 
 ## Plano de Verificação
 
+### Automated Tests
+- Executar `./gradlew assembleDebug` para validar se todos os recursos XML estão íntegros.
+
 ### Manual Verification
-- **Recuperação**: Solicitar reset -> Receber e-mail -> Clicar no link -> Alterar senha -> Logar com nova senha.
-- **Notificações**: Negar permissão -> Ver tela de bloqueio -> Ativar nas configurações -> Ver app liberado.
+- Instalar o APK e verificar se o ícone do Cofrinho PRO aparece na lista de apps.
+- Abrir o app e validar se a transição da Splash Screen para a tela de Login ocorre sem o flash de tela preta.
