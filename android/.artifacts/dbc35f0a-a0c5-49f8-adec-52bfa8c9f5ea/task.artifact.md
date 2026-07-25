@@ -1,5 +1,6 @@
-- [x] Add missing colors to `colors.xml` (Branding colors)
-- [x] Fix resource references in `styles.xml` (Window background fix)
-- [x] Update `capacitor.config.ts` with SplashScreen settings
-- [x] Fix duplicate resource conflicts in Android project
-- [x] Build APK with updated branding and stability fixes
+- [ ] Install `@capacitor/splash-screen`
+- [ ] Explicitly hide Splash Screen in `App.tsx`
+- [ ] Fix redundant push registration in `App.tsx`
+- [ ] Improve loading state in `ProtectedRoute`
+- [ ] Run `npm run build` and `npx cap sync android`
+- [ ] Final build and APK generation

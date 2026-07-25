@@ -1,47 +1,45 @@
-# Correção do Ícone do App e Tela Preta no Inicialização
+# Correção Definitiva: Tela Preta e Ícone do App
 
-Este plano visa resolver dois problemas críticos: o ícone do aplicativo que não aparece corretamente e a tela preta que surge após o splash screen.
+Identificamos que o aplicativo fica em tela preta porque o plugin de Splash Screen do Capacitor não está instalado no `package.json`, impedindo que o app oculte a tela de carregamento nativa. Além disso, vamos consolidar a inicialização para evitar loops de redirecionamento.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> Identificamos que o Android está tentando carregar cores e fundos que não existem ou estão referenciados incorretamente (como tratar um arquivo de imagem como uma cor). Isso causa a falha visual (tela preta) na transição para o conteúdo do app.
+> Vou instalar o plugin `@capacitor/splash-screen`. Isso é essencial para que o código JavaScript consiga dizer ao Android: "Já carreguei, pode esconder a logo de abertura".
 
 ## Proposta de Mudanças
 
-### [Android Resources]
+### [Dependências e Build]
 
-#### [MODIFY] [colors.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/res/values/colors.xml)
-- Adicionar as cores faltantes: `ic_launcher_background` (combinando com a marca) e `windowBackground`.
-- Definir cores de contraste para o modo noturno.
-
-#### [MODIFY] [styles.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/res/values/styles.xml)
-- Corrigir a referência de `android:windowBackground` para usar uma cor sólida em vez de um drawable que pode estar falhando.
-- Ajustar o `postSplashScreenTheme` para garantir uma transição suave.
-
-#### [MODIFY] [ic_launcher.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml)
-- Garantir que o ícone adaptativo aponte para os recursos corretos (`@drawable/ic_launcher_background`).
+#### [ACTION] Instalação de Plugins
+- Instalar `@capacitor/splash-screen` (versão compatível com Capacitor 4).
+- Rodar `npx cap sync android`.
 
 ---
 
-### [Capacitor Configuration]
+### [Core & Inicialização]
 
-#### [MODIFY] [capacitor.config.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/capacitor.config.ts)
-- Adicionar configurações explícitas para o plugin de Splash Screen.
-- Definir `launchShowDuration: 0` e `launchAutoHide: true` para que o Capacitor gerencie a transição corretamente com o Android 12+.
+#### [MODIFY] [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx)
+- Importar e chamar `SplashScreen.hide()` assim que o componente principal for montado.
+- Remover chamadas duplicadas de `registerNativePush` para evitar conflitos de estado.
+- Garantir que o `ProtectedRoute` mostre um spinner visível em vez de uma tela vazia durante a checagem de notificações.
+
+#### [MODIFY] [native-push.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/lib/native-push.ts)
+- Adicionar logs extras para debug no Logcat.
 
 ---
 
-### [Icon Generation]
+### [Android Resources (Ícone)]
 
-#### [ACTION] Geração de Ícones Nativos
-- Vou tentar novamente o comando `assets generate` com parâmetros específicos para garantir que a imagem `assets/logo.png` seja convertida nos formatos `mipmap` necessários (hdpi, xhdpi, etc).
+#### [MODIFY] [AndroidManifest.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/AndroidManifest.xml)
+- Temporariamente desativar o ícone adaptativo se ele continuar falhando, ou garantir que a cor de fundo seja aplicada globalmente.
+
+#### [ACTION] Geração de Ícones
+- Vou tentar uma abordagem simplificada de cópia de arquivos para garantir que pelo menos o ícone principal apareça.
 
 ## Plano de Verificação
 
-### Automated Tests
-- Executar `./gradlew assembleDebug` para validar se todos os recursos XML estão íntegros.
-
 ### Manual Verification
-- Instalar o APK e verificar se o ícone do Cofrinho PRO aparece na lista de apps.
-- Abrir o app e validar se a transição da Splash Screen para a tela de Login ocorre sem o flash de tela preta.
+- **Abertura**: O app deve mostrar a logo por 2 segundos e então abrir a tela de Login ou Dashboard.
+- **Login**: Após clicar em "Entrar", deve aparecer o spinner e logo em seguida o Dashboard (ou a trava de notificação).
+- **Ícone**: O ícone do app deve aparecer na grade de aplicativos do Android.

@@ -11,6 +11,7 @@ import { useGestureBack } from "@/hooks/use-gesture-back";
 import { checkForUpdates } from "@/lib/version";
 import { registerNativePush } from "@/lib/native-push";
 import { App as CapacitorApp } from "@capacitor/app";
+import { SplashScreen } from "@capacitor/splash-screen";
 import { Capacitor } from "@capacitor/core";
 import Today from "./pages/Today.tsx";
 import Accounts from "./pages/Accounts.tsx";
@@ -41,23 +42,28 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
   const [pushStatus, setPushStatus] = useState<string | null>(null);
+  const [checkingPush, setCheckingPush] = useState(false);
 
   useEffect(() => {
-    if (session?.user) {
-      registerNativePush(session.user.id).then(res => setPushStatus(res.status));
+    if (session?.user && !pushStatus && !checkingPush) {
+      setCheckingPush(true);
+      registerNativePush(session.user.id)
+        .then(res => setPushStatus(res.status))
+        .finally(() => setCheckingPush(false));
     }
-  }, [session]);
+  }, [session, pushStatus, checkingPush]);
 
-  if (loading) {
+  if (loading || (session && checkingPush)) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-xs text-muted-foreground font-medium animate-pulse">Sincronizando seu Cofrinho PRO...</p>
       </div>
     );
   }
   if (!session) return <Navigate to="/auth" replace />;
 
-  if (Capacitor.isNativePlatform() && pushStatus && pushStatus !== 'granted') {
+  if (Capacitor.isNativePlatform() && pushStatus && pushStatus !== 'granted' && pushStatus !== 'web') {
     return <NotificationWall onRetry={() => window.location.reload()} />;
   }
 
@@ -107,6 +113,7 @@ const AppContent = () => {
 
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
+      SplashScreen.hide();
       const backListener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
         if (!canGoBack) {
           CapacitorApp.exitApp();
@@ -120,11 +127,14 @@ const AppContent = () => {
     }
   }, []);
 
+  // Push registration is handled inside ProtectedRoute to ensure mandatory check
+  /*
   useEffect(() => {
     if (session?.user) {
       registerNativePush(session.user.id);
     }
   }, [session]);
+  */
 
   useEffect(() => {
     const checkVersion = async () => {
