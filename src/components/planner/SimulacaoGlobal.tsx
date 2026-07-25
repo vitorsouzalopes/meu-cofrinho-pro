@@ -152,7 +152,7 @@ export default function SimulacaoGlobal({
         {/* Estratégias Globais */}
         <div className="space-y-3 pt-4 border-t border-border">
           <h4 className="text-sm font-medium text-muted-foreground">
-            Estratégias de Distribuição
+            Seu planejamento
           </h4>
 
           {/* Avalanche */}

@@ -274,7 +274,7 @@ export async function generateMonthlyReport(monthYear?: string): Promise<void> {
       }],
     }, {}, 600, 360);
     if (y > 200) { pdf.addPage(); addHeader(pdf, data); y = 46; }
-    sectionTitle(pdf, "Distribuição da Renda", y);
+    sectionTitle(pdf, "Seu planejamento de Renda", y);
     y += 6;
     pdf.addImage(doughImg, "PNG", 50, y, 110, 65);
     y += 72;

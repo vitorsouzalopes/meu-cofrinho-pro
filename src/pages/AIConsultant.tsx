@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import { ArrowLeft, Sparkles, Send, Bot, User, ShieldCheck, AlertCircle, XCircle } from "lucide-react";
+import { ArrowLeft, Sparkles, Send, Bot, User, ShieldCheck, AlertCircle, XCircle, Crown, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { calcularTotaisFinanceiros, resolverContasDoMes } from "@/lib/finance-utils";
+import { usePremium } from "@/lib/premium";
 import { cn } from "@/lib/utils";
 
 const formatCurrency = (v: number) =>
@@ -21,6 +22,7 @@ interface Message {
 const AIConsultant = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isPremium, loading: premiumLoading } = usePremium();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -121,6 +123,71 @@ const AIConsultant = () => {
       setLoading(false);
     }, 1000);
   };
+
+  if (premiumLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isPremium) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background max-w-lg mx-auto border-x border-border/50 shadow-2xl">
+        <div className="p-6 border-b border-border/50 bg-card/50 backdrop-blur-xl flex items-center gap-4 sticky top-0 z-20">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-xl bg-card border border-border/50">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <h1 className="font-bold text-lg">Consultor IA</h1>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6">
+          <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center shadow-xl">
+             <Lock className="w-10 h-10 text-primary" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-foreground">Funcionalidade Premium</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              O Consultor IA e a ferramenta "Posso comprar?" são exclusivos para membros **Cofrinho Pro Premium**.
+            </p>
+          </div>
+
+          <Card className="p-6 bg-gradient-to-br from-primary/20 to-transparent border-primary/30 w-full">
+            <div className="flex items-center gap-3 mb-4">
+              <Crown className="w-5 h-5 text-primary" />
+              <span className="text-sm font-bold uppercase tracking-wider">Benefícios Pro</span>
+            </div>
+            <ul className="text-left space-y-3">
+               <li className="flex items-center gap-2 text-xs font-medium">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  Análise personalizada de compras
+               </li>
+               <li className="flex items-center gap-2 text-xs font-medium">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  Consultoria financeira 24h por dia
+               </li>
+               <li className="flex items-center gap-2 text-xs font-medium">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  Simulações ilimitadas de cenários
+               </li>
+            </ul>
+          </Card>
+
+          <Button
+            className="w-full h-14 rounded-2xl text-base font-bold shadow-lg shadow-primary/20"
+            onClick={() => navigate("/premium")}
+          >
+            Conhecer o Premium <Sparkles className="ml-2 w-4 h-4" />
+          </Button>
+
+          <Button variant="ghost" onClick={() => navigate(-1)}>
+            Voltar para o Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background max-w-lg mx-auto border-x border-border/50 shadow-2xl">

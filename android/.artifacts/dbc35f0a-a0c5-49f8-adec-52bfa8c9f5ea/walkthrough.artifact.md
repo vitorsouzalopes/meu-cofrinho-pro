@@ -1,33 +1,32 @@
-# Walkthrough - Final Preparations and Cleanup
+# Walkthrough - Restrição Premium e Validação de Fluxo
 
-The application is now aligned with the production requirements for v1.0. All previous build issues have been resolved, and the requested feature cleanup has been performed.
+Concluí a implementação das restrições de acesso e validei o fluxo completo da aplicação v1.0. Agora o sistema distingue corretamente entre usuários Free e Pro, protegendo as funcionalidades de inteligência artificial.
 
-## Changes Made
+## Alterações Realizadas
 
-### 1. Feature Removal (Cleanup)
-Removed the following administrative buttons and their associated logic from the [Profile](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Profile.tsx) page:
-- **Limpar Dados Auto-Gerados do Mês**
-- **Apagar Todos os Objetivos**
-- **Apagar Todas as Dívidas Ativas**
+### 1. Restrição do Consultor IA (Premium)
+- **Bloqueio de Acesso**: A página [AIConsultant.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/AIConsultant.tsx) agora utiliza o hook `usePremium`.
+- **Interface de Upgrade**: Usuários sem plano Pro visualizam um card explicativo sobre os benefícios Premium e um botão de ação para a página de assinatura, em vez da interface de chat.
+- **Consultoria Protegida**: A ferramenta "Posso comprar?" está agora 100% restrita a assinantes.
 
-This ensures that users (even admins) don't accidentally wipe their data using these destructive shortcuts in the final version.
+### 2. Identificação de Status no Perfil
+- Adicionado um badge visual no cabeçalho da página de [Perfil](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Profile.tsx):
+    - **Pro Member**: Para assinantes e administradores.
+    - **Free Plan**: Para usuários regulares.
 
-### 2. Infrastructure & Build Fixes (Recap)
-- **Firebase Initialization**: Fixed the startup crash by enabling the `GoogleServices` task specifically for the `:app` module.
-- **SDK & Tools**: Project is now fully compatible with **Android SDK 35** and **AGP 8.7.3**.
-- **Plugin Compatibility**: Injected missing namespaces and resolved duplicate class conflicts in subprojects.
+### 3. Padronização de Nomenclatura
+- Substituídos termos técnicos remanescentes por uma linguagem mais amigável ao usuário:
+    - "Estratégias de Distribuição" ➔ **"Seu planejamento"**.
+    - "Distribuição da Renda" (no PDF) ➔ **"Seu planejamento de Renda"**.
 
-## Test Plan Acknowledgement
+### 4. Validação da Lógica "Dinheiro Livre"
+- Verificado que o Dashboard ([Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)) exibe o cálculo em cascata corretamente:
+    - `Dinheiro Livre = (Salário + Extras) - Contas - Dívidas - Reserva de Metas`.
 
-I have reviewed the **Plano de Testes Completo - Cofrinho Pro v1.0**. It is comprehensive and covers all critical areas:
-- **ETAPA 1-12**: All stages are well-defined.
-- **Firebase & Notifications**: With the latest fixes, the Firebase token retrieval and background notifications (Step 8) are ready for validation.
-- **Performance & Security**: The build optimizations (ProGuard) and SDK upgrades ensure the app is ready for high-load testing (Step 10).
+## Resultados dos Testes
+- **Compilação**: O build do APK (`assembleDebug`) foi concluído com sucesso.
+- **Navegação**: O fluxo de "Modo Simples" vs "Modo Avançado" está persistindo corretamente no `localStorage`.
+- **Segurança**: Admins (como você) continuam tendo acesso Pro automático para fins de teste.
 
 > [!TIP]
-> O aplicativo está agora em seu estado mais estável e limpo para o início dos testes. O APK atualizado já reflete a remoção dos botões solicitados.
-
-## Next Steps
-1. **Download the updated APK**: [app-debug.apk](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/build/outputs/apk/debug/app-debug.apk).
-2. **Begin Step 1 of the Test Plan**: Verify the splash screen and login flow.
-3. **Report any issues**: If any specific step of the plan fails, let me know the details and I will fix it immediately.
+> O aplicativo está agora pronto para a fase de testes beta. O próximo passo recomendado é realizar uma simulação real de meta (ex: notebook em 10 meses) e ver como o "Dinheiro Livre" se comporta no dia a dia.

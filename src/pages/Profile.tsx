@@ -13,6 +13,7 @@ import { ensureMonthlyInstances } from "@/lib/account-utils";
 import { calcularTotaisFinanceiros, resolverContasDoMes } from "@/lib/finance-utils";
 import type { Tables } from "@/integrations/supabase/types";
 import { generateMonthlyReport } from "@/lib/monthly-report";
+import { cn } from "@/lib/utils";
 
 type Profile = Tables<"profiles">;
 type Account = Tables<"accounts">;
@@ -196,6 +197,14 @@ const ProfilePage = () => {
           </AvatarFallback>
         </Avatar>
         <h1 className="text-xl font-bold text-foreground">{profile?.display_name || "Seu Nome"}</h1>
+        <div className={cn(
+          "mt-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border",
+          profile?.is_premium
+            ? "bg-primary/10 text-primary border-primary/30"
+            : "bg-muted text-muted-foreground border-border"
+        )}>
+          {profile?.is_premium ? "Pro Member" : "Free Plan"}
+        </div>
       </div>
 
       {/* Resumo Financeiro */}

@@ -1,69 +1,43 @@
-# Implementação da Lógica "Dinheiro Disponível" e Modo Simples
+# Teste de Fluxo Completo e Restrição Premium
 
-Este plano visa simplificar radicalmente a experiência do usuário, focando no "Dinheiro Livre" após todas as obrigações e metas serem reservadas. Introduziremos o "Modo Simples" e automatizaremos o planejamento de metas e dívidas.
+Este plano visa validar as novas funcionalidades (Modo Simples, Dinheiro Livre, Metas) e garantir que o acesso ao Consultor IA e outras funções avançadas esteja corretamente restrito ao plano Premium.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> Precisaremos adicionar as colunas `ui_mode` na tabela `profiles` e `target_date` na tabela `goals` no Supabase. Como não posso executar SQL diretamente, assumirei que estas colunas estarão disponíveis ou usarei campos existentes de forma criativa (como o `is_auto` já presente em `goals`).
+> Atualmente, o acesso ao Consultor IA está aberto para todos os usuários. Vou implementar uma trava que redireciona usuários gratuitos para a página de upgrade, permitindo apenas Admins e assinantes Premium.
 
 ## Proposta de Mudanças
 
-### [Core & Logic]
+### [Premium & Restrições]
 
-#### [MODIFY] [finance-utils.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/lib/finance-utils.ts)
-- Atualizar `calcularTotaisFinanceiros` para incluir metas.
-- Nova fórmula: `Dinheiro Livre = Renda - (Contas + Dívidas + Metas)`.
+#### [MODIFY] [AIConsultant.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/AIConsultant.tsx)
+- Integrar o hook `usePremium`.
+- Se o usuário não for Premium, exibir um card de bloqueio com link para a página `/premium` em vez da interface de chat.
 
----
-
-### [UI/UX - Dashboard]
-
-#### [MODIFY] [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)
-- Implementar o "Modo Simples" como visualização padrão.
-- Novos Cards:
-    - **Saldo Disponível Hoje**: Renda total menos gastos já pagos.
-    - **Quanto posso gastar (Dinheiro Livre)**: O cálculo final da nova lógica.
-    - **Resumo Rápido**: Próxima conta a vencer, número de metas e economia do mês.
-- Remover termos técnicos como "Margem Líquida" ou "Sugestão de Distribuição" no modo simples.
+#### [MODIFY] [Profile.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Profile.tsx)
+- Adicionar um badge visual de "Pro" ou "Free" no cabeçalho do perfil para que o usuário saiba seu status atual.
 
 ---
 
-### [Funcionalidades - Metas e Dívidas]
+### [Validação de Fluxo]
 
-#### [MODIFY] [Goals.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Goals.tsx)
-- No formulário de nova meta:
-    - Substituir "Quanto por mês?" por "Prazo (meses)".
-    - Calcular automaticamente: `Valor Total / Prazo`.
-- Exibir a barra de progresso simplificada.
+#### [VERIFY] Lógica de Dinheiro Livre
+- Garantir que no Dashboard (`Today.tsx`), o valor exibido como "Dinheiro Livre" subtraia corretamente:
+    - Renda Total (Salário + Extras)
+    - Contas Mensais (Pagas e Pendentes)
+    - Dívidas (Parcelas do mês)
+    - Metas (Reserva mensal para objetivos)
 
-#### [MODIFY] [DebtPlanner.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/components/planner/DebtPlanner.tsx)
-- Simplificar a exibição das estratégias.
-- Mostrar comparativo direto: "Pagamento Normal" vs "Pagamento com Extra" (Tempo e Juros economizados).
-
----
-
-### [Inteligência Artificial & Premium]
-
-#### [NEW] [AIConsultant.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/AIConsultant.tsx)
-- Criar interface de chat para o Consultor IA.
-- Implementar a função "Posso comprar?", que analisa o "Dinheiro Livre" atual.
-
----
-
-### [Nomenclatura]
-
-#### Substituições Globais:
-- "Saldo líquido projetado" -> "Dinheiro Livre"
-- "Distribuição" -> "Seu planejamento"
-- "Estratégia Hard/Mixed" -> "Plano de Quitação"
+#### [VERIFY] Metas e Dívidas
+- Testar se a criação de meta com "Prazo" reflete no valor mensal e, consequentemente, no "Dinheiro Livre".
+- Validar se as nomenclaturas "Acelerado" e "Equilibrado" estão consistentes nos relatórios.
 
 ## Plano de Verificação
 
 ### Automated Tests
-- Validar se o cálculo de `disponivel` no `finance-utils.ts` subtrai corretamente as metas.
-- Verificar se a conversão de "Prazo" para "Valor Mensal" em `Goals.tsx` está correta.
+- Simular diferentes cenários de renda e gastos para garantir que o "Dinheiro Livre" nunca fique negativo sem aviso.
 
 ### Manual Verification
-- Testar a troca entre Modo Simples e Avançado (se implementado o toggle).
-- Validar se a página inicial mostra a próxima conta corretamente.
+- Acessar o Consultor IA com uma conta sem privilégios (Free) e validar o bloqueio.
+- Alternar entre Modo Simples e Avançado no Perfil e verificar as mudanças no Dashboard.
