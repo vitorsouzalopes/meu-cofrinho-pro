@@ -1,44 +1,40 @@
-# Atualização de Marca e Identidade Visual (v1.0)
+# Correção de Sincronização de Build e Erro de Push
 
-Este plano visa atualizar a identidade visual do aplicativo em todos os pontos de contato: ícone do app, splash screen, tela de autenticação e descrições institucionais.
+Identificamos que os botões administrativos (Limpar Dados, etc.) ainda aparecem no APK porque o build do frontend (Vite) não foi atualizado antes da geração do APK. Além disso, vamos investigar e tratar o erro na função de push.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> Recebi a nova logomarca. Para aplicá-la corretamente como ícone do Android e Splash Screen, precisarei que o arquivo de imagem (ex: `logo.png`) esteja presente na pasta `public/` ou `src/assets/`. Se você puder me informar o nome do arquivo que salvou no projeto, eu farei a substituição automática.
+> Vou forçar uma reconstrução completa do aplicativo (Frontend + Capacitor + Android) para garantir que as remoções de código que fizemos estejam presentes no seu dispositivo.
 
 ## Proposta de Mudanças
 
-### [Android Resources]
+### [Build & Sincronização]
 
-#### [MODIFY] [strings.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/res/values/strings.xml)
-- Padronizar o nome para **Cofrinho PRO** (mantendo a consistência com a nova logomarca).
-- Adicionar a nova descrição curta do app.
+#### [ACTION] Reconstrução Completa
+1. Executar `npm run build` para atualizar os arquivos em `dist/`.
+2. Executar `npx cap copy android` para sincronizar o código novo com o projeto nativo.
+3. Gerar um novo APK.
 
----
+### [Notificações Push]
 
-### [UI/UX - Web & Capacitor]
-
-#### [MODIFY] [Auth.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Auth.tsx)
-- Substituir o ícone genérico `Wallet` pela nova logomarca.
-- Incluir a descrição: "Seu planejamento financeiro inteligente começa aqui" abaixo do título.
-- Ajustar o layout para destacar a identidade visual Premium (dourado/prata).
-
-#### [MODIFY] [Index.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Index.tsx) (Dashboard)
-- Atualizar o cabeçalho para refletir o novo nome **Cofrinho PRO**.
+#### [MODIFY] [TelegramSettings.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/TelegramSettings.tsx)
+- Melhorar o tratamento de erro no `triggerTest`.
+- Adicionar logs para identificar se o erro vem de falta de permissão ou falha na Edge Function.
 
 ---
 
-### [Assets & Icons]
+### [Limpeza de Código]
 
-#### [NEW] [Manifest & PWA](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/public/manifest.json)
-- Atualizar o `short_name` e `name` no manifesto da web.
+#### [MODIFY] [Profile.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Profile.tsx)
+- Remover importação não utilizada do ícone `Trash2`.
 
 ## Plano de Verificação
 
 ### Automated Tests
-- Validar se o build do APK continua funcionando após a alteração dos recursos de string.
+- Validar se o comando de build do Vite termina com sucesso.
+- Gerar o APK e verificar o log de compilação.
 
 ### Manual Verification
-- Verificar se a tela de Login/Cadastro exibe a nova logomarca e a descrição corretamente.
-- Confirmar se o nome do app no launcher do Android mudou para "Cofrinho PRO".
+- Instalar o novo APK e confirmar que os botões "Limpar Dados..." sumiram.
+- Tentar enviar o push de teste e observar os novos logs/mensagens de erro.

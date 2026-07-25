@@ -1,7 +1,6 @@
-- [x] Update app name in `strings.xml` and `manifest.json`
-- [x] Refactor `Auth.tsx` with new logo placeholder and description
-- [x] Update title in `Index.tsx` and `Today.tsx`
-- [x] Update app name in `capacitor.config.ts`
-- [x] Detect and rename `logo.png.png` to `logo.png`
-- [ ] Generate Android Icon and Splash Screen (Native)
-- [x] Build APK with updated branding
+- [ ] Update `Profile.tsx` (remove unused `Trash2` import)
+- [ ] Improve error handling in `TelegramSettings.tsx`
+- [ ] Run `npm run build`
+- [ ] Run `npx cap copy android`
+- [ ] Generate new APK via `assembleDebug`
+- [ ] Verify if buttons are finally gone from the resulting bundle
