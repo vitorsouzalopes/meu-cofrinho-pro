@@ -28,13 +28,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let isMounted = true;
+    console.log("[Auth] Provider mounted, fetching session...");
 
-    // Fetch initial session — always resolves loading even if Supabase is unavailable
+    // Fetch initial session
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
         if (!isMounted) return;
+        console.log("[Auth] Session fetched:", session ? "Active" : "None");
         setSession(session);
         setUser(session?.user ?? null);
+        // ... (role check omitted for brevity in targetContent match, will re-read)
+
 
         if (session?.user) {
           supabase

@@ -5,67 +5,41 @@ import App from "./App.tsx";
 import "./index.css";
 import { checkForUpdates } from "./lib/version";
 
-// --- Hard Reset Logic for Testing ---
-const INIT_VERSION = 'v1.0.4_final_reset'; // Force a clean slate
+console.log("[Main] App entry point reached");
+
+// --- Hard Reset Logic (Testing only) ---
+const INIT_VERSION = 'v1.0.4_final_reset';
 if (localStorage.getItem('cofrinho_init_check') !== INIT_VERSION) {
-  console.log("[Init] Hard Reset triggered. Purging local storage...");
   localStorage.clear();
   localStorage.setItem('cofrinho_init_check', INIT_VERSION);
 }
 
-// Show update splash before React mounts
-function showUpdateSplash() {
-  const root = document.getElementById("root")!;
-  root.innerHTML = `
-    <div style="
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      height: 100vh; background: #0A0E1A;
-      color: white; font-family: system-ui, sans-serif; gap: 16px;
-    ">
-      <div style="
-        width: 48px; height: 48px; border: 3px solid rgba(212, 160, 23, 0.2);
-        border-top-color: #D4A017; border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-      "></div>
-      <p style="font-size: 18px; font-weight: 600; margin: 0;">Atualizando Cofrinho PRO...</p>
-      <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
-    </div>
-  `;
+const rootElement = document.getElementById("root");
+if (rootElement) {
+  const root = createRoot(rootElement);
+
+  // RENDER IMMEDIATELY - Do not block on network/updates
+  root.render(<App />);
+
+  // Run update check in background
+  if (!Capacitor.isNativePlatform()) {
+    checkForUpdates().then((updated) => {
+      if (updated) {
+        console.log("[Update] App updated, reloading...");
+        window.location.reload();
+      }
+    }).catch(console.error);
+  }
 }
 
-const RELOAD_GUARD_KEY = 'cofrinho_last_reload';
-const now = Date.now();
-const lastReload = Number(localStorage.getItem(RELOAD_GUARD_KEY) || '0');
-const canReload = now - lastReload > 10_000;
-
-const renderApp = () => {
-  const rootElement = document.getElementById("root");
-  if (rootElement) {
-    createRoot(rootElement).render(<App />);
-  }
-};
-
-checkForUpdates().then((updated) => {
-  if (updated && canReload) {
-    localStorage.setItem(RELOAD_GUARD_KEY, String(now));
-    showUpdateSplash();
-    setTimeout(() => window.location.reload(), 1500);
-    return;
-  }
-  renderApp();
-}).catch((err) => {
-  console.error("Update check failed:", err);
-  renderApp();
-});
-
-const isNative = Capacitor.isNativePlatform();
-if (isNative) {
+// Capacitor Platform setup
+if (Capacitor.isNativePlatform()) {
+  // Disable SW on native
   navigator.serviceWorker?.getRegistrations().then((regs) => {
     regs.forEach((r) => r.unregister());
   });
-}
 
-if (isNative) {
+  // Handle Deep Links
   CapacitorApp.addListener("appUrlOpen", (event) => {
     try {
       const url = new URL(event.url);
@@ -74,7 +48,12 @@ if (isNative) {
         window.location.href = path;
       }
     } catch (error) {
-      console.error("Failed to parse app URL:", error);
+      console.error("Deep Link Error:", error);
     }
+  });
+} else if ('serviceWorker' in navigator) {
+  // Register SW for Web PWA only
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js').catch(console.error);
   });
 }

@@ -8,7 +8,6 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import BottomNav from "@/components/BottomNav";
 import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
 import { useGestureBack } from "@/hooks/use-gesture-back";
-import { checkForUpdates } from "@/lib/version";
 import { registerNativePush } from "@/lib/native-push";
 import { App as CapacitorApp } from "@capacitor/app";
 import { SplashScreen } from "@capacitor/splash-screen";
@@ -36,67 +35,74 @@ import NotificationWall from "./components/NotificationWall.tsx";
 import UpdateModal from "./components/UpdateModal";
 import { CURRENT_VERSION } from "./constants/version";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "./components/ui/button";
 
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
+  const [pushChecked, setPushChecked] = useState(false);
   const [pushStatus, setPushStatus] = useState<string | null>(null);
-  const [checkingPush, setCheckingPush] = useState(false);
   const [forceProceed, setForceProceed] = useState(false);
 
   useEffect(() => {
     let mounted = true;
 
-    if (!Capacitor.isNativePlatform() || forceProceed) {
+    if (!session?.user || pushChecked || forceProceed) return;
+
+    if (!Capacitor.isNativePlatform()) {
       setPushStatus('web');
+      setPushChecked(true);
       return;
     }
 
-    if (session?.user && !pushStatus && !checkingPush) {
-      setCheckingPush(true);
-      console.log("[Auth] Push check start...");
+    console.log("[Auth] Starting mandatory push check...");
+    setPushChecked(false); // Ensure we are in checking state
 
-      const safetyTimeout = setTimeout(() => {
+    const safetyTimeout = setTimeout(() => {
+      if (mounted) {
+        console.warn("[Auth] Push check timed out (3s).");
+        setPushStatus('timeout');
+        setPushChecked(true);
+      }
+    }, 3000);
+
+    registerNativePush(session.user.id)
+      .then(res => {
         if (mounted) {
-          console.warn("[Auth] Push timeout (2.5s). Proceeding.");
-          setPushStatus('timeout');
-          setCheckingPush(false);
+          console.log("[Auth] Push status:", res.status);
+          setPushStatus(res.status);
+          setPushChecked(true);
         }
-      }, 2500);
+      })
+      .catch(err => {
+        console.error("[Auth] Push check fatal error:", err);
+        if (mounted) {
+          setPushStatus('error');
+          setPushChecked(true);
+        }
+      })
+      .finally(() => {
+        clearTimeout(safetyTimeout);
+      });
 
-      registerNativePush(session.user.id)
-        .then(res => {
-          if (mounted) {
-            setPushStatus(res.status);
-          }
-        })
-        .catch(err => {
-          console.error("[Auth] Push error:", err);
-          if (mounted) setPushStatus('error');
-        })
-        .finally(() => {
-          clearTimeout(safetyTimeout);
-          if (mounted) setCheckingPush(false);
-        });
-    }
     return () => { mounted = false; };
-  }, [session, pushStatus, checkingPush, forceProceed]);
+  }, [session, pushChecked, forceProceed]);
 
-  if (loading || (session && checkingPush && !forceProceed)) {
+  if (loading || (session && !pushChecked && !forceProceed)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#0A0E1A] text-white p-8">
         <div className="w-12 h-12 border-4 border-[#D4A017] border-t-transparent rounded-full animate-spin mb-6" />
         <div className="space-y-4 text-center">
-          <h2 className="text-lg font-bold tracking-widest uppercase text-white">Cofrinho PRO</h2>
-          <p className="text-[10px] text-muted-foreground animate-pulse">Sincronizando seu universo financeiro...</p>
+          <h2 className="text-lg font-bold tracking-widest uppercase">Cofrinho PRO</h2>
+          <p className="text-[10px] text-muted-foreground animate-pulse tracking-widest">Sincronizando seu universo financeiro...</p>
 
           <Button
             variant="ghost"
             onClick={() => setForceProceed(true)}
             className="mt-12 text-[10px] text-muted-foreground hover:text-white uppercase tracking-tighter"
           >
-            Sincronização lenta? Entrar agora
+            Entrar sem sincronizar
           </Button>
         </div>
       </div>
@@ -153,7 +159,10 @@ const AppContent = () => {
 
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
-      SplashScreen.hide().catch(err => console.warn("Splash hide err:", err));
+      // Hide native splash once React is mounted
+      setTimeout(() => {
+        SplashScreen.hide().catch(() => {});
+      }, 500);
 
       const backListener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
         if (!canGoBack) {
@@ -166,39 +175,6 @@ const AppContent = () => {
         backListener.then(l => l.remove());
       };
     }
-  }, []);
-
-  useEffect(() => {
-    const checkVersion = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("app_config" as any)
-          .select("*")
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (error || !data) return;
-
-        const config = data as any;
-        const isOlder = (current: string, min: string) => {
-          const c = current.split('.').map(Number);
-          const m = min.split('.').map(Number);
-          for (let i = 0; i < Math.max(c.length, m.length); i++) {
-            if ((c[i] || 0) < (m[i] || 0)) return true;
-            if ((c[i] || 0) > (m[i] || 0)) return false;
-          }
-          return false;
-        };
-
-        if (isOlder(CURRENT_VERSION, config.min_version)) {
-          // Trigger global event or state for update
-        }
-      } catch (e) {
-        console.error("Failed to check version:", e);
-      }
-    };
-    checkVersion();
   }, []);
 
   return (

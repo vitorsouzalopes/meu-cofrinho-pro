@@ -1,30 +1,29 @@
-# Walkthrough - Resgate v1.0.4: Destravamento de Tela e Reset Total
+# Walkthrough - Resgate v1.0.5: Estabilização de Renderização e Login
 
-Esta atualização foca em eliminar o travamento de tela preta e garantir que o seu teste comece de forma limpa, sem carregar estados antigos do celular.
+Concluí as correções definitivas para o problema da tela preta pós-login e a visibilidade do ícone do aplicativo. O foco desta versão foi garantir que o React monte a interface imediatamente, sem depender de respostas lentas da rede.
 
 ## Alterações Realizadas
 
-### 1. Hard Reset de Dados (v1.0.4)
-- **O que mudou**: Adicionei um gatilho de segurança no [main.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/main.tsx) que detecta a nova versão e **limpa todo o armazenamento local** na primeira vez que o app é aberto.
-- **Resultado**: Ao instalar este APK, o login antigo será esquecido e você entrará como se fosse a primeira vez.
+### 1. Fim do Bloqueio de Inicialização
+- **Mount Imediato**: No [main.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/main.tsx), removi a verificação de atualizações que bloqueava a abertura do app. Agora o aplicativo renderiza a tela de login instantaneamente e faz a checagem de versão em segundo plano.
+- **Fundo Sólido**: Adicionei um fundo azul noturno diretamente no [index.html](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/index.html). Mesmo que o React demore milissegundos para carregar, você verá a cor da marca em vez de um flash preto ou branco.
 
-### 2. Destravamento da Sincronização
-- **Redução de Timeout**: Diminuí o tempo de espera da checagem de notificações de 4s para **2.5 segundos**.
-- **Botão de Emergência**: Na tela de carregamento azul, adicionei o botão **"Sincronização lenta? Entrar agora"**. Se o Android travar na checagem de rede, você pode clicar nele e saltar direto para o Dashboard.
-- **Bypass de Erro**: Se a verificação de notificações falhar, o app agora segue em frente automaticamente em vez de ficar preso na tela preta.
+### 2. Estabilização do Login (ProtectedRoute)
+- **Estado de Checagem Único**: Refatorei o `ProtectedRoute` no [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx). Agora ele usa um estado de controle (`pushChecked`) que garante que a verificação de notificações seja executada apenas uma vez. Isso elimina o "loop infinito" que causava a tela preta ao tentar logar.
+- **Botão de Emergência**: Melhorei o botão de bypass: *"Entrar sem sincronizar"*. Se o Android demorar a responder, você pode clicar e entrar no Dashboard na hora.
 
-### 3. Estabilidade do Dashboard
-- **Consolidação de Código**: O arquivo [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx) foi limpo e verificado para evitar qualquer erro de referência que causasse o travamento do React.
+### 3. Debug e Logs
+- Adicionei logs visíveis no console (Logcat) para monitorar o status do login e da checagem de notificações em tempo real.
 
-## Como validar o sucesso?
+## Como testar agora?
 
-1. **Fresh Start**: Ao abrir o app, a tela de Login deve estar vazia (sem e-mail salvo).
-2. **Dashboard Rápido**: Após logar, você verá o carregador azul por no máximo 2 segundos e será levado ao Dashboard.
-3. **Pular Carga**: Caso sua internet esteja muito lenta, clique no botão que aparece abaixo do spinner para entrar instantaneamente.
+1. **Limpeza**: Desinstale o app atual.
+2. **Instalação**: Instale este novo APK.
+3. **Login**: Ao logar, você verá o carregador por cerca de 2 segundos. Se ele não sumir sozinho (devido à rede), clique em **"Entrar sem sincronizar"**.
 
 > [!IMPORTANT]
-> **Ação Recomendada**: Desinstale a versão atual do celular antes de instalar o novo APK gerado agora. Isso garante que o Android não tente restaurar caches do sistema.
+> **Sobre o Ícone**: Como os ícones adaptativos do Android dependem de arquivos gerados pelo sistema, se ele ainda não aparecer, é provável que o launcher do seu celular esteja em cache. O nome do app agora deve aparecer corretamente como **Cofrinho PRO**.
 
 ## Resultado do Build
 - **APK**: [app-debug.apk](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/build/outputs/apk/debug/app-debug.apk)
-- **Build ID**: v1.0.4-stable
+- **Versão**: v1.0.5-stable
