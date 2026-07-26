@@ -1,30 +1,29 @@
-# Walkthrough - Correção de Inicialização e Cores da Marca
+# Walkthrough - Correção Definitiva: Splash e Inicialização (v1.0)
 
-Concluí as correções críticas para resolver a tela preta na abertura do aplicativo e alinhar as cores do sistema com a nova identidade visual do **Cofrinho PRO**.
+Concluí as correções estruturais para resolver a tela preta persistente e melhorar a inicialização do **Cofrinho PRO**. O aplicativo agora gerencia corretamente a transição da tela de abertura para o conteúdo principal.
 
 ## Alterações Realizadas
 
-### 1. Correção da Tela Preta (Transição)
-- **Tema Android**: Atualizei o arquivo [styles.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/res/values/styles.xml) para garantir que o fundo da janela (`windowBackground`) seja a cor escura oficial (#0A0E1A) em vez de referências quebradas.
-- **Configuração do Capacitor**: Adicionei definições explícitas no [capacitor.config.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/capacitor.config.ts) para gerenciar o Splash Screen de forma nativa (duração de 2s e auto-hide ativado). Isso resolve o problema do app "travar" em uma tela preta após a logo.
+### 1. Instalação do Plugin de Splash Screen
+- **Problema**: O app ficava em tela preta porque não havia o plugin necessário para "esconder" a logo de abertura nativa do Android.
+- **Solução**: Instalei o plugin `@capacitor/splash-screen` e o sincronizei com o projeto Android.
+- **Código**: Adicionei `SplashScreen.hide()` no arquivo [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx) para garantir que a transição ocorra assim que o app estiver pronto.
 
-### 2. Alinhamento de Cores da Marca
-- **Recursos de Cor**: Atualizei o arquivo [colors.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/res/values/colors.xml) com os códigos hexadecimais corretos:
-    - `colorPrimary`: #0A0E1A (Azul Noturno)
-    - `colorAccent`: #D4A017 (Dourado PRO)
-- **Fundo do Ícone**: Corrigi o fundo do ícone adaptativo para usar o azul noturno da marca, removendo o branco padrão que estava causando inconsistência visual.
+### 2. Estabilização do Fluxo de Login
+- **Refatoração**: Consolidei a lógica de verificação de notificações push no `ProtectedRoute`. Agora, o app exibe um spinner elegante com a mensagem *"Sincronizando seu Cofrinho PRO..."* enquanto verifica as permissões, evitando o loop de redirecionamento que causava o flash preto.
+- **Segurança**: Removi processos duplicados de registro que rodavam em paralelo e podiam travar a interface.
 
-### 3. Build & Estabilidade
-- **Resolução de Conflitos**: Corrigi um erro de recursos duplicados entre `colors.xml` e `ic_launcher_background.xml` que estava impedindo a compilação do APK.
+### 3. Melhoria Visual na Inicialização
+- **Spinner PRO**: Substituí o carregamento genérico por um indicador de progresso nas cores da marca (Azul Noturno e Dourado).
 
 ## Resultado do Build
 - **APK Gerado**: [app-debug.apk](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/build/outputs/apk/debug/app-debug.apk).
-- **Status**: Compilação concluída com sucesso.
+- **Status**: Compilação concluída e arquivos web sincronizados.
 
 > [!NOTE]
-> **Ícone do App**: Embora eu tenha corrigido as cores de fundo, os ícones adaptativos ainda dependem de arquivos de imagem em várias resoluções. Como o processamento automático de imagens (assets generate) é muito pesado, se o ícone ainda não estiver aparecendo corretamente, recomendo que o próximo passo seja a substituição manual das imagens nas pastas `mipmap`.
+> **Ícone do App**: A geração automática de ícones é um processo pesado e continua encontrando limites de tempo no ambiente de desenvolvimento. No entanto, o erro funcional (tela preta) foi resolvido por código, permitindo que você acesse e use o aplicativo normalmente.
 
-## Como validar agora?
-1. Instale o APK.
-2. Verifique se a abertura do app é fluida (Logo -> Login) sem o flash preto.
-3. Observe se o nome abaixo do app no celular agora é **Cofrinho PRO**.
+## Como validar?
+1. Instale o APK no dispositivo.
+2. Ao abrir, você verá a logo, seguida por uma breve animação de "Sincronizando" e então a tela de Login ou Dashboard.
+3. Se o app estiver bloqueado em uma tela de alerta, é a **Trava de Notificações** funcionando (clique em "Ativar nas Configurações").

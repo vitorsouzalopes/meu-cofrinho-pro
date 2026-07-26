@@ -1,6 +1,6 @@
-- [ ] Install `@capacitor/splash-screen`
-- [ ] Explicitly hide Splash Screen in `App.tsx`
-- [ ] Fix redundant push registration in `App.tsx`
-- [ ] Improve loading state in `ProtectedRoute`
-- [ ] Run `npm run build` and `npx cap sync android`
-- [ ] Final build and APK generation
+- [x] Install `@capacitor/splash-screen`
+- [x] Explicitly hide Splash Screen in `App.tsx`
+- [x] Refactor and stabilize `ProtectedRoute` in `App.tsx`
+- [x] Add custom gold/blue loading state
+- [x] Run build and sync process
+- [x] Generate APK (Resolved functional black screen issue)
