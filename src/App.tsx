@@ -70,11 +70,18 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (loading || (session && checkingPush)) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0A0E1A] text-white">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0A0E1A] text-white p-6">
         <div className="w-12 h-12 border-4 border-[#D4A017] border-t-transparent rounded-full animate-spin mb-6" />
-        <div className="space-y-2 text-center">
+        <div className="space-y-4 text-center">
           <p className="text-sm font-bold tracking-widest uppercase">Cofrinho PRO</p>
           <p className="text-[10px] text-muted-foreground animate-pulse">Sincronizando dados seguros...</p>
+
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-8 text-[9px] text-muted-foreground underline hover:text-white transition-colors"
+          >
+            Demorando muito? Toque aqui para reiniciar
+          </button>
         </div>
       </div>
     );

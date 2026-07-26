@@ -66,6 +66,7 @@ const DonutChart = ({ percentage, label, color = "var(--primary)" }: { percentag
 
 const Today = () => {
   const { user } = useAuth();
+  const { isPremium, loading: premiumLoading } = usePremium();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);

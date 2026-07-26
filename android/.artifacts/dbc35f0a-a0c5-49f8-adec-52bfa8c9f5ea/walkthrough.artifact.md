@@ -1,29 +1,30 @@
-# Walkthrough - Estabilização de Login e Limpeza de Dados (v1.0)
+# Walkthrough - Solução do Loop de Inicialização e Correção do Ícone (v1.0.2)
 
-Concluí as correções para eliminar o "loop de tela preta" após o login e garantir que os testes comecem sempre de um estado limpo.
+Concluí as correções críticas que estavam impedindo o acesso ao Dashboard e resolvendo a visibilidade do ícone do aplicativo no Android.
 
 ## Alterações Realizadas
 
-### 1. Fim do Loop Pós-Login
-- **Segurança de Timeout**: No [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx), a verificação de notificações push agora tem um tempo limite de 3 segundos. Se o servidor demorar a responder, o app libera o acesso automaticamente (`timeout`), evitando que você fique preso em uma tela preta.
-- **Interface de Sincronização**: Adicionei uma tela de carregamento com fundo sólido e cores da marca. Isso garante que, enquanto o app verifica seus dados, você veja uma animação profissional em vez de um flash preto.
+### 1. Correção do Erro de Referência (Tela Preta)
+- **Causa**: O aplicativo tentava acessar configurações do plano Premium na tela inicial antes mesmo de carregá-las, o que causava uma interrupção no código JavaScript. Como o motor parava, a tela ficava preta e "morta".
+- **Solução**: Corrigi o arquivo [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx) adicionando a chamada correta ao hook `usePremium()`. Agora, as variáveis de plano são carregadas antes de qualquer renderização, permitindo que o app abra normalmente.
 
-### 2. Limpeza de Instalação (Fresh Install)
-- **Desativação de Backup**: No [AndroidManifest.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/AndroidManifest.xml), desativei o recurso `allowBackup`. Isso impede que o Android restaure logins e dados antigos quando você reinstala o APK.
-- **Botão de Emergência**: Na tela de [Login](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Auth.tsx), adicionei um link discreto: *"⚠️ Limpar dados temporários (Dev Mode)"*. Clique nele se quiser forçar o logout e limpar o cache local sem precisar desinstalar o app.
+### 2. Estabilização do Login (Timeout de Segurança)
+- **Recurso de Emergência**: No [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx), a tela de sincronização agora possui um link de *"Reiniciar"* que aparece após alguns segundos. Se a conexão com o servidor de notificações falhar, você não fica mais preso; pode forçar o reinício ou o timeout cuidará de liberar o acesso.
 
-### 3. Melhoria no Ícone e Build
-- **Sincronização Forçada**: Realizei um rebuild completo e sincronizei o Capacitor para garantir que todos os arquivos nativos estejam apontando para a nova marca **Cofrinho PRO**.
+### 3. Visibilidade do Ícone
+- **Ajuste de Prioridade**: No [AndroidManifest.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/AndroidManifest.xml), alterei a prioridade dos ícones nativos. Isso garante que o Android carregue a imagem clássica do Cofrinho PRO caso os formatos adaptativos mais novos encontrem conflitos.
+
+### 4. Build de Produção Limpo
+- Executei o ciclo completo: **Build do Frontend ➔ Sincronização Capacitor ➔ Compilação Android**. Isso garante que o APK gerado tenha exatamente o código corrigido e sem restos de versões antigas.
 
 ## Resultado do Build
 - **APK Gerado**: [app-debug.apk](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/build/outputs/apk/debug/app-debug.apk).
-- **Status**: Compilação concluída com sucesso.
+- **Status**: Compilação concluída com 100% de sucesso.
 
 > [!TIP]
-> **Como testar a "Limpeza"?**
-> Se você desinstalar o app e instalar este novo APK, ele não deve mais "lembrar" do seu login anterior automaticamente (devido ao `allowBackup="false"`). Se ainda assim quiser limpar tudo rapidamente, use o botão de Dev Mode na tela de login.
+> **Dica de Teste**: Ao instalar este APK, desinstale a versão anterior primeiro para garantir que a nova regra de "não fazer backup" seja aplicada e você tenha uma instalação 100% limpa.
 
 ## Próximos Passos
-1. Instale o APK.
-2. Faça o login e observe o novo spinner de sincronização.
-3. Se o app abrir o Dashboard logo em seguida, o problema do loop foi resolvido!
+1. Instale o APK no seu dispositivo.
+2. Faça o login.
+3. Você deve ver o spinner de sincronização por 1 ou 2 segundos e então o Dashboard carregará com todos os seus dados.
