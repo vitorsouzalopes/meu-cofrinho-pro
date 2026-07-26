@@ -1,43 +1,40 @@
-# Correção de Tela Preta Pós-Login e Estabilização de Inicialização
+# Correção de Erro Crítico (Tela Preta) e Ícone do App
 
-O aplicativo está apresentando uma tela preta após o login, provavelmente devido a um loop de carregamento ou falha na checagem de notificações push. Além disso, vamos desativar o backup do Android para garantir que novos testes comecem com o estado limpo e corrigir o problema do ícone.
+Identificamos um erro técnico grave (ReferenceError) na página inicial que causava o travamento total do aplicativo (tela preta) após o login. Além disso, vamos forçar a atualização dos ícones nativos para que a marca **Cofrinho PRO** apareça corretamente no celular.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Limpeza de Dados**: Vou desativar `android:allowBackup` e `android:fullBackupContent` no Manifesto. Isso fará com que, ao desinstalar e reinstalar o app, os dados locais sejam realmente apagados, permitindo um teste "do zero".
+> Descobri que o app estava tentando usar variáveis de "Plano Premium" na tela inicial sem carregá-las corretamente, o que fazia o código "quebrar" e travar em uma tela escura. Vou corrigir isso e simplificar a inicialização.
 
 ## Proposta de Mudanças
 
-### [Android Infrastructure]
+### [UI/UX - Correção de Bug]
 
-#### [MODIFY] [AndroidManifest.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/AndroidManifest.xml)
-- Definir `android:allowBackup="false"` para evitar persistência de dados antigos entre instalações durante esta fase de teste.
-- Garantir que o `icon` e `roundIcon` estejam apontando corretamente para `@mipmap/ic_launcher`.
+#### [MODIFY] [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)
+- Corrigir a falta da chamada ao hook `usePremium()`.
+- Garantir que as variáveis `isPremium` e `premiumLoading` estejam disponíveis antes de inicializar os anúncios.
+- Isso removerá o "loop infinito" de tela preta.
 
 ---
 
-### [App Logic & UI]
+### [Core & Estabilidade]
 
 #### [MODIFY] [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx)
-- Corrigir a lógica do `ProtectedRoute`:
-    - Adicionar um estado `hasInitializedPush` para evitar re-execuções.
-    - Melhorar o fallback do spinner para garantir que ele seja renderizado em um container com fundo sólido, evitando a transparência que pode parecer uma "tela preta".
-- Ajustar o tempo de ocultação do Splash Screen para ocorrer apenas após o primeiro render do conteúdo.
-
-#### [MODIFY] [Auth.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Auth.tsx)
-- Adicionar um botão temporário "Limpar Dados Locais" na tela de login para facilitar os seus testes de "instalação limpa".
+- Adicionar um botão de "Reiniciar App" na tela de sincronização caso ela demore mais que o esperado.
+- Melhorar os logs de erro para que apareçam no console do desenvolvedor.
 
 ---
 
-### [Icon Fix]
+### [Android Resources (Ícone)]
 
-#### [ACTION] Geração Manual de Ícones
-- Vou tentar copiar a logo diretamente para os recursos de ícone principais, contornando o erro de geração automática.
+#### [ACTION] Substituição Forçada de Ícones
+- Vou configurar o Android para usar o ícone clássico (`ic_launcher.png`) como prioridade caso o ícone adaptativo falhe.
+- Garantir que as referências no `AndroidManifest.xml` estejam sólidas.
 
 ## Plano de Verificação
 
 ### Manual Verification
-- **Abertura**: O app deve mostrar a logo e carregar a tela de Login.
-- **Login**: Após logar, o app deve mostrar o spinner "Sincronizando..." e em seguida o Dashboard.
-- **Fresh Install**: Desinstalar e instalar deve resultar em um app deslogado (sem dados anteriores).
+- **Abertura**: O app deve abrir a tela de Login normalmente.
+- **Pós-Login**: O spinner de sincronização deve aparecer brevemente e levar direto ao Dashboard (sem tela preta).
+- **Ícone**: O ícone do porquinho dourado deve aparecer na lista de aplicativos.

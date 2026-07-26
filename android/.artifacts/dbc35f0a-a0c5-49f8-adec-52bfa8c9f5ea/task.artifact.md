@@ -1,6 +1,5 @@
-- [x] Disable Android Auto Backup in `AndroidManifest.xml`
-- [x] Refactor `ProtectedRoute` with 3s Timeout safety
-- [x] Ensure solid background for loading state (Fix black flash)
-- [x] Add "Clear Data" helper for dev/testing in `Auth.tsx`
-- [x] Run full build and sync
-- [x] Generate APK (Resolved login loop issue)
+- [ ] Fix `ReferenceError` in `Today.tsx` (Add `usePremium` call)
+- [ ] Stabilize `App.tsx` loading state and add "Emergency Reload"
+- [ ] Fix `AndroidManifest.xml` icon priority
+- [ ] Run full build (`npm run build` + `cap sync`)
+- [ ] Final APK generation
