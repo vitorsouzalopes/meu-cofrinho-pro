@@ -1,5 +1,5 @@
-- [x] Update `main.tsx` reset version to `v1.0.4_final_reset`
-- [x] Refactor `App.tsx` ProtectedRoute (2.5s timeout + Skip button)
-- [x] Stabilize `native-push.ts` with error boundaries
-- [x] Run `npm run build` + `cap sync`
-- [x] Generate final APK (Build v1.0.4)
+- [ ] Remove `VidaFit.tsx` and related library files
+- [ ] Remove `/vidafit` route from `App.tsx`
+- [ ] Fix `Profile.tsx` by adding `usePremium` call (Fixes blue screen)
+- [ ] Verify `BottomNav.tsx` for orphan links
+- [ ] Run full build and APK generation
