@@ -1,6 +1,6 @@
-- [x] Remove `VidaFit.tsx` and related library files
-- [x] Remove `/vidafit` route from `App.tsx`
-- [x] Remove VidaFit from `BottomNav.tsx`
-- [x] Fix `Profile.tsx` crash by importing `usePremium`
-- [x] Run `npm run build` + `cap sync`
-- [x] Generate APK v1.0.6 (Stable and Clean)
+- [ ] Fix syntax error in `Today.tsx` (Component definition order)
+- [ ] Move push notification state to `AuthContext.tsx`
+- [ ] Simplify `ProtectedRoute` in `App.tsx`
+- [ ] Remove `Index.tsx` (Orphan page)
+- [ ] Run `npm run build` + `cap sync`
+- [ ] Generate APK v1.0.7

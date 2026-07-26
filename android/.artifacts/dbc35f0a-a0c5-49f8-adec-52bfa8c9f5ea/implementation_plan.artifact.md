@@ -1,46 +1,46 @@
-# Remoção da Página "Vida Fit" e Correção do Perfil
+# Correção de Navegação e Remoção de Resíduos (Vida Fit)
 
-Identificamos que o componente `VidaFit` e suas rotas ainda estão presentes no projeto, causando confusão na interface do **Cofrinho PRO**. Além disso, o crash na página de perfil (tela azul) é causado por uma falha de carregamento no hook `usePremium`.
+Identificamos que o aplicativo ainda apresenta falhas na navegação entre as páginas (Perfil e Metas) e resíduos visuais do projeto anterior. Vamos estabilizar o sistema de autenticação e limpar os componentes órfãos.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> Vou remover permanentemente todas as referências ao projeto "Vida Fit" (páginas, utilitários e testes).
-> O crash na página de perfil acontece porque o app está tentando verificar o status Premium sem carregar as bibliotecas de Anúncios necessárias, causando uma "quebra" no renderizador.
+> **Crash na Navegação**: O erro de "tela azul" ao trocar de página acontece porque a verificação de segurança (Notificações Push) estava rodando novamente em cada clique, causando um travamento. Vou mover essa verificação para o nível global do app para que rode apenas uma vez no login.
 
 ## Proposta de Mudanças
 
-### [Limpeza de Marca]
+### [Core & Auth]
 
-#### [DELETE] [VidaFit.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/VidaFit.tsx)
-- Excluir o arquivo da página.
-
-#### [DELETE] [vida-fit.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/lib/vida-fit.ts)
-- Excluir utilitários e testes relacionados.
+#### [MODIFY] [AuthContext.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/contexts/AuthContext.tsx)
+- Adicionar o estado `pushStatus` e `pushChecked` ao contexto global.
+- Realizar o registro do Push apenas uma vez após o login ser detectado.
+- Isso permitirá que a troca de páginas (Dashboard -> Perfil) seja instantânea.
 
 #### [MODIFY] [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx)
-- Remover a rota `/vidafit`.
-- Limpar importações órfãs.
+- Simplificar o `ProtectedRoute` para ler o status do `AuthContext`.
+- Remover a lógica redundante de chetagem que causava lentidão.
 
 ---
 
-### [UI/UX - Correção de Crash]
+### [UI/UX - Correção de Dashboard]
 
-#### [MODIFY] [Profile.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Profile.tsx)
-- Adicionar o hook `usePremium()` que estava faltando.
-- Garantir que a renderização do badge "Pro Member" dependa de dados carregados.
-- Isso resolverá a "tela azul/trava" ao abrir o perfil.
+#### [MODIFY] [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)
+- **CORREÇÃO CRÍTICA**: Remover erro de sintaxe onde o componente era exportado antes de ser definido.
+- Garantir que as cores da marca (Dourado/Azul) sejam aplicadas corretamente.
+
+#### [DELETE] [Index.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Index.tsx)
+- Remover esta página que continha os desafios do "Vida Fit" e não está mais sendo usada nas rotas.
 
 ---
 
-### [Navegação]
+### [Nomenclatura]
 
-#### [MODIFY] [BottomNav.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/components/BottomNav.tsx)
-- Garantir que o link para "Vida Fit" (se existir) seja removido do menu inferior.
+#### [MODIFY] [Goals.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Goals.tsx)
+- Revisar textos para garantir que não existam menções a "treinos" ou "saúde" (herança do Vida Fit).
 
 ## Plano de Verificação
 
 ### Manual Verification
-- **Menu**: O link para "Vida Fit" deve ter sumido do menu.
-- **Perfil**: Clicar no Perfil deve abrir a tela de configurações normalmente (sem travar).
-- **Consistência**: O nome **Cofrinho PRO** deve ser o único visível.
+- **Navegação**: Abrir o app -> Clicar em Metas -> Clicar em Perfil. A transição deve ser imediata.
+- **Identidade**: Confirmar que o termo "Vida Fit" sumiu completamente de todas as telas.
+- **Estabilidade**: Validar que o botão "Entrar sem sincronizar" só aparece se houver falha real de rede.
