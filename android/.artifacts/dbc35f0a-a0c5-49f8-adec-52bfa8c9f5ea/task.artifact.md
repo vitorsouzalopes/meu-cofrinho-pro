@@ -1,6 +1,5 @@
-- [x] Fix syntax error in `Today.tsx` (Component definition order)
-- [x] Move push notification state to `AuthContext.tsx`
-- [x] Simplify `ProtectedRoute` in `App.tsx`
-- [x] Remove `Index.tsx` (Orphan page/Vida Fit residue)
-- [x] Run `npm run build` + `cap sync`
-- [x] Generate APK v1.0.7 (Navigation fixed)
+- [ ] Add Bruteforce Timeout (2s) to `AuthContext.tsx`
+- [ ] Refactor `App.tsx` ProtectedRoute to prevent re-blocking on route change
+- [ ] Verify `BottomNav.tsx` navigation logic
+- [ ] Run `npm run build` + `cap sync`
+- [ ] Generate final stable APK v1.0.8

@@ -1,46 +1,40 @@
-# Correção de Navegação e Remoção de Resíduos (Vida Fit)
+# Correção Definitiva de Navegação e Carregamento (v1.0.8)
 
-Identificamos que o aplicativo ainda apresenta falhas na navegação entre as páginas (Perfil e Metas) e resíduos visuais do projeto anterior. Vamos estabilizar o sistema de autenticação e limpar os componentes órfãos.
+O aplicativo está apresentando uma falha de carregamento (tela azul) ao navegar para "Metas" ou "Perfil". Isso ocorre devido a um conflito entre os estados de checagem de notificações e a transição de rotas. Vamos desacoplar a segurança da navegação e garantir fluidez total.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Crash na Navegação**: O erro de "tela azul" ao trocar de página acontece porque a verificação de segurança (Notificações Push) estava rodando novamente em cada clique, causando um travamento. Vou mover essa verificação para o nível global do app para que rode apenas uma vez no login.
+> **Otimização de Segurança**: Vou alterar o `ProtectedRoute` para que a tela de "Sincronizando..." apareça **apenas uma vez** por sessão. Assim que você logar e o app conferir as notificações (ou der o tempo limite), ele nunca mais bloqueará sua navegação entre abas.
 
 ## Proposta de Mudanças
 
 ### [Core & Auth]
 
 #### [MODIFY] [AuthContext.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/contexts/AuthContext.tsx)
-- Adicionar o estado `pushStatus` e `pushChecked` ao contexto global.
-- Realizar o registro do Push apenas uma vez após o login ser detectado.
-- Isso permitirá que a troca de páginas (Dashboard -> Perfil) seja instantânea.
+- Adicionar um mecanismo de **Timeout de Força Bruta** diretamente no Contexto.
+- Se o Android não responder sobre a permissão de notificações em **2 segundos**, o `pushChecked` será forçado para `true`. Isso garante que o app continue funcionando mesmo em dispositivos com falhas no plugin.
+
+---
+
+### [UI/UX - Navegação]
 
 #### [MODIFY] [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx)
-- Simplificar o `ProtectedRoute` para ler o status do `AuthContext`.
-- Remover a lógica redundante de chetagem que causava lentidão.
+- Refatorar o `ProtectedRoute` para ser "pass-through": ele só bloqueia o acesso inicial.
+- Uma vez que o usuário está "dentro", a troca de rotas (Metas, Perfil, etc) não dispara mais a tela de carga.
+
+#### [MODIFY] [BottomNav.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/components/BottomNav.tsx)
+- Garantir que a troca de abas não cause re-renders pesados que possam simular um travamento.
 
 ---
 
-### [UI/UX - Correção de Dashboard]
+### [Estabilidade]
 
 #### [MODIFY] [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)
-- **CORREÇÃO CRÍTICA**: Remover erro de sintaxe onde o componente era exportado antes de ser definido.
-- Garantir que as cores da marca (Dourado/Azul) sejam aplicadas corretamente.
-
-#### [DELETE] [Index.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Index.tsx)
-- Remover esta página que continha os desafios do "Vida Fit" e não está mais sendo usada nas rotas.
-
----
-
-### [Nomenclatura]
-
-#### [MODIFY] [Goals.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Goals.tsx)
-- Revisar textos para garantir que não existam menções a "treinos" ou "saúde" (herança do Vida Fit).
+- Verificar e remover qualquer dependência circular ou efeito colateral que possa travar a renderização ao voltar para a home.
 
 ## Plano de Verificação
 
 ### Manual Verification
-- **Navegação**: Abrir o app -> Clicar em Metas -> Clicar em Perfil. A transição deve ser imediata.
-- **Identidade**: Confirmar que o termo "Vida Fit" sumiu completamente de todas as telas.
-- **Estabilidade**: Validar que o botão "Entrar sem sincronizar" só aparece se houver falha real de rede.
+- **Teste de Stress**: Abrir o app -> Logar -> Clicar repetidamente em Metas, Perfil e Hoje. A troca deve ser fluida e sem spinners.
+- **Teste de Timeout**: Desativar a internet e tentar abrir o app. O spinner deve aparecer por no máximo 2s e então liberar o acesso ao que for possível (ou tela de erro amigável).
