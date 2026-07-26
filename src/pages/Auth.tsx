@@ -259,6 +259,19 @@ const Auth = () => {
               <Fingerprint className="w-4 h-4 ml-2" />
             </Button>
           )}
+
+          <div className="pt-4 border-t border-border/30">
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.clear();
+                window.location.reload();
+              }}
+              className="w-full text-[10px] text-muted-foreground hover:text-destructive transition-colors uppercase tracking-widest font-bold"
+            >
+              ⚠️ Limpar dados temporários (Dev Mode)
+            </button>
+          </div>
         </form>
 
         {/* Toggle */}

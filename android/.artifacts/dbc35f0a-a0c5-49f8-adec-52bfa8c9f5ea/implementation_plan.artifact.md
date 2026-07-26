@@ -1,45 +1,43 @@
-# Correção Definitiva: Tela Preta e Ícone do App
+# Correção de Tela Preta Pós-Login e Estabilização de Inicialização
 
-Identificamos que o aplicativo fica em tela preta porque o plugin de Splash Screen do Capacitor não está instalado no `package.json`, impedindo que o app oculte a tela de carregamento nativa. Além disso, vamos consolidar a inicialização para evitar loops de redirecionamento.
+O aplicativo está apresentando uma tela preta após o login, provavelmente devido a um loop de carregamento ou falha na checagem de notificações push. Além disso, vamos desativar o backup do Android para garantir que novos testes comecem com o estado limpo e corrigir o problema do ícone.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> Vou instalar o plugin `@capacitor/splash-screen`. Isso é essencial para que o código JavaScript consiga dizer ao Android: "Já carreguei, pode esconder a logo de abertura".
+> **Limpeza de Dados**: Vou desativar `android:allowBackup` e `android:fullBackupContent` no Manifesto. Isso fará com que, ao desinstalar e reinstalar o app, os dados locais sejam realmente apagados, permitindo um teste "do zero".
 
 ## Proposta de Mudanças
 
-### [Dependências e Build]
-
-#### [ACTION] Instalação de Plugins
-- Instalar `@capacitor/splash-screen` (versão compatível com Capacitor 4).
-- Rodar `npx cap sync android`.
-
----
-
-### [Core & Inicialização]
-
-#### [MODIFY] [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx)
-- Importar e chamar `SplashScreen.hide()` assim que o componente principal for montado.
-- Remover chamadas duplicadas de `registerNativePush` para evitar conflitos de estado.
-- Garantir que o `ProtectedRoute` mostre um spinner visível em vez de uma tela vazia durante a checagem de notificações.
-
-#### [MODIFY] [native-push.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/lib/native-push.ts)
-- Adicionar logs extras para debug no Logcat.
-
----
-
-### [Android Resources (Ícone)]
+### [Android Infrastructure]
 
 #### [MODIFY] [AndroidManifest.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/AndroidManifest.xml)
-- Temporariamente desativar o ícone adaptativo se ele continuar falhando, ou garantir que a cor de fundo seja aplicada globalmente.
+- Definir `android:allowBackup="false"` para evitar persistência de dados antigos entre instalações durante esta fase de teste.
+- Garantir que o `icon` e `roundIcon` estejam apontando corretamente para `@mipmap/ic_launcher`.
 
-#### [ACTION] Geração de Ícones
-- Vou tentar uma abordagem simplificada de cópia de arquivos para garantir que pelo menos o ícone principal apareça.
+---
+
+### [App Logic & UI]
+
+#### [MODIFY] [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx)
+- Corrigir a lógica do `ProtectedRoute`:
+    - Adicionar um estado `hasInitializedPush` para evitar re-execuções.
+    - Melhorar o fallback do spinner para garantir que ele seja renderizado em um container com fundo sólido, evitando a transparência que pode parecer uma "tela preta".
+- Ajustar o tempo de ocultação do Splash Screen para ocorrer apenas após o primeiro render do conteúdo.
+
+#### [MODIFY] [Auth.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Auth.tsx)
+- Adicionar um botão temporário "Limpar Dados Locais" na tela de login para facilitar os seus testes de "instalação limpa".
+
+---
+
+### [Icon Fix]
+
+#### [ACTION] Geração Manual de Ícones
+- Vou tentar copiar a logo diretamente para os recursos de ícone principais, contornando o erro de geração automática.
 
 ## Plano de Verificação
 
 ### Manual Verification
-- **Abertura**: O app deve mostrar a logo por 2 segundos e então abrir a tela de Login ou Dashboard.
-- **Login**: Após clicar em "Entrar", deve aparecer o spinner e logo em seguida o Dashboard (ou a trava de notificação).
-- **Ícone**: O ícone do app deve aparecer na grade de aplicativos do Android.
+- **Abertura**: O app deve mostrar a logo e carregar a tela de Login.
+- **Login**: Após logar, o app deve mostrar o spinner "Sincronizando..." e em seguida o Dashboard.
+- **Fresh Install**: Desinstalar e instalar deve resultar em um app deslogado (sem dados anteriores).

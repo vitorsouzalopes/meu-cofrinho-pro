@@ -1,6 +1,6 @@
-- [x] Install `@capacitor/splash-screen`
-- [x] Explicitly hide Splash Screen in `App.tsx`
-- [x] Refactor and stabilize `ProtectedRoute` in `App.tsx`
-- [x] Add custom gold/blue loading state
-- [x] Run build and sync process
-- [x] Generate APK (Resolved functional black screen issue)
+- [x] Disable Android Auto Backup in `AndroidManifest.xml`
+- [x] Refactor `ProtectedRoute` with 3s Timeout safety
+- [x] Ensure solid background for loading state (Fix black flash)
+- [x] Add "Clear Data" helper for dev/testing in `Auth.tsx`
+- [x] Run full build and sync
+- [x] Generate APK (Resolved login loop issue)

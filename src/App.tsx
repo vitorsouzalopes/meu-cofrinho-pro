@@ -47,23 +47,42 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (session?.user && !pushStatus && !checkingPush) {
       setCheckingPush(true);
+      // Timeout safety: don't wait more than 3s for push registration
+      const timeout = setTimeout(() => {
+        if (!pushStatus) {
+          setPushStatus('timeout');
+          setCheckingPush(false);
+        }
+      }, 3000);
+
       registerNativePush(session.user.id)
-        .then(res => setPushStatus(res.status))
+        .then(res => {
+          clearTimeout(timeout);
+          setPushStatus(res.status);
+        })
+        .catch(err => {
+          console.error("Push reg fail:", err);
+          setPushStatus('error');
+        })
         .finally(() => setCheckingPush(false));
     }
   }, [session, pushStatus, checkingPush]);
 
   if (loading || (session && checkingPush)) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-xs text-muted-foreground font-medium animate-pulse">Sincronizando seu Cofrinho PRO...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0A0E1A] text-white">
+        <div className="w-12 h-12 border-4 border-[#D4A017] border-t-transparent rounded-full animate-spin mb-6" />
+        <div className="space-y-2 text-center">
+          <p className="text-sm font-bold tracking-widest uppercase">Cofrinho PRO</p>
+          <p className="text-[10px] text-muted-foreground animate-pulse">Sincronizando dados seguros...</p>
+        </div>
       </div>
     );
   }
+
   if (!session) return <Navigate to="/auth" replace />;
 
-  if (Capacitor.isNativePlatform() && pushStatus && pushStatus !== 'granted' && pushStatus !== 'web') {
+  if (Capacitor.isNativePlatform() && pushStatus && pushStatus !== 'granted' && pushStatus !== 'web' && pushStatus !== 'timeout' && pushStatus !== 'error') {
     return <NotificationWall onRetry={() => window.location.reload()} />;
   }
 
