@@ -16,6 +16,8 @@ import { useDebts } from "@/hooks/use-finance-data";
 import { forecastMonth } from "@/financial/forecastEngine";
 import { analyzeFinancialRisk } from "@/financial/notificationEngine";
 import { cn } from "@/lib/utils";
+import { initializeAds, showBannerAd, hideBannerAd } from "@/lib/ads";
+import { usePremium } from "@/lib/premium";
 
 type Account = Tables<"accounts">;
 type Profile = Tables<"profiles">;

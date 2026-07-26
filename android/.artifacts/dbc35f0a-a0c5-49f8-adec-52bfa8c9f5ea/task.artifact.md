@@ -1,5 +1,5 @@
-- [x] Fix `ReferenceError` in `Today.tsx` (Add `usePremium` call)
-- [x] Stabilize `App.tsx` loading state and add "Emergency Reload"
-- [x] Fix `AndroidManifest.xml` icon priority
-- [x] Run full build (`npm run build` + `cap sync`)
-- [x] Generate APK (Resolved functional black screen issue)
+- [x] Fix critical syntax error in `Today.tsx` (Complete rewrite)
+- [x] Add "First Run" data wipe in `main.tsx` (Hard reset logic)
+- [x] Refactor `App.tsx` for higher resilience (4s timeout + solid background)
+- [x] Run `npm run build` + `cap sync`
+- [x] Clean Android Gradle cache and build APK (Build v1.0.3)

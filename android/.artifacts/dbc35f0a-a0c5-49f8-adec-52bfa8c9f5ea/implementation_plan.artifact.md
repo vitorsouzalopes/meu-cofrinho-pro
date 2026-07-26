@@ -1,40 +1,44 @@
-# Correção de Erro Crítico (Tela Preta) e Ícone do App
+# Correção Crítica de Crash (Fim da Tela Preta) e Reset de Dados
 
-Identificamos um erro técnico grave (ReferenceError) na página inicial que causava o travamento total do aplicativo (tela preta) após o login. Além disso, vamos forçar a atualização dos ícones nativos para que a marca **Cofrinho PRO** apareça corretamente no celular.
+Descobri o erro exato que estava mantendo o aplicativo em tela preta: o arquivo do Dashboard (`Today.tsx`) estava com uma falha de sintaxe grave (definições duplicadas e exportação antes da hora), o que fazia o React "quebrar" assim que você logava. Além disso, vamos forçar a limpeza de dados antigos.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> Descobri que o app estava tentando usar variáveis de "Plano Premium" na tela inicial sem carregá-las corretamente, o que fazia o código "quebrar" e travar em uma tela escura. Vou corrigir isso e simplificar a inicialização.
+> O arquivo `Today.tsx` foi corrompido em uma das edições anteriores, o que causava o travamento total após o login. Vou reconstruí-lo de forma limpa. Também vou adicionar um script de "Primeira Execução" que limpará seu cache local automaticamente nesta atualização.
 
 ## Proposta de Mudanças
 
-### [UI/UX - Correção de Bug]
+### [UI/UX - Correção de Bug Fatal]
 
 #### [MODIFY] [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)
-- Corrigir a falta da chamada ao hook `usePremium()`.
-- Garantir que as variáveis `isPremium` e `premiumLoading` estejam disponíveis antes de inicializar os anúncios.
-- Isso removerá o "loop infinito" de tela preta.
+- Remover definições duplicadas do componente.
+- Corrigir a ordem de exportação.
+- Garantir que todos os hooks (`useAuth`, `usePremium`, `useDebts`) sejam chamados corretamente no início.
+- Isso removerá o crash que causava a tela preta após o login.
 
 ---
 
-### [Core & Estabilidade]
+### [Core & Inicialização]
+
+#### [MODIFY] [main.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/main.tsx)
+- Adicionar uma lógica de **"Hard Reset"**: Se o app for aberto e não encontrar a chave `v1_init`, ele limpará todo o `localStorage` e recarregará. Isso resolverá o problema de "dados anteriores" voltando.
+- Tornar o `renderApp` mais resiliente a falhas no serviço de atualização.
 
 #### [MODIFY] [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx)
-- Adicionar um botão de "Reiniciar App" na tela de sincronização caso ela demore mais que o esperado.
-- Melhorar os logs de erro para que apareçam no console do desenvolvedor.
+- Simplificar o `ProtectedRoute`.
+- Adicionar um `console.log` visível para facilitar o debug se algo falhar na inicialização.
 
 ---
 
-### [Android Resources (Ícone)]
+### [Android Resources]
 
-#### [ACTION] Substituição Forçada de Ícones
-- Vou configurar o Android para usar o ícone clássico (`ic_launcher.png`) como prioridade caso o ícone adaptativo falhe.
-- Garantir que as referências no `AndroidManifest.xml` estejam sólidas.
+#### [ACTION] Limpeza de Cache de Build
+- Rodar um comando para limpar os caches do Gradle antes de gerar o novo APK.
 
 ## Plano de Verificação
 
 ### Manual Verification
-- **Abertura**: O app deve abrir a tela de Login normalmente.
-- **Pós-Login**: O spinner de sincronização deve aparecer brevemente e levar direto ao Dashboard (sem tela preta).
-- **Ícone**: O ícone do porquinho dourado deve aparecer na lista de aplicativos.
+- **Abertura**: O app deve abrir a tela de Login sem dados salvos (Reset automático).
+- **Pós-Login**: O Dashboard deve carregar instantaneamente, sem loop de tela preta.
+- **Identidade**: O ícone do app deve ser validado novamente após o build limpo.

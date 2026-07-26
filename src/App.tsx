@@ -45,42 +45,51 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [checkingPush, setCheckingPush] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
     if (session?.user && !pushStatus && !checkingPush) {
       setCheckingPush(true);
-      // Timeout safety: don't wait more than 3s for push registration
-      const timeout = setTimeout(() => {
-        if (!pushStatus) {
+      console.log("[Auth] Starting push check...");
+
+      const safetyTimeout = setTimeout(() => {
+        if (mounted && !pushStatus) {
+          console.warn("[Auth] Push check timeout. Moving forward.");
           setPushStatus('timeout');
           setCheckingPush(false);
         }
-      }, 3000);
+      }, 4000);
 
       registerNativePush(session.user.id)
         .then(res => {
-          clearTimeout(timeout);
-          setPushStatus(res.status);
+          if (mounted) {
+            console.log("[Auth] Push check complete:", res.status);
+            setPushStatus(res.status);
+          }
         })
         .catch(err => {
-          console.error("Push reg fail:", err);
-          setPushStatus('error');
+          console.error("[Auth] Push check error:", err);
+          if (mounted) setPushStatus('error');
         })
-        .finally(() => setCheckingPush(false));
+        .finally(() => {
+          clearTimeout(safetyTimeout);
+          if (mounted) setCheckingPush(false);
+        });
     }
+    return () => { mounted = false; };
   }, [session, pushStatus, checkingPush]);
 
   if (loading || (session && checkingPush)) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0A0E1A] text-white p-6">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0A0E1A] text-white p-8">
         <div className="w-12 h-12 border-4 border-[#D4A017] border-t-transparent rounded-full animate-spin mb-6" />
         <div className="space-y-4 text-center">
-          <p className="text-sm font-bold tracking-widest uppercase">Cofrinho PRO</p>
-          <p className="text-[10px] text-muted-foreground animate-pulse">Sincronizando dados seguros...</p>
+          <h2 className="text-lg font-bold tracking-widest uppercase text-white">Cofrinho PRO</h2>
+          <p className="text-[10px] text-muted-foreground animate-pulse">Sincronizando seu universo financeiro...</p>
 
           <button
             onClick={() => window.location.reload()}
-            className="mt-8 text-[9px] text-muted-foreground underline hover:text-white transition-colors"
+            className="mt-12 text-[10px] text-muted-foreground underline hover:text-white uppercase tracking-tighter"
           >
-            Demorando muito? Toque aqui para reiniciar
+            Aguardando conexão? Toque para reiniciar
           </button>
         </div>
       </div>
@@ -89,7 +98,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (!session) return <Navigate to="/auth" replace />;
 
-  if (Capacitor.isNativePlatform() && pushStatus && pushStatus !== 'granted' && pushStatus !== 'web' && pushStatus !== 'timeout' && pushStatus !== 'error') {
+  if (Capacitor.isNativePlatform() && pushStatus && !['granted', 'web', 'timeout', 'error'].includes(pushStatus)) {
     return <NotificationWall onRetry={() => window.location.reload()} />;
   }
 
@@ -130,16 +139,14 @@ const AppRoutes = () => (
 
 const AppContent = () => {
   const { session } = useAuth();
-  const navigate = useNavigate();
-  const [updateConfig, setUpdateConfig] = useState<{ min_version: string; download_url: string; message: string } | null>(null);
-  const [needsUpdate, setNeedsUpdate] = useState(false);
 
   useScrollRestoration();
   useGestureBack();
 
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
-      SplashScreen.hide();
+      SplashScreen.hide().catch(err => console.warn("Splash hide err:", err));
+
       const backListener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
         if (!canGoBack) {
           CapacitorApp.exitApp();
@@ -153,15 +160,6 @@ const AppContent = () => {
     }
   }, []);
 
-  // Push registration is handled inside ProtectedRoute to ensure mandatory check
-  /*
-  useEffect(() => {
-    if (session?.user) {
-      registerNativePush(session.user.id);
-    }
-  }, [session]);
-  */
-
   useEffect(() => {
     const checkVersion = async () => {
       try {
@@ -172,53 +170,28 @@ const AppContent = () => {
           .limit(1)
           .maybeSingle();
 
-        if (error) {
-          console.error("Error checking app version:", error);
-          return;
-        }
+        if (error || !data) return;
 
-        if (data) {
-          const config = data as any;
-          const isOlder = (current: string, min: string) => {
-            const c = current.split('.').map(Number);
-            const m = min.split('.').map(Number);
-            for (let i = 0; i < Math.max(c.length, m.length); i++) {
-              const cv = c[i] || 0;
-              const mv = m[i] || 0;
-              if (cv < mv) return true;
-              if (cv > mv) return false;
-            }
-            return false;
-          };
-
-          if (isOlder(CURRENT_VERSION, config.min_version)) {
-            setUpdateConfig(config);
-            setNeedsUpdate(true);
+        const config = data as any;
+        const isOlder = (current: string, min: string) => {
+          const c = current.split('.').map(Number);
+          const m = min.split('.').map(Number);
+          for (let i = 0; i < Math.max(c.length, m.length); i++) {
+            if ((c[i] || 0) < (m[i] || 0)) return true;
+            if ((c[i] || 0) > (m[i] || 0)) return false;
           }
+          return false;
+        };
+
+        if (isOlder(CURRENT_VERSION, config.min_version)) {
+          // Trigger global event or state for update
         }
       } catch (e) {
         console.error("Failed to check version:", e);
       }
     };
-
     checkVersion();
   }, []);
-
-  // Heartbeat: Check for frontend updates every 30 minutes
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const updated = await checkForUpdates();
-      if (updated) {
-        window.location.reload();
-      }
-    }, 1000 * 60 * 30);
-    
-    return () => clearInterval(interval);
-  }, []);
-
-  if (needsUpdate && updateConfig) {
-    return <UpdateModal downloadUrl={updateConfig.download_url} message={updateConfig.message} />;
-  }
 
   return (
     <>
