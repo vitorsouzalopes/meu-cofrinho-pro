@@ -1,6 +1,6 @@
-- [ ] Fix syntax error in `Today.tsx` (Component definition order)
-- [ ] Move push notification state to `AuthContext.tsx`
-- [ ] Simplify `ProtectedRoute` in `App.tsx`
-- [ ] Remove `Index.tsx` (Orphan page)
-- [ ] Run `npm run build` + `cap sync`
-- [ ] Generate APK v1.0.7
+- [x] Fix syntax error in `Today.tsx` (Component definition order)
+- [x] Move push notification state to `AuthContext.tsx`
+- [x] Simplify `ProtectedRoute` in `App.tsx`
+- [x] Remove `Index.tsx` (Orphan page/Vida Fit residue)
+- [x] Run `npm run build` + `cap sync`
+- [x] Generate APK v1.0.7 (Navigation fixed)

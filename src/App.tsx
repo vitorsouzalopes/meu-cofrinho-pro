@@ -28,7 +28,6 @@ import NotFound from "./pages/NotFound.tsx";
 import MonthlyAccounts from "./pages/MonthlyAccounts.tsx";
 import Goals from "./pages/Goals.tsx";
 import Planner from "./pages/Planner.tsx";
-import VidaFit from "./pages/VidaFit.tsx";
 import AIConsultant from "./pages/AIConsultant.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
 import NotificationWall from "./components/NotificationWall.tsx";
@@ -40,70 +39,15 @@ import { Button } from "./components/ui/button";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { session, loading } = useAuth();
-  const [pushChecked, setPushChecked] = useState(false);
-  const [pushStatus, setPushStatus] = useState<string | null>(null);
-  const [forceProceed, setForceProceed] = useState(false);
+  const { session, loading, pushChecked, pushStatus, checkPushPermission } = useAuth();
 
-  useEffect(() => {
-    let mounted = true;
-
-    if (!session?.user || pushChecked || forceProceed) return;
-
-    if (!Capacitor.isNativePlatform()) {
-      setPushStatus('web');
-      setPushChecked(true);
-      return;
-    }
-
-    console.log("[Auth] Starting mandatory push check...");
-    setPushChecked(false); // Ensure we are in checking state
-
-    const safetyTimeout = setTimeout(() => {
-      if (mounted) {
-        console.warn("[Auth] Push check timed out (3s).");
-        setPushStatus('timeout');
-        setPushChecked(true);
-      }
-    }, 3000);
-
-    registerNativePush(session.user.id)
-      .then(res => {
-        if (mounted) {
-          console.log("[Auth] Push status:", res.status);
-          setPushStatus(res.status);
-          setPushChecked(true);
-        }
-      })
-      .catch(err => {
-        console.error("[Auth] Push check fatal error:", err);
-        if (mounted) {
-          setPushStatus('error');
-          setPushChecked(true);
-        }
-      })
-      .finally(() => {
-        clearTimeout(safetyTimeout);
-      });
-
-    return () => { mounted = false; };
-  }, [session, pushChecked, forceProceed]);
-
-  if (loading || (session && !pushChecked && !forceProceed)) {
+  if (loading || (session && !pushChecked)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#0A0E1A] text-white p-8">
         <div className="w-12 h-12 border-4 border-[#D4A017] border-t-transparent rounded-full animate-spin mb-6" />
         <div className="space-y-4 text-center">
-          <h2 className="text-lg font-bold tracking-widest uppercase">Cofrinho PRO</h2>
+          <h2 className="text-lg font-bold tracking-widest uppercase text-white">Cofrinho PRO</h2>
           <p className="text-[10px] text-muted-foreground animate-pulse tracking-widest">Sincronizando seu universo financeiro...</p>
-
-          <Button
-            variant="ghost"
-            onClick={() => setForceProceed(true)}
-            className="mt-12 text-[10px] text-muted-foreground hover:text-white uppercase tracking-tighter"
-          >
-            Entrar sem sincronizar
-          </Button>
         </div>
       </div>
     );
@@ -112,8 +56,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!session) return <Navigate to="/auth" replace />;
 
   const isBypass = ['granted', 'web', 'timeout', 'error'].includes(pushStatus || '');
-  if (Capacitor.isNativePlatform() && !isBypass && !forceProceed) {
-    return <NotificationWall onRetry={() => window.location.reload()} />;
+  if (Capacitor.isNativePlatform() && !isBypass) {
+    return <NotificationWall onRetry={() => checkPushPermission()} />;
   }
 
   return <>{children}</>;
@@ -158,7 +102,6 @@ const AppContent = () => {
 
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
-      // Hide native splash once React is mounted
       setTimeout(() => {
         SplashScreen.hide().catch(() => {});
       }, 500);
