@@ -1,5 +1,5 @@
-- [x] Fix critical syntax error in `Today.tsx` (Complete rewrite)
-- [x] Add "First Run" data wipe in `main.tsx` (Hard reset logic)
-- [x] Refactor `App.tsx` for higher resilience (4s timeout + solid background)
-- [x] Run `npm run build` + `cap sync`
-- [x] Clean Android Gradle cache and build APK (Build v1.0.3)
+- [ ] Update `main.tsx` reset version to `v1.0.4_final_reset`
+- [ ] Refactor `App.tsx` ProtectedRoute (2s timeout + Skip button)
+- [ ] Stabilize `native-push.ts` with error boundaries
+- [ ] Run `npm run build` + `cap sync`
+- [ ] Generate final APK (Build v1.0.4)

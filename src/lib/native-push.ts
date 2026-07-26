@@ -5,52 +5,40 @@ import { supabase } from "@/integrations/supabase/client";
 export async function registerNativePush(userId: string): Promise<{ status: string }> {
   if (!Capacitor.isNativePlatform()) return { status: 'web' };
 
-  let permStatus = await PushNotifications.checkPermissions();
-
-  if (permStatus.receive === 'prompt') {
-    permStatus = await PushNotifications.requestPermissions();
-  }
-
-  if (permStatus.receive !== 'granted') {
-    console.warn('User denied permissions for push notifications');
-    return { status: permStatus.receive };
-  }
-
   try {
+    const permStatus = await PushNotifications.checkPermissions();
+
+    if (permStatus.receive === 'denied') {
+      return { status: 'denied' };
+    }
+
+    if (permStatus.receive === 'prompt') {
+      const request = await PushNotifications.requestPermissions();
+      if (request.receive !== 'granted') return { status: request.receive };
+    }
+
     await PushNotifications.register();
 
-    await PushNotifications.addListener('registration', async (token) => {
-      console.log('Push registration success, token: ' + token.value);
+    // Cleanup old listeners to avoid memory leaks/multiple triggers
+    await PushNotifications.removeAllListeners();
 
-      const { error } = await supabase
-        .from('fcm_tokens')
-        .upsert({
-          user_id: userId,
-          token: token.value,
-          platform: Capacitor.getPlatform(),
-          user_agent: navigator.userAgent
-        }, { onConflict: 'token' });
-
-      if (error) {
-        console.error('Error saving push token to Supabase:', error);
-      }
+    PushNotifications.addListener('registration', async (token) => {
+      console.log('[Push] Registration success:', token.value);
+      await supabase.from('fcm_tokens').upsert({
+        user_id: userId,
+        token: token.value,
+        platform: Capacitor.getPlatform(),
+        user_agent: navigator.userAgent
+      }, { onConflict: 'token' });
     });
 
-    await PushNotifications.addListener('registrationError', (error) => {
-      console.error('Error on push registration: ' + JSON.stringify(error));
-    });
-
-    await PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      console.log('Push received: ' + JSON.stringify(notification));
-    });
-
-    await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-      console.log('Push action performed: ' + JSON.stringify(notification));
+    PushNotifications.addListener('registrationError', (error) => {
+      console.error('[Push] Registration error:', error);
     });
 
     return { status: 'granted' };
   } catch (e) {
-    console.error('FCM Error:', e);
+    console.error('[Push] Fatal Error:', e);
     return { status: 'error' };
   }
 }

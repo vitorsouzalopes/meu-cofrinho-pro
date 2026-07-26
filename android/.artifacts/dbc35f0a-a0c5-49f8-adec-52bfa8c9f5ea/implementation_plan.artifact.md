@@ -1,44 +1,40 @@
-# Correção Crítica de Crash (Fim da Tela Preta) e Reset de Dados
+# Correção Crítica de Inicialização e Reset de Dados (v1.0.4)
 
-Descobri o erro exato que estava mantendo o aplicativo em tela preta: o arquivo do Dashboard (`Today.tsx`) estava com uma falha de sintaxe grave (definições duplicadas e exportação antes da hora), o que fazia o React "quebrar" assim que você logava. Além disso, vamos forçar a limpeza de dados antigos.
+Identificamos que o aplicativo fica preso na tela de "Sincronizando..." devido a uma falha na lógica de verificação de notificações push e uma persistência de dados antigos. Vamos realizar um "Hard Reset" para limpar o ambiente de teste e simplificar a inicialização.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> O arquivo `Today.tsx` foi corrompido em uma das edições anteriores, o que causava o travamento total após o login. Vou reconstruí-lo de forma limpa. Também vou adicionar um script de "Primeira Execução" que limpará seu cache local automaticamente nesta atualização.
+> **Reset de Dados**: Vou forçar uma limpeza completa do armazenamento local para que o aplicativo abra como se tivesse sido instalado pela primeira vez. Isso apagará o login anterior.
+> **Sincronização**: Vou reduzir o tempo de espera da sincronização e garantir que o app abra mesmo se a verificação de notificações falhar, evitando o travamento.
 
 ## Proposta de Mudanças
-
-### [UI/UX - Correção de Bug Fatal]
-
-#### [MODIFY] [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)
-- Remover definições duplicadas do componente.
-- Corrigir a ordem de exportação.
-- Garantir que todos os hooks (`useAuth`, `usePremium`, `useDebts`) sejam chamados corretamente no início.
-- Isso removerá o crash que causava a tela preta após o login.
-
----
 
 ### [Core & Inicialização]
 
 #### [MODIFY] [main.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/main.tsx)
-- Adicionar uma lógica de **"Hard Reset"**: Se o app for aberto e não encontrar a chave `v1_init`, ele limpará todo o `localStorage` e recarregará. Isso resolverá o problema de "dados anteriores" voltando.
-- Tornar o `renderApp` mais resiliente a falhas no serviço de atualização.
+- Atualizar a chave de reset para `v1.0.4_final_reset`.
+- Garantir que a limpeza ocorra antes de qualquer carregamento do Supabase ou do React.
 
 #### [MODIFY] [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx)
-- Simplificar o `ProtectedRoute`.
-- Adicionar um `console.log` visível para facilitar o debug se algo falhar na inicialização.
+- **Simplificar `ProtectedRoute`**:
+    - Se estiver no modo web, pular a checagem de push imediatamente.
+    - Se no modo nativo, tentar registrar o push mas não bloquear o app por mais de 2 segundos.
+    - Adicionar um botão "Entrar Manualmente" caso o carregamento automático trave.
+
+#### [MODIFY] [native-push.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/lib/native-push.ts)
+- Adicionar um mecanismo de proteção para que a função nunca fique "pendente" para sempre.
 
 ---
 
-### [Android Resources]
+### [UI/UX - Melhoria de Feedback]
 
-#### [ACTION] Limpeza de Cache de Build
-- Rodar um comando para limpar os caches do Gradle antes de gerar o novo APK.
+#### [MODIFY] [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)
+- Adicionar logs de carregamento para sabermos exatamente em qual parte da sincronização financeira o app está.
 
 ## Plano de Verificação
 
 ### Manual Verification
-- **Abertura**: O app deve abrir a tela de Login sem dados salvos (Reset automático).
-- **Pós-Login**: O Dashboard deve carregar instantaneamente, sem loop de tela preta.
-- **Identidade**: O ícone do app deve ser validado novamente após o build limpo.
+- **Abertura**: O app deve mostrar a logo e, em seguida, a tela de Login (vazia).
+- **Pós-Login**: O spinner de sincronização deve durar no máximo 2 segundos e levar ao Dashboard.
+- **Botão de Emergência**: Se travar, o botão na tela de carga deve permitir entrar no app.

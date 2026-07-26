@@ -43,30 +43,36 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
   const [pushStatus, setPushStatus] = useState<string | null>(null);
   const [checkingPush, setCheckingPush] = useState(false);
+  const [forceProceed, setForceProceed] = useState(false);
 
   useEffect(() => {
     let mounted = true;
+
+    if (!Capacitor.isNativePlatform() || forceProceed) {
+      setPushStatus('web');
+      return;
+    }
+
     if (session?.user && !pushStatus && !checkingPush) {
       setCheckingPush(true);
-      console.log("[Auth] Starting push check...");
+      console.log("[Auth] Push check start...");
 
       const safetyTimeout = setTimeout(() => {
-        if (mounted && !pushStatus) {
-          console.warn("[Auth] Push check timeout. Moving forward.");
+        if (mounted) {
+          console.warn("[Auth] Push timeout (2.5s). Proceeding.");
           setPushStatus('timeout');
           setCheckingPush(false);
         }
-      }, 4000);
+      }, 2500);
 
       registerNativePush(session.user.id)
         .then(res => {
           if (mounted) {
-            console.log("[Auth] Push check complete:", res.status);
             setPushStatus(res.status);
           }
         })
         .catch(err => {
-          console.error("[Auth] Push check error:", err);
+          console.error("[Auth] Push error:", err);
           if (mounted) setPushStatus('error');
         })
         .finally(() => {
@@ -75,9 +81,9 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         });
     }
     return () => { mounted = false; };
-  }, [session, pushStatus, checkingPush]);
+  }, [session, pushStatus, checkingPush, forceProceed]);
 
-  if (loading || (session && checkingPush)) {
+  if (loading || (session && checkingPush && !forceProceed)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#0A0E1A] text-white p-8">
         <div className="w-12 h-12 border-4 border-[#D4A017] border-t-transparent rounded-full animate-spin mb-6" />
@@ -85,12 +91,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           <h2 className="text-lg font-bold tracking-widest uppercase text-white">Cofrinho PRO</h2>
           <p className="text-[10px] text-muted-foreground animate-pulse">Sincronizando seu universo financeiro...</p>
 
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-12 text-[10px] text-muted-foreground underline hover:text-white uppercase tracking-tighter"
+          <Button
+            variant="ghost"
+            onClick={() => setForceProceed(true)}
+            className="mt-12 text-[10px] text-muted-foreground hover:text-white uppercase tracking-tighter"
           >
-            Aguardando conexão? Toque para reiniciar
-          </button>
+            Sincronização lenta? Entrar agora
+          </Button>
         </div>
       </div>
     );
@@ -98,7 +105,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (!session) return <Navigate to="/auth" replace />;
 
-  if (Capacitor.isNativePlatform() && pushStatus && !['granted', 'web', 'timeout', 'error'].includes(pushStatus)) {
+  const isBypass = ['granted', 'web', 'timeout', 'error'].includes(pushStatus || '');
+  if (Capacitor.isNativePlatform() && !isBypass && !forceProceed) {
     return <NotificationWall onRetry={() => window.location.reload()} />;
   }
 

@@ -6,9 +6,9 @@ import "./index.css";
 import { checkForUpdates } from "./lib/version";
 
 // --- Hard Reset Logic for Testing ---
-const INIT_VERSION = 'v1.0.2_init'; // Bump this to force a reset
+const INIT_VERSION = 'v1.0.4_final_reset'; // Force a clean slate
 if (localStorage.getItem('cofrinho_init_check') !== INIT_VERSION) {
-  console.log("[Init] First run of new version detected. Cleaning local storage...");
+  console.log("[Init] Hard Reset triggered. Purging local storage...");
   localStorage.clear();
   localStorage.setItem('cofrinho_init_check', INIT_VERSION);
 }
