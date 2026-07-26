@@ -1,5 +1,5 @@
-- [ ] Update `main.tsx` reset version to `v1.0.4_final_reset`
-- [ ] Refactor `App.tsx` ProtectedRoute (2s timeout + Skip button)
-- [ ] Stabilize `native-push.ts` with error boundaries
-- [ ] Run `npm run build` + `cap sync`
-- [ ] Generate final APK (Build v1.0.4)
+- [x] Update `main.tsx` reset version to `v1.0.4_final_reset`
+- [x] Refactor `App.tsx` ProtectedRoute (2.5s timeout + Skip button)
+- [x] Stabilize `native-push.ts` with error boundaries
+- [x] Run `npm run build` + `cap sync`
+- [x] Generate final APK (Build v1.0.4)

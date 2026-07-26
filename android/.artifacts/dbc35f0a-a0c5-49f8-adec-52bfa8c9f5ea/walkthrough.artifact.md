@@ -1,31 +1,30 @@
-# Walkthrough - Resgate Total: Fim da Tela Preta e Reset de Dados (v1.0.3)
+# Walkthrough - Resgate v1.0.4: Destravamento de Tela e Reset Total
 
-Concluí a reconstrução estrutural do aplicativo para eliminar o travamento em tela preta e garantir que o seu ambiente de teste seja 100% limpo a cada nova instalação.
+Esta atualização foca em eliminar o travamento de tela preta e garantir que o seu teste comece de forma limpa, sem carregar estados antigos do celular.
 
 ## Alterações Realizadas
 
-### 1. Reconstrução do Dashboard (Today.tsx)
-- **Correção Fatal**: Identifiquei que o arquivo principal da interface estava corrompido com exportações duplicadas e erros de referência. Reconstruí o [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx) do zero, garantindo que os hooks de Premium e Autenticação sejam carregados na ordem correta. Isso elimina a causa principal da tela preta pós-login.
+### 1. Hard Reset de Dados (v1.0.4)
+- **O que mudou**: Adicionei um gatilho de segurança no [main.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/main.tsx) que detecta a nova versão e **limpa todo o armazenamento local** na primeira vez que o app é aberto.
+- **Resultado**: Ao instalar este APK, o login antigo será esquecido e você entrará como se fosse a primeira vez.
 
-### 2. Hard Reset Automático (First Run)
-- **Limpeza de Cache**: No [main.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/main.tsx), adicionei um script de detecção de versão. Ao instalar este APK, o app detectará que é uma nova build e **limpará todo o armazenamento local** (localStorage) automaticamente uma única vez. Isso resolve definitivamente o problema de "dados anteriores" voltando.
+### 2. Destravamento da Sincronização
+- **Redução de Timeout**: Diminuí o tempo de espera da checagem de notificações de 4s para **2.5 segundos**.
+- **Botão de Emergência**: Na tela de carregamento azul, adicionei o botão **"Sincronização lenta? Entrar agora"**. Se o Android travar na checagem de rede, você pode clicar nele e saltar direto para o Dashboard.
+- **Bypass de Erro**: Se a verificação de notificações falhar, o app agora segue em frente automaticamente em vez de ficar preso na tela preta.
 
-### 3. Resiliência de Inicialização (App.tsx)
-- **Spinner de Emergência**: A tela de sincronização agora possui um fundo sólido azul noturno (marca) e um botão de "Reiniciar" visível.
-- **Trava Anti-Hanging**: Implementei um timeout de 4 segundos. Se a rede falhar ao verificar as notificações, o app libera o seu acesso automaticamente, impedindo que você fique preso em um loop infinito.
+### 3. Estabilidade do Dashboard
+- **Consolidação de Código**: O arquivo [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx) foi limpo e verificado para evitar qualquer erro de referência que causasse o travamento do React.
 
-### 4. Correção do Ícone Nativo
-- **AndroidManifest**: Reconfigurei a prioridade de ícones nativos. O sistema agora deve buscar a imagem oficial do Cofrinho PRO de forma mais agressiva.
+## Como validar o sucesso?
 
-## Resultado do Build
-- **APK Gerado**: [app-debug.apk](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/build/outputs/apk/debug/app-debug.apk).
-- **Processo**: Build do Frontend (Vite) ➔ Sincronização Capacitor ➔ Limpeza de Cache Gradle ➔ Compilação Final.
+1. **Fresh Start**: Ao abrir o app, a tela de Login deve estar vazia (sem e-mail salvo).
+2. **Dashboard Rápido**: Após logar, você verá o carregador azul por no máximo 2 segundos e será levado ao Dashboard.
+3. **Pular Carga**: Caso sua internet esteja muito lenta, clique no botão que aparece abaixo do spinner para entrar instantaneamente.
 
 > [!IMPORTANT]
-> **Instalação Limpa**: Embora tenhamos o reset automático, recomendo desinstalar a versão atual do seu celular antes de colocar esta nova. Isso garante que as novas permissões de ícone e backup sejam aplicadas pelo Android.
+> **Ação Recomendada**: Desinstale a versão atual do celular antes de instalar o novo APK gerado agora. Isso garante que o Android não tente restaurar caches do sistema.
 
-## Como validar?
-1. Abra o app. Você verá a logo por 2s.
-2. A tela de Login aparecerá (limpa, sem e-mail salvo).
-3. Após o Login, você verá o spinner "Sincronizando universo financeiro..." por 1 ou 2 segundos.
-4. O Dashboard carregará perfeitamente.
+## Resultado do Build
+- **APK**: [app-debug.apk](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/build/outputs/apk/debug/app-debug.apk)
+- **Build ID**: v1.0.4-stable
