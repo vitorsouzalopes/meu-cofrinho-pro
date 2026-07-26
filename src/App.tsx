@@ -40,14 +40,22 @@ const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading, pushChecked, pushStatus, checkPushPermission } = useAuth();
+  const [hasStartedCheck, setHasStartedCheck] = useState(false);
+
+  useEffect(() => {
+    if (session?.user && !pushChecked && !hasStartedCheck) {
+      setHasStartedCheck(true);
+      checkPushPermission();
+    }
+  }, [session, pushChecked, hasStartedCheck, checkPushPermission]);
 
   if (loading || (session && !pushChecked)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#0A0E1A] text-white p-8">
         <div className="w-12 h-12 border-4 border-[#D4A017] border-t-transparent rounded-full animate-spin mb-6" />
         <div className="space-y-4 text-center">
-          <h2 className="text-lg font-bold tracking-widest uppercase text-white">Cofrinho PRO</h2>
-          <p className="text-[10px] text-muted-foreground animate-pulse tracking-widest">Sincronizando seu universo financeiro...</p>
+          <h2 className="text-lg font-bold tracking-widest uppercase">Cofrinho PRO</h2>
+          <p className="text-[10px] text-muted-foreground animate-pulse tracking-widest uppercase">Acessando seu planejamento...</p>
         </div>
       </div>
     );

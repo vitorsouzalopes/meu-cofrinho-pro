@@ -44,8 +44,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    console.log("[AuthContext] Checking push permission...");
+
+    // Safety Timeout: Force proceed after 2 seconds
+    const safetyTimeout = setTimeout(() => {
+      if (!pushChecked) {
+        console.warn("[AuthContext] Push check timed out (2s). Forcing completion.");
+        setPushStatus('timeout');
+        setPushChecked(true);
+      }
+    }, 2000);
+
     try {
       const res = await registerNativePush(user.id);
+      clearTimeout(safetyTimeout);
       setPushStatus(res.status);
     } catch (e) {
       console.error("[AuthContext] Push check error:", e);

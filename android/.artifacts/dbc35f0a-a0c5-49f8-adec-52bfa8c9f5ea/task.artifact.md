@@ -1,5 +1,5 @@
-- [ ] Add Bruteforce Timeout (2s) to `AuthContext.tsx`
-- [ ] Refactor `App.tsx` ProtectedRoute to prevent re-blocking on route change
-- [ ] Verify `BottomNav.tsx` navigation logic
-- [ ] Run `npm run build` + `cap sync`
-- [ ] Generate final stable APK v1.0.8
+- [x] Add Bruteforce Timeout (2s) to `AuthContext.tsx`
+- [x] Refactor `App.tsx` ProtectedRoute to prevent re-blocking on route change
+- [x] Verify `BottomNav.tsx` navigation logic
+- [x] Run `npm run build` + `cap sync`
+- [x] Generate final stable APK v1.0.8
