@@ -14,6 +14,8 @@ import { calcularTotaisFinanceiros, resolverContasDoMes } from "@/lib/finance-ut
 import type { Tables } from "@/integrations/supabase/types";
 import { generateMonthlyReport } from "@/lib/monthly-report";
 import { cn } from "@/lib/utils";
+import { usePremium } from "@/lib/premium";
+import { showInterstitialAd } from "@/lib/ads";
 
 type Profile = Tables<"profiles">;
 type Account = Tables<"accounts">;
@@ -25,6 +27,7 @@ const formatCurrency = (v: number) =>
 
 const ProfilePage = () => {
   const { user, signOut } = useAuth();
+  const { isPremium, loading: premiumLoading } = usePremium();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);

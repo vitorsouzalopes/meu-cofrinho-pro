@@ -8,7 +8,6 @@ const navItems = [
   { path: "/accounts", icon: Wallet, label: "Contas" },
   { path: "/progress", icon: TrendingUp, label: "Progresso" },
   { path: "/goals", icon: Target, label: "Metas" },
-  { path: "/vidafit", icon: HeartPulse, label: "VidaFit" },
   { path: "/profile", icon: User, label: "Perfil" },
 ];
 

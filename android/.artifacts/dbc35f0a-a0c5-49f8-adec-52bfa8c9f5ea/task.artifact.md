@@ -1,5 +1,6 @@
-- [ ] Remove `VidaFit.tsx` and related library files
-- [ ] Remove `/vidafit` route from `App.tsx`
-- [ ] Fix `Profile.tsx` by adding `usePremium` call (Fixes blue screen)
-- [ ] Verify `BottomNav.tsx` for orphan links
-- [ ] Run full build and APK generation
+- [x] Remove `VidaFit.tsx` and related library files
+- [x] Remove `/vidafit` route from `App.tsx`
+- [x] Remove VidaFit from `BottomNav.tsx`
+- [x] Fix `Profile.tsx` crash by importing `usePremium`
+- [x] Run `npm run build` + `cap sync`
+- [x] Generate APK v1.0.6 (Stable and Clean)

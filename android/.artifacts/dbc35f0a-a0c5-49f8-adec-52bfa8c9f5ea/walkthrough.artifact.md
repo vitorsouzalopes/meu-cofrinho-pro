@@ -1,29 +1,28 @@
-# Walkthrough - Resgate v1.0.5: Estabilização de Renderização e Login
+# Walkthrough - Resgate Total v1.0.6: Limpeza de Marca e Fix de Perfil
 
-Concluí as correções definitivas para o problema da tela preta pós-login e a visibilidade do ícone do aplicativo. O foco desta versão foi garantir que o React monte a interface imediatamente, sem depender de respostas lentas da rede.
+Esta atualização remove definitivamente as referências ao projeto "Vida Fit" e corrige o erro técnico que causava o crash (tela azul/travamento) ao abrir as configurações de perfil.
 
 ## Alterações Realizadas
 
-### 1. Fim do Bloqueio de Inicialização
-- **Mount Imediato**: No [main.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/main.tsx), removi a verificação de atualizações que bloqueava a abertura do app. Agora o aplicativo renderiza a tela de login instantaneamente e faz a checagem de versão em segundo plano.
-- **Fundo Sólido**: Adicionei um fundo azul noturno diretamente no [index.html](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/index.html). Mesmo que o React demore milissegundos para carregar, você verá a cor da marca em vez de um flash preto ou branco.
+### 1. Remoção Total do "Vida Fit"
+- **Arquivos Deletados**: Excluí as páginas e bibliotecas relacionadas ao antigo projeto Vida Fit ([VidaFit.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/VidaFit.tsx) e utilitários).
+- **Menu Limpo**: Removi o link "Vida Fit" do menu inferior ([BottomNav.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/components/BottomNav.tsx)).
+- **Rotas Atualizadas**: Limpei as definições de rotas no [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx).
 
-### 2. Estabilização do Login (ProtectedRoute)
-- **Estado de Checagem Único**: Refatorei o `ProtectedRoute` no [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx). Agora ele usa um estado de controle (`pushChecked`) que garante que a verificação de notificações seja executada apenas uma vez. Isso elimina o "loop infinito" que causava a tela preta ao tentar logar.
-- **Botão de Emergência**: Melhorei o botão de bypass: *"Entrar sem sincronizar"*. Se o Android demorar a responder, você pode clicar e entrar no Dashboard na hora.
+### 2. Correção do Crash no Perfil (Fim da Tela Azul)
+- **O que mudou**: A página de [Perfil](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Profile.tsx) estava tentando verificar o status Premium sem carregar as ferramentas necessárias. Importei o hook `usePremium` e estabilizei a renderização do badge "Pro Member".
+- **Resultado**: Agora você pode abrir o Perfil, trocar entre Modo Simples/Avançado e gerenciar sua conta sem travamentos.
 
-### 3. Debug e Logs
-- Adicionei logs visíveis no console (Logcat) para monitorar o status do login e da checagem de notificações em tempo real.
+### 3. Build de Produção v1.0.6
+- **Sincronização**: Realizei o build completo do frontend e sincronizei com o Android para garantir que nenhuma "sujeira" visual permaneça no APK.
+- **Limpeza de Cache**: Forcei o `clean` do Gradle antes da compilação final.
 
-## Como testar agora?
+## Como validar o sucesso?
 
-1. **Limpeza**: Desinstale o app atual.
-2. **Instalação**: Instale este novo APK.
-3. **Login**: Ao logar, você verá o carregador por cerca de 2 segundos. Se ele não sumir sozinho (devido à rede), clique em **"Entrar sem sincronizar"**.
-
-> [!IMPORTANT]
-> **Sobre o Ícone**: Como os ícones adaptativos do Android dependem de arquivos gerados pelo sistema, se ele ainda não aparecer, é provável que o launcher do seu celular esteja em cache. O nome do app agora deve aparecer corretamente como **Cofrinho PRO**.
+1. **Menu Inferior**: Verifique se o botão do coração (Vida Fit) sumiu, sobrando apenas as opções do Cofrinho.
+2. **Perfil PRO**: Entre no Perfil e confirme que a tela carrega instantaneamente, mostrando seu status (Pro Member) no topo.
+3. **Estabilidade**: O app agora está 100% focado no seu planejamento financeiro.
 
 ## Resultado do Build
 - **APK**: [app-debug.apk](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/build/outputs/apk/debug/app-debug.apk)
-- **Versão**: v1.0.5-stable
+- **Status**: Estável
