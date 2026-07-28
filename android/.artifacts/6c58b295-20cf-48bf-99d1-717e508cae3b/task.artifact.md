@@ -1,0 +1,3 @@
+- `[x]` Remove deprecated flag from `gradle.properties`
+- `[x]` Enable `buildConfig` in `app/build.gradle`
+- `[x]` Verify build and sync
