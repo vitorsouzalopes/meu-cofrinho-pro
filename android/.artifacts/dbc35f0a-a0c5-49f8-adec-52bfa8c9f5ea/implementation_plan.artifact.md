@@ -1,47 +1,44 @@
-# Correção Definitiva de Navegação e Estabilidade (v1.1.0)
+# Correção do Loop de Renderização e Travamento de Navegação (v1.1.1)
 
-O aplicativo apresenta travamentos (tela azul/carregamento infinito) ao navegar entre páginas porque o sistema de segurança tenta revalidar as permissões de notificação push em cada clique. Vamos desacoplar totalmente essa verificação da navegação das páginas.
+O aplicativo apresenta um travamento (tela azul) ao navegar porque identificamos um loop infinito de atualizações de estado no "coração" do sistema (`AuthContext`). Isso consome todo o processamento do celular e impede que as novas páginas sejam desenhadas.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Mudança de Fluxo**: A verificação de notificações deixará de ser um "bloqueio de tela" em cada página. Ela ocorrerá apenas uma vez no login. Se você já estiver logado, o app abrirá instantaneamente e fará qualquer checagem necessária em segundo plano.
+> **Loop Infinito**: Descobri que a função que verifica as notificações estava reiniciando a si mesma centenas de vezes por segundo. Vou quebrar esse loop e tornar a inicialização do app muito mais leve.
 
 ## Proposta de Mudanças
 
 ### [Core & Auth]
 
 #### [MODIFY] [AuthContext.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/contexts/AuthContext.tsx)
-- Estabilizar a função `checkPushPermission` com `useCallback`.
-- Garantir que o estado `pushChecked` seja persistente durante a navegação entre rotas.
-- Adicionar logs detalhados para monitorar a transição de estados.
+- Remover a dependência circular na função `checkPushPermission`.
+- Garantir que a verificação de notificações ocorra exatamente **uma vez** por login, sem reiniciar ao trocar de aba.
+- Adicionar um "cadeado" (lock) para evitar múltiplas execuções simultâneas.
 
 #### [MODIFY] [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx)
-- **Simplificar `ProtectedRoute`**: Remover a trava de `pushChecked`. O protetor agora só verificará se existe uma sessão ativa.
-- **Sincronização em Background**: A checagem de notificações será movida para o `AppContent`, rodando silenciosamente enquanto o usuário já vê o Dashboard.
+- Simplificar o componente `ProtectedRoute`. Ele agora será 100% transparente: uma vez que o usuário logou, ele nunca mais mostrará a tela de carga azul ao trocar de aba (Hoje -> Metas -> Perfil).
 
 ---
 
-### [UI/UX - Navegação Fluida]
+### [UI/UX - Estabilização]
 
 #### [MODIFY] [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)
-- Remover qualquer lógica de bloqueio de renderização que dependa de carregamento de anúncios ou push.
-- Adicionar tratamento de erro (`error boundary` simulado) para evitar que falhas em hooks de terceiros travem a página.
+- Garantir que o Dashboard carregue seus dados de forma independente, sem travar o restante do app se o servidor estiver lento.
 
 #### [MODIFY] [Goals.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Goals.tsx)
-- Otimizar o carregamento de dados para ser não-bloqueante.
+- Ajustar o estado inicial de `loading` para evitar flashes desnecessários.
 
 ---
 
-### [Limpeza de Build]
+### [Build & Deploy]
 
-#### [ACTION] Reconstrução Forçada
-- Vou executar uma limpeza profunda nos diretórios de build (`dist`, `android/app/build`).
-- Sincronizar o Capacitor para garantir que o menu "Vida Fit" sumiu definitivamente do código nativo.
+#### [ACTION] Build Limpo
+- Executar `npm run build` e `cap sync`.
+- Gerar o APK v1.1.1.
 
 ## Plano de Verificação
 
 ### Manual Verification
-- **Login**: O app deve entrar no Dashboard imediatamente após digitar a senha.
-- **Navegação**: Clicar em Metas e Perfil deve mudar a tela em menos de 300ms, sem mostrar o carregador azul.
-- **Push**: Validar que a permissão é solicitada apenas se o usuário ainda não tiver respondido.
+- **Navegação**: O teste principal será clicar nos botões do menu inferior e garantir que a página mude instantaneamente, sem nunca mais ver o carregador azul após o login inicial.
+- **Login**: O spinner de sincronização deve aparecer apenas na entrada do app.

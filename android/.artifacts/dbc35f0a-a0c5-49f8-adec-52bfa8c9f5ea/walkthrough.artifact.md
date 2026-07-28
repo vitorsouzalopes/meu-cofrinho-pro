@@ -1,29 +1,25 @@
-# Walkthrough - Resgate v1.1.0: Navegação Instantânea e Fim do Vida Fit
+# Walkthrough - Resgate v1.1.1: Fim do Loop de Travamento e Navegação Estável
 
-Esta atualização resolve definitivamente os problemas de navegação e as sobras visuais do projeto anterior. O aplicativo agora é 100% **Cofrinho PRO** e oferece uma experiência fluida.
+Esta atualização corrige o erro técnico que causava o travamento (tela azul) ao navegar pelas abas do aplicativo. Identificamos um loop infinito de atualizações de estado que impedia a troca de páginas.
 
 ## Alterações Realizadas
 
-### 1. Navegação Sem Travamentos
-- **Mudança de Paradigma**: A verificação de notificações push foi movida para o [AuthContext.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/contexts/AuthContext.tsx) e roda silenciosamente em segundo plano.
-- **ProtectedRoute Inteligente**: O protetor de rotas no [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx) agora só verifica se você está logado. Isso significa que clicar em "Metas" ou "Perfil" agora é **instantâneo**, sem disparar a tela azul de sincronização.
-- **Timeout de Segurança**: Implementei um timeout de 2.5s na checagem inicial. Se o Android não responder rápido, o app libera seu acesso automaticamente.
+### 1. Quebra do Loop de Estado (AuthContext)
+- **Problema**: A função que verificava as notificações push estava entrando em conflito com o seu próprio estado de conclusão, reiniciando centenas de vezes por segundo e travando a interface.
+- **Solução**: Refatorei o [AuthContext.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/contexts/AuthContext.tsx) para usar uma referência de segurança (`useRef`). Agora, a verificação ocorre **exatamente uma vez** por sessão, garantindo que o processador do celular fique livre para navegar entre as telas.
+- **Bypass de Segurança**: Mantive o timeout de 2.5s para garantir que, mesmo se o Android falhar, o app continue funcionando.
 
-### 2. Limpeza Total de Marca
-- **Remoção do Vida Fit**: O arquivo `Index.tsx` (que causava o surgimento da página errada) foi removido.
-- **Menu Limpo**: O menu inferior ([BottomNav.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/components/BottomNav.tsx)) agora exibe apenas as seções oficiais do Cofrinho PRO.
+### 2. Navegação Instantânea (App.tsx)
+- **Otimização**: O `ProtectedRoute` foi simplificado. Ele agora só protege o acesso inicial. Uma vez que você está logado, clicar em "Metas" ou "Perfil" não dispara mais nenhuma checagem de bloqueio, tornando a troca de abas instantânea.
 
-### 3. Dashboard Estabilizado
-- **Today.tsx**: Corrigido um erro de sintaxe onde o componente era exportado antes da sua definição. Também tornei a inicialização de anúncios não-bloqueante para evitar lentidão no carregamento.
+### 3. Build de Estabilização v1.1.1
+- **Processo**: Realizei o build completo do frontend e sincronização Capacitor para garantir que o menu "Vida Fit" sumisse e as novas lógicas de navegação fossem aplicadas.
 
-### 4. Hard Reset v1.0.4+
-- **Limpeza Automática**: O script de reset no [main.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/main.tsx) foi reforçado para limpar qualquer "sujeira" de sessões anteriores que pudessem estar causando o loop de tela preta.
-
-## Como validar o sucesso?
-
-1. **Troca de Abas**: Entre no app e clique alternadamente em "Hoje", "Metas" e "Perfil". A mudança deve ser imediata e sem carregamentos.
-2. **Identidade PRO**: Confirme que não há mais nenhuma menção ao nome "Vida Fit" no menu ou nas páginas.
+## Como validar?
+1. Abra o app e faça o login.
+2. Após carregar a home, clique em **Metas** e em seguida em **Perfil**.
+3. A troca de tela deve ocorrer na hora, sem mostrar o carregador azul (spinner).
 
 ## Resultado do Build
 - **APK**: [app-debug.apk](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/build/outputs/apk/debug/app-debug.apk)
-- **Versão**: v1.1.0-stable-ux
+- **Build ID**: v1.1.1-stable-ui

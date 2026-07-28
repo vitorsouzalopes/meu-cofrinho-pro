@@ -47,7 +47,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
         <div className="w-12 h-12 border-4 border-[#D4A017] border-t-transparent rounded-full animate-spin mb-6" />
         <div className="space-y-4 text-center">
           <h2 className="text-lg font-bold tracking-widest uppercase">Cofrinho PRO</h2>
-          <p className="text-[10px] text-muted-foreground animate-pulse tracking-widest uppercase">Sincronizando universo financeiro...</p>
+          <p className="text-[10px] text-muted-foreground animate-pulse tracking-widest uppercase">Acessando sistema...</p>
         </div>
       </div>
     );

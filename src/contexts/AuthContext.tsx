@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { registerNativePush } from "@/lib/native-push";
@@ -36,45 +36,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [pushStatus, setPushStatus] = useState<string | null>(null);
   const [pushChecked, setPushChecked] = useState(false);
 
+  const checkingPushRef = useRef(false);
+
   const checkPushPermission = useCallback(async () => {
-    if (!user) return;
+    if (!user || pushChecked || checkingPushRef.current) return;
+
     if (!Capacitor.isNativePlatform()) {
       setPushStatus('web');
       setPushChecked(true);
       return;
     }
 
-    console.log("[AuthContext] Checking push permission...");
+    console.log("[AuthContext] Checking push permission once...");
+    checkingPushRef.current = true;
 
-    // Safety Timeout: Force proceed after 2.5 seconds
-    const safetyTimeout = setTimeout(() => {
+    // Safety Timeout: Proceed after 2.5s no matter what
+    const timeout = setTimeout(() => {
       if (!pushChecked) {
-        console.warn("[AuthContext] Push check timed out (2.5s). Forcing completion.");
+        console.warn("[AuthContext] Push timeout. Bypassing.");
         setPushStatus('timeout');
         setPushChecked(true);
+        checkingPushRef.current = false;
       }
     }, 2500);
 
     try {
       const res = await registerNativePush(user.id);
-      clearTimeout(safetyTimeout);
+      clearTimeout(timeout);
       setPushStatus(res.status);
-      console.log("[AuthContext] Push status received:", res.status);
     } catch (e) {
-      console.error("[AuthContext] Push check error:", e);
+      console.error("[AuthContext] Push error:", e);
       setPushStatus('error');
     } finally {
       setPushChecked(true);
+      checkingPushRef.current = false;
     }
   }, [user, pushChecked]);
 
   useEffect(() => {
     let isMounted = true;
-    console.log("[AuthContext] Provider mounting...");
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!isMounted) return;
-      console.log("[AuthContext] Session checked:", session ? "Active" : "None");
       setSession(session);
       setUser(session?.user ?? null);
 
@@ -97,7 +100,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!isMounted) return;
-      console.log("[AuthContext] Auth state changed:", _event, session ? "User active" : "No user");
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -116,6 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsAdmin(false);
         setPushChecked(false);
         setPushStatus(null);
+        checkingPushRef.current = false;
       }
     });
 
@@ -125,7 +128,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Background check once user is loaded - does NOT block UI anymore
+  // Run push check only once per user session
   useEffect(() => {
     if (user && !pushChecked) {
       checkPushPermission();

@@ -1,8 +1,5 @@
-- [x] Refactor `AuthContext.tsx` for stable state management
-- [x] Simplify `App.tsx` ProtectedRoute (remove push block)
-- [x] Move push check to `AppContent` in `App.tsx`
-- [x] Stabilize `Today.tsx` (remove rendering blocks)
-- [x] Optimize `Goals.tsx` data loading
-- [x] Remove `Index.tsx` if it still exists
-- [x] Perform full `npm run build` and `npx cap sync android`
-- [x] Generate stable APK v1.1.0
+- [x] Fix infinite loop in `AuthContext.tsx` (Remove circular dependency)
+- [x] Simplify `ProtectedRoute` in `App.tsx` (Pass-through logic)
+- [x] Ensure `Today.tsx` and `Goals.tsx` load data independently
+- [x] Run full `npm run build` and `npx cap sync android`
+- [x] Generate stable APK v1.1.1
