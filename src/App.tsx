@@ -39,34 +39,21 @@ import { Button } from "./components/ui/button";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { session, loading, pushChecked, pushStatus, checkPushPermission } = useAuth();
-  const [hasStartedCheck, setHasStartedCheck] = useState(false);
+  const { session, loading } = useAuth();
 
-  useEffect(() => {
-    if (session?.user && !pushChecked && !hasStartedCheck) {
-      setHasStartedCheck(true);
-      checkPushPermission();
-    }
-  }, [session, pushChecked, hasStartedCheck, checkPushPermission]);
-
-  if (loading || (session && !pushChecked)) {
+  if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#0A0E1A] text-white p-8">
         <div className="w-12 h-12 border-4 border-[#D4A017] border-t-transparent rounded-full animate-spin mb-6" />
         <div className="space-y-4 text-center">
           <h2 className="text-lg font-bold tracking-widest uppercase">Cofrinho PRO</h2>
-          <p className="text-[10px] text-muted-foreground animate-pulse tracking-widest uppercase">Acessando seu planejamento...</p>
+          <p className="text-[10px] text-muted-foreground animate-pulse tracking-widest uppercase">Sincronizando universo financeiro...</p>
         </div>
       </div>
     );
   }
 
   if (!session) return <Navigate to="/auth" replace />;
-
-  const isBypass = ['granted', 'web', 'timeout', 'error'].includes(pushStatus || '');
-  if (Capacitor.isNativePlatform() && !isBypass) {
-    return <NotificationWall onRetry={() => checkPushPermission()} />;
-  }
 
   return <>{children}</>;
 };

@@ -1,40 +1,47 @@
-# Correção Definitiva de Navegação e Carregamento (v1.0.8)
+# Correção Definitiva de Navegação e Estabilidade (v1.1.0)
 
-O aplicativo está apresentando uma falha de carregamento (tela azul) ao navegar para "Metas" ou "Perfil". Isso ocorre devido a um conflito entre os estados de checagem de notificações e a transição de rotas. Vamos desacoplar a segurança da navegação e garantir fluidez total.
+O aplicativo apresenta travamentos (tela azul/carregamento infinito) ao navegar entre páginas porque o sistema de segurança tenta revalidar as permissões de notificação push em cada clique. Vamos desacoplar totalmente essa verificação da navegação das páginas.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Otimização de Segurança**: Vou alterar o `ProtectedRoute` para que a tela de "Sincronizando..." apareça **apenas uma vez** por sessão. Assim que você logar e o app conferir as notificações (ou der o tempo limite), ele nunca mais bloqueará sua navegação entre abas.
+> **Mudança de Fluxo**: A verificação de notificações deixará de ser um "bloqueio de tela" em cada página. Ela ocorrerá apenas uma vez no login. Se você já estiver logado, o app abrirá instantaneamente e fará qualquer checagem necessária em segundo plano.
 
 ## Proposta de Mudanças
 
 ### [Core & Auth]
 
 #### [MODIFY] [AuthContext.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/contexts/AuthContext.tsx)
-- Adicionar um mecanismo de **Timeout de Força Bruta** diretamente no Contexto.
-- Se o Android não responder sobre a permissão de notificações em **2 segundos**, o `pushChecked` será forçado para `true`. Isso garante que o app continue funcionando mesmo em dispositivos com falhas no plugin.
-
----
-
-### [UI/UX - Navegação]
+- Estabilizar a função `checkPushPermission` com `useCallback`.
+- Garantir que o estado `pushChecked` seja persistente durante a navegação entre rotas.
+- Adicionar logs detalhados para monitorar a transição de estados.
 
 #### [MODIFY] [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx)
-- Refatorar o `ProtectedRoute` para ser "pass-through": ele só bloqueia o acesso inicial.
-- Uma vez que o usuário está "dentro", a troca de rotas (Metas, Perfil, etc) não dispara mais a tela de carga.
-
-#### [MODIFY] [BottomNav.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/components/BottomNav.tsx)
-- Garantir que a troca de abas não cause re-renders pesados que possam simular um travamento.
+- **Simplificar `ProtectedRoute`**: Remover a trava de `pushChecked`. O protetor agora só verificará se existe uma sessão ativa.
+- **Sincronização em Background**: A checagem de notificações será movida para o `AppContent`, rodando silenciosamente enquanto o usuário já vê o Dashboard.
 
 ---
 
-### [Estabilidade]
+### [UI/UX - Navegação Fluida]
 
 #### [MODIFY] [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)
-- Verificar e remover qualquer dependência circular ou efeito colateral que possa travar a renderização ao voltar para a home.
+- Remover qualquer lógica de bloqueio de renderização que dependa de carregamento de anúncios ou push.
+- Adicionar tratamento de erro (`error boundary` simulado) para evitar que falhas em hooks de terceiros travem a página.
+
+#### [MODIFY] [Goals.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Goals.tsx)
+- Otimizar o carregamento de dados para ser não-bloqueante.
+
+---
+
+### [Limpeza de Build]
+
+#### [ACTION] Reconstrução Forçada
+- Vou executar uma limpeza profunda nos diretórios de build (`dist`, `android/app/build`).
+- Sincronizar o Capacitor para garantir que o menu "Vida Fit" sumiu definitivamente do código nativo.
 
 ## Plano de Verificação
 
 ### Manual Verification
-- **Teste de Stress**: Abrir o app -> Logar -> Clicar repetidamente em Metas, Perfil e Hoje. A troca deve ser fluida e sem spinners.
-- **Teste de Timeout**: Desativar a internet e tentar abrir o app. O spinner deve aparecer por no máximo 2s e então liberar o acesso ao que for possível (ou tela de erro amigável).
+- **Login**: O app deve entrar no Dashboard imediatamente após digitar a senha.
+- **Navegação**: Clicar em Metas e Perfil deve mudar a tela em menos de 300ms, sem mostrar o carregador azul.
+- **Push**: Validar que a permissão é solicitada apenas se o usuário ainda não tiver respondido.

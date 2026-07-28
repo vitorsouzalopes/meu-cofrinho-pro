@@ -1,5 +1,8 @@
-- [x] Add Bruteforce Timeout (2s) to `AuthContext.tsx`
-- [x] Refactor `App.tsx` ProtectedRoute to prevent re-blocking on route change
-- [x] Verify `BottomNav.tsx` navigation logic
-- [x] Run `npm run build` + `cap sync`
-- [x] Generate final stable APK v1.0.8
+- [x] Refactor `AuthContext.tsx` for stable state management
+- [x] Simplify `App.tsx` ProtectedRoute (remove push block)
+- [x] Move push check to `AppContent` in `App.tsx`
+- [x] Stabilize `Today.tsx` (remove rendering blocks)
+- [x] Optimize `Goals.tsx` data loading
+- [x] Remove `Index.tsx` if it still exists
+- [x] Perform full `npm run build` and `npx cap sync android`
+- [x] Generate stable APK v1.1.0

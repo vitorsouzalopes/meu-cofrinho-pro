@@ -160,18 +160,27 @@ const Today = () => {
     return () => window.removeEventListener("finance-data-updated", handleSync);
   }, [user?.id, fetchData]);
 
-  // Ads initialization
+  // Ads initialization - Non-blocking
   useEffect(() => {
+    let active = true;
     const handleAds = async () => {
-      await initializeAds();
-      if (!premiumLoading && !isPremium) {
-        showBannerAd();
-      } else {
-        hideBannerAd();
+      try {
+        await initializeAds();
+        if (!active) return;
+        if (!premiumLoading && !isPremium) {
+          showBannerAd();
+        } else {
+          hideBannerAd();
+        }
+      } catch (err) {
+        console.error("Ads fail:", err);
       }
     };
     handleAds();
-    return () => { hideBannerAd(); };
+    return () => {
+      active = false;
+      hideBannerAd().catch(() => {});
+    };
   }, [isPremium, premiumLoading]);
 
   const totais = useMemo(() => {
