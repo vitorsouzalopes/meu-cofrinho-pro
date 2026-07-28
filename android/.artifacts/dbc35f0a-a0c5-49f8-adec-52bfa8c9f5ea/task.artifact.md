@@ -1,5 +1,5 @@
-- [x] Fix infinite loop in `AuthContext.tsx` (Remove circular dependency)
-- [x] Simplify `ProtectedRoute` in `App.tsx` (Pass-through logic)
-- [x] Ensure `Today.tsx` and `Goals.tsx` load data independently
-- [x] Run full `npm run build` and `npx cap sync android`
-- [x] Generate stable APK v1.1.1
+- [x] Improve `NotificationWall.tsx` (Handle permission logic)
+- [x] Update `AuthContext.tsx` (Add force re-check for push)
+- [x] Refactor `App.tsx` (Strict block on `ProtectedLayout`)
+- [x] Run full `npm run build` + `npx cap sync android`
+- [x] Generate APK v1.3.0

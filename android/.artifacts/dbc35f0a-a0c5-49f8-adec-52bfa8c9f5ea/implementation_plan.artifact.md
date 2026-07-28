@@ -1,44 +1,43 @@
-# Correção do Loop de Renderização e Travamento de Navegação (v1.1.1)
+# Implementação de Notificações Push Obrigatórias (v1.3.0)
 
-O aplicativo apresenta um travamento (tela azul) ao navegar porque identificamos um loop infinito de atualizações de estado no "coração" do sistema (`AuthContext`). Isso consome todo o processamento do celular e impede que as novas páginas sejam desenhadas.
+Conforme solicitado, vamos tornar as notificações push **obrigatórias** para o funcionamento do Cofrinho PRO. O usuário será bloqueado por uma tela informativa imediatamente após o login e só poderá acessar o Dashboard após conceder a permissão.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> **Loop Infinito**: Descobri que a função que verifica as notificações estava reiniciando a si mesma centenas de vezes por segundo. Vou quebrar esse loop e tornar a inicialização do app muito mais leve.
+> **Regra de Bloqueio**: Se o usuário negar as notificações ou se elas estiverem desativadas no sistema, o app exibirá o "Muro de Notificações". O acesso ao Dashboard, Metas e Perfil ficará bloqueado até que o status seja alterado para "Concedido".
 
 ## Proposta de Mudanças
 
-### [Core & Auth]
+### [UI/UX - Muro de Notificações]
 
-#### [MODIFY] [AuthContext.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/contexts/AuthContext.tsx)
-- Remover a dependência circular na função `checkPushPermission`.
-- Garantir que a verificação de notificações ocorra exatamente **uma vez** por login, sem reiniciar ao trocar de aba.
-- Adicionar um "cadeado" (lock) para evitar múltiplas execuções simultâneas.
+#### [MODIFY] [NotificationWall.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/components/NotificationWall.tsx)
+- Adicionar inteligência ao botão principal:
+    - Se a permissão nunca foi pedida, o botão aciona o pedido oficial do Android.
+    - Se a permissão foi negada anteriormente, o botão abre as configurações do sistema para ativação manual.
+- Melhorar o feedback visual para indicar que esta é uma etapa obrigatória.
+
+---
+
+### [Arquitetura de Segurança]
 
 #### [MODIFY] [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx)
-- Simplificar o componente `ProtectedRoute`. Ele agora será 100% transparente: uma vez que o usuário logou, ele nunca mais mostrará a tela de carga azul ao trocar de aba (Hoje -> Metas -> Perfil).
+- Atualizar o `ProtectedLayout` para verificar rigorosamente o `pushStatus`.
+- Se o status for diferente de `granted` (em dispositivos nativos), renderizar o `NotificationWall` em vez das páginas do app.
+
+#### [MODIFY] [AuthContext.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/contexts/AuthContext.tsx)
+- Garantir que a checagem de push seja re-executada ao clicar no botão "Tentar Novamente" do muro.
 
 ---
 
-### [UI/UX - Estabilização]
+### [Lógica de Negócio]
 
-#### [MODIFY] [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)
-- Garantir que o Dashboard carregue seus dados de forma independente, sem travar o restante do app se o servidor estiver lento.
-
-#### [MODIFY] [Goals.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Goals.tsx)
-- Ajustar o estado inicial de `loading` para evitar flashes desnecessários.
-
----
-
-### [Build & Deploy]
-
-#### [ACTION] Build Limpo
-- Executar `npm run build` e `cap sync`.
-- Gerar o APK v1.1.1.
+#### [VERIFY] Notificações de Contas
+- Validar se o registro do token FCM (Firebase Cloud Messaging) está ocorrendo corretamente no banco de dados após a aprovação do usuário.
 
 ## Plano de Verificação
 
 ### Manual Verification
-- **Navegação**: O teste principal será clicar nos botões do menu inferior e garantir que a página mude instantaneamente, sem nunca mais ver o carregador azul após o login inicial.
-- **Login**: O spinner de sincronização deve aparecer apenas na entrada do app.
+- **Fluxo de Primeiro Acesso**: Login -> Ver tela de bloqueio -> Clicar em Permitir -> Dashboard aberto.
+- **Fluxo de Recusa**: Login -> Ver tela de bloqueio -> Negar -> Permanecer bloqueado com instruções para ativar nas configurações.
+- **Persistência**: Fechar e abrir o app; se a permissão estiver ativa, deve ir direto para o Dashboard.

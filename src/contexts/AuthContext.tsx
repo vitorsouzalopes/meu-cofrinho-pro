@@ -12,7 +12,7 @@ interface AuthContextType {
   pushStatus: string | null;
   pushChecked: boolean;
   signOut: () => Promise<void>;
-  checkPushPermission: () => Promise<void>;
+  checkPushPermission: (force?: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -38,8 +38,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const checkingPushRef = useRef(false);
 
-  const checkPushPermission = useCallback(async () => {
-    if (!user || pushChecked || checkingPushRef.current) return;
+  const checkPushPermission = useCallback(async (force = false) => {
+    if (!user) return;
+    if (!force && (pushChecked || checkingPushRef.current)) return;
 
     if (!Capacitor.isNativePlatform()) {
       setPushStatus('web');
@@ -47,25 +48,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    console.log("[AuthContext] Checking push permission once...");
+    console.log("[AuthContext] Requesting push check...");
     checkingPushRef.current = true;
 
-    // Safety Timeout: Proceed after 2.5s no matter what
+    // Safety Timeout: Proceed after 3s to avoid total app hang
     const timeout = setTimeout(() => {
       if (!pushChecked) {
-        console.warn("[AuthContext] Push timeout. Bypassing.");
+        console.warn("[AuthContext] Push check safety timeout.");
         setPushStatus('timeout');
         setPushChecked(true);
         checkingPushRef.current = false;
       }
-    }, 2500);
+    }, 3000);
 
     try {
       const res = await registerNativePush(user.id);
       clearTimeout(timeout);
       setPushStatus(res.status);
     } catch (e) {
-      console.error("[AuthContext] Push error:", e);
+      console.error("[AuthContext] Push registration failed:", e);
       setPushStatus('error');
     } finally {
       setPushChecked(true);
@@ -79,7 +80,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!isMounted) return;
       setSession(session);
-      setUser(session?.user ?? null);
+
+      const nextUser = session?.user ?? null;
+      setUser(prev => (prev?.id === nextUser?.id && prev?.email === nextUser?.email) ? prev : nextUser);
 
       if (session?.user) {
         supabase
@@ -128,7 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Run push check only once per user session
+  // Run push check once user is loaded
   useEffect(() => {
     if (user && !pushChecked) {
       checkPushPermission();
