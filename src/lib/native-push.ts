@@ -23,13 +23,23 @@ export async function registerNativePush(userId: string): Promise<{ status: stri
     await PushNotifications.removeAllListeners();
 
     PushNotifications.addListener('registration', async (token) => {
-      console.log('[Push] Registration success:', token.value);
-      await supabase.from('fcm_tokens').upsert({
-        user_id: userId,
-        token: token.value,
-        platform: Capacitor.getPlatform(),
-        user_agent: navigator.userAgent
-      }, { onConflict: 'token' });
+      console.log('[Push] Registration success. Token:', token.value);
+      try {
+        const { error } = await supabase.from('fcm_tokens').upsert({
+          user_id: userId,
+          token: token.value,
+          platform: Capacitor.getPlatform(),
+          user_agent: navigator.userAgent
+        }, { onConflict: 'token' });
+
+        if (error) {
+          console.error('[Push] Supabase Upsert Error:', error.message);
+        } else {
+          console.log('[Push] Token saved to Supabase successfully.');
+        }
+      } catch (err) {
+        console.error('[Push] Supabase Error:', err);
+      }
     });
 
     PushNotifications.addListener('registrationError', (error) => {

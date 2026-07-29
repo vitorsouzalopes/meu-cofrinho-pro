@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { ArrowLeft, Plus, Target, TrendingUp, Edit2, PlusCircle, Trash2, ChevronRight, Wallet, TrendingDown } from "lucide-react";
+import { ArrowLeft, Plus, Target, TrendingUp, Edit2, PlusCircle, Trash2, ChevronRight, Wallet, TrendingDown, Pause, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -12,6 +12,8 @@ import { useNavigate } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import DebtPlanner from "@/components/planner/DebtPlanner";
 import { calcularTotaisFinanceiros } from "@/lib/finance-utils";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const DEFAULT_INTEREST = 0.008; // 0.8% a.m.
 
@@ -44,6 +46,7 @@ const Goals = () => {
   const [targetAmount, setTargetAmount] = useState("");
   const [deadline, setDeadline] = useState("");
   const [priority, setPriority] = useState("2");
+  const [status, setStatus] = useState<"active" | "paused" | "completed" | "cancelled">("active");
 
   const monthlyAmount = useMemo(() => {
     const target = parseFloat(targetAmount);
@@ -107,8 +110,9 @@ const Goals = () => {
   const resetForm = () => {
     setName("");
     setTargetAmount("");
-    setMonthlyAmount("");
+    setDeadline("");
     setPriority("2");
+    setStatus("active");
     setEditingGoal(null);
   };
 
@@ -120,7 +124,8 @@ const Goals = () => {
       target_amount: parseFloat(targetAmount),
       monthly_amount: monthlyAmount,
       priority: parseInt(priority),
-      current_amount: 0,
+      status: status,
+      current_amount: editingGoal ? editingGoal.current_amount : 0,
     };
 
     try {
@@ -142,18 +147,26 @@ const Goals = () => {
   };
 
   const deleteGoal = async (id: string) => {
-    if (!window.confirm("Deseja realmente remover este objetivo?")) return;
-    await supabase.from("goals" as any).delete().eq("id", id);
-    toast({ title: "Objetivo removido" });
-    loadGoals();
+    if (!window.confirm("Deseja realmente remover este objetivo? Esta ação não poderá ser desfeita.")) return;
+    try {
+      const { error } = await supabase.from("goals" as any).delete().eq("id", id);
+      if (error) throw error;
+      toast({ title: "Objetivo removido" });
+      loadGoals();
+    } catch (error: any) {
+      toast({ title: "Erro ao remover", description: error.message, variant: "destructive" });
+    }
   };
 
   const handleEdit = (goal: any) => {
     setEditingGoal(goal);
     setName(goal.name);
     setTargetAmount(String(goal.target_amount));
-    setMonthlyAmount(String(goal.monthly_amount));
+    // Calculate deadline from monthly amount if not saved
+    const calculatedDeadline = goal.monthly_amount > 0 ? Math.round(goal.target_amount / goal.monthly_amount) : 12;
+    setDeadline(String(calculatedDeadline));
     setPriority(String(goal.priority));
+    setStatus(goal.status || "active");
     setIsDialogOpen(true);
   };
 
@@ -238,9 +251,21 @@ const Goals = () => {
                   </Button>
                 </div>
 
-                <div className="flex items-center gap-3 mb-6">
-                  <div className={`w-3 h-3 rounded-full ${goal.priority === 1 ? 'bg-destructive' : goal.priority === 2 ? 'bg-primary' : 'bg-emerald-500'}`} />
-                  <h3 className="text-lg font-bold text-foreground">{goal.name}</h3>
+                <div className="flex items-center justify-between mb-6 pr-12">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full ${goal.priority === 1 ? 'bg-destructive' : goal.priority === 2 ? 'bg-primary' : 'bg-emerald-500'}`} />
+                    <h3 className="text-lg font-bold text-foreground">{goal.name}</h3>
+                  </div>
+                  {goal.status && goal.status !== 'active' && (
+                    <Badge variant="outline" className={cn(
+                      "text-[9px] uppercase tracking-widest",
+                      goal.status === 'completed' && "border-emerald-500 text-emerald-500 bg-emerald-500/10",
+                      goal.status === 'paused' && "border-amber-500 text-amber-500 bg-amber-500/10",
+                      goal.status === 'cancelled' && "border-red-500 text-red-500 bg-red-500/10",
+                    )}>
+                      {goal.status === 'completed' ? 'Concluída' : goal.status === 'paused' ? 'Pausada' : 'Cancelada'}
+                    </Badge>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-6 mb-8">
@@ -334,14 +359,27 @@ const Goals = () => {
                 <p className="text-sm font-bold text-foreground">Guardar <span className="text-primary">{formatCurrency(monthlyAmount)}</span> por mês.</p>
               </div>
             )}
-            <div className="space-y-1.5">
-              <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Prioridade</label>
-              <select title="Prioridade" value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full h-12 rounded-xl border border-border bg-muted px-4 text-sm text-foreground outline-none focus:border-primary">
-                <option value="1">Alta (Urgente)</option>
-                <option value="2">Média (Normal)</option>
-                <option value="3">Baixa (Desejo)</option>
-              </select>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Prioridade</label>
+                <select title="Prioridade" value={priority} onChange={(e) => setPriority(e.target.value)} className="w-full h-12 rounded-xl border border-border bg-muted px-4 text-sm text-foreground outline-none focus:border-primary">
+                  <option value="1">Alta (Urgente)</option>
+                  <option value="2">Média (Normal)</option>
+                  <option value="3">Baixa (Desejo)</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Status</label>
+                <select title="Status" value={status} onChange={(e: any) => setStatus(e.target.value)} className="w-full h-12 rounded-xl border border-border bg-muted px-4 text-sm text-foreground outline-none focus:border-primary">
+                  <option value="active">Ativa</option>
+                  <option value="paused">Pausada</option>
+                  <option value="completed">Concluída</option>
+                  <option value="cancelled">Cancelada</option>
+                </select>
+              </div>
             </div>
+
             <Button onClick={saveGoal} className="w-full h-14 rounded-2xl text-base font-bold shadow-lg shadow-primary/20">
               Salvar Objetivo
             </Button>

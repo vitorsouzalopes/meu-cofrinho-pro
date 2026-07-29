@@ -296,6 +296,21 @@ const Today = () => {
       <div className="mb-8">
         <Card className="p-8 border-none bg-primary shadow-2xl shadow-primary/30 animate-scale-in relative overflow-hidden group">
           <div className="relative z-10 text-center">
+            <div className="flex justify-center mb-4">
+              {(() => {
+                const ratio = totais.renda > 0 ? (totais.gastos + totais.totalMetas) / totais.renda : 1;
+                let health = { label: "Excelente", color: "bg-emerald-500", text: "text-emerald-500" };
+                if (ratio > 0.95 || totais.disponivel < 0) health = { label: "Crítica", color: "bg-red-500", text: "text-red-500" };
+                else if (ratio > 0.8) health = { label: "Atenção", color: "bg-amber-500", text: "text-amber-500" };
+
+                return (
+                  <div className={cn("px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/20 bg-white/10 flex items-center gap-1.5")}>
+                    <div className={cn("w-2 h-2 rounded-full", health.color)} />
+                    Saúde: <span className="text-white">{health.label}</span>
+                  </div>
+                );
+              })()}
+            </div>
             <p className="text-white/70 text-xs uppercase font-bold mb-2 tracking-widest">Você ainda pode gastar</p>
             <h2 className="text-4xl font-bold text-white mb-2">{formatCurrency(totais.disponivel)}</h2>
             <div className="bg-white/20 rounded-full px-4 py-1 inline-block">

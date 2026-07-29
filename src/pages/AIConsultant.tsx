@@ -88,26 +88,49 @@ const AIConsultant = () => {
       if (userMsg.toLowerCase().includes("posso comprar") && purchaseAmount) {
         const remaining = financeData.disponivel;
         const afterPurchase = remaining - purchaseAmount;
+        const impactPercentage = (purchaseAmount / (remaining || 1)) * 100;
 
+        let recommendation = "";
         if (afterPurchase >= 0) {
           const percentageRemaining = (afterPurchase / financeData.renda) * 100;
           if (percentageRemaining > 15) {
+            recommendation = "A compra está dentro do seu orçamento de segurança. ✅";
             response = {
               role: "bot",
-              content: `Sim! Hoje você possui ${formatCurrency(remaining)} de Dinheiro Livre. Após essa compra de ${formatCurrency(purchaseAmount)}, ainda restarão ${formatCurrency(afterPurchase)}. Suas contas e metas continuarão protegidas. ✅`,
+              content: `Sim! Você pode comprar.
+
+📊 **Resumo da Análise:**
+• **Compra:** ${formatCurrency(purchaseAmount)}
+• **Impacto:** -${impactPercentage.toFixed(0)}% do seu dinheiro livre
+• **Saldo após compra:** ${formatCurrency(afterPurchase)}
+• **Recomendação:** ${recommendation}`,
               type: "success"
             };
           } else {
+            recommendation = "Comprar agora reduzirá sua margem de segurança significativamente. Considere esperar o próximo mês. ⚠️";
             response = {
               role: "bot",
-              content: `Pode comprar, mas atenção: isso reduzirá sua margem de segurança. Você ficaria com apenas ${formatCurrency(afterPurchase)} livres até o fim do mês. Suas metas podem ser afetadas. ⚠️`,
+              content: `Pode comprar, mas com cautela.
+
+📊 **Resumo da Análise:**
+• **Compra:** ${formatCurrency(purchaseAmount)}
+• **Impacto:** -${impactPercentage.toFixed(0)}% do seu dinheiro livre
+• **Saldo após compra:** ${formatCurrency(afterPurchase)}
+• **Recomendação:** ${recommendation}`,
               type: "warning"
             };
           }
         } else {
+          recommendation = `Essa compra excede seu saldo livre. Economizar ${formatCurrency(purchaseAmount - remaining)} extras permitiria a compra sem dívidas. ❌`;
           response = {
             role: "bot",
-            content: `Não recomendado. Essa compra de ${formatCurrency(purchaseAmount)} excede seu Dinheiro Livre atual (${formatCurrency(remaining)}). Isso comprometeria o pagamento de suas contas ou suas metas de economia. ❌`,
+            content: `Não recomendado no momento.
+
+📊 **Resumo da Análise:**
+• **Compra:** ${formatCurrency(purchaseAmount)}
+• **Impacto:** -${impactPercentage.toFixed(0)}% (Excede o disponível)
+• **Saldo restante:** ${formatCurrency(remaining)}
+• **Recomendação:** ${recommendation}`,
             type: "error"
           };
         }

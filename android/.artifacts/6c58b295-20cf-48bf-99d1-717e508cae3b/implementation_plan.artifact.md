@@ -1,24 +1,64 @@
-# Fix Deprecated `buildConfig` Flag
+# Implementation Plan - Cofrinho Pro v1.0 Backlog
 
-The build warning `The option setting 'android.defaults.buildfeatures.buildconfig=true' is deprecated` indicates that the global way of enabling `BuildConfig` generation in `gradle.properties` is no longer recommended.
+This plan addresses high-priority items from the v1.0 backlog, including Premium features, Goal management improvements, and Dashboard enhancements.
 
-Starting with Android Gradle Plugin (AGP) 8.0, `BuildConfig` generation is disabled by default to improve build speed. The flag in `gradle.properties` was a temporary measure to maintain backward compatibility, but it will be removed in AGP 9.0.
+## User Review Required
+
+> [!IMPORTANT]
+> Some changes require database schema updates (adding `status` to `goals` and ensuring `is_premium` exists in `profiles`). I will assume these columns are available or can be added.
 
 ## Proposed Changes
 
-### [Component Name]
+### 1. Dashboard Enhancements
+#### [MODIFY] [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)
+- Add "Saúde Financeira" indicator based on income vs. expenses.
+  - **Excelente**: Savings > 20% of income.
+  - **Atenção**: Expenses between 70% and 90% of income.
+  - **Crítica**: Expenses > 90% of income or negative balance.
 
-#### [MODIFY] [gradle.properties](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/gradle.properties)
-- Remove `android.defaults.buildfeatures.buildconfig=true`.
+---
 
-#### [MODIFY] [app/build.gradle](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/build.gradle)
-- Explicitly enable `buildConfig` for the app module. This ensures that if the app (or any future code) needs `BuildConfig`, it remains available without using the deprecated global flag.
+### 2. Goals Management (Edit, Delete, Status)
+#### [MODIFY] [Goals.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Goals.tsx)
+- Fix state bugs in `resetForm` and `handleEdit` (removed non-existent `setMonthlyAmount`).
+- Add confirmation dialog for deletion.
+- Add `status` field to Goals (Concluída, Pausada, Cancelada).
+- Update UI to show/change status.
+
+---
+
+### 3. AI Consultant Improvements
+#### [MODIFY] [AIConsultant.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/AIConsultant.tsx)
+- Enhance the "Posso comprar?" response with a structured summary:
+  - Purchase amount.
+  - Impact % on free money.
+  - Remaining balance.
+  - Recommendation (e.g., "Wait for next month to save R$ X").
+- Ensure it remains locked for non-premium users.
+
+---
+
+### 4. Push Notifications & FCM
+#### [MODIFY] [native-push.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/lib/native-push.ts)
+- Add more robust logging for FCM registration.
+- Verify if the token is being upserted correctly to Supabase.
+
+---
+
+### 5. Premium Features (Reports & Ads)
+#### [MODIFY] [Premium.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Premium.tsx)
+- Highlight new benefits: No ads, full reports, cloud backup, advanced planning.
+
+---
 
 ## Verification Plan
 
 ### Automated Tests
-- Run `./gradlew assembleDebug` to ensure the project still builds correctly.
-- Verify that `BuildConfig` is still generated for the `:app` module (if needed).
+- Build and run the app: `npm run build:android`.
+- Verify no linting errors.
 
 ### Manual Verification
-- Check that the deprecation warning is gone during sync/build.
+- **Dashboard**: Check if the health indicator changes correctly with different income/expense values.
+- **Goals**: Create, edit, and delete a goal. Change its status.
+- **AI Consultant**: Ask "Posso comprar um celular de R$ 2000?" and verify the summary.
+- **Push**: Check console logs in Android Studio for "Registration success" and token value.

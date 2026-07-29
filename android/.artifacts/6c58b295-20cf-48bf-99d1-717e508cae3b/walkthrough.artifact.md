@@ -1,32 +1,44 @@
-# Walkthrough - Fix Deprecated `buildConfig` Flag
+# Walkthrough - Cofrinho Pro v1.0 Enhancements
 
-The deprecated global flag for `BuildConfig` generation has been replaced with a module-specific configuration in the app module. This aligns the project with modern Android Gradle Plugin best practices and removes the build warning.
+The high-priority items from the v1.0 backlog have been implemented, improving the Dashboard, Goal management, and the AI Consultant experience.
 
 ## Changes
 
-### Gradle Configuration
+### Dashboard Enhancements
+#### [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)
+- Added a **"Saúde Financeira"** indicator in the main money card.
+- It dynamically calculates your status based on income vs. essential expenses + goals:
+  - 🟢 **Excelente**: Under 80% utilization.
+  - 🟡 **Atenção**: 80-95% utilization.
+  - 🔴 **Crítica**: Over 95% or negative balance.
 
-#### [gradle.properties](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/gradle.properties)
+### Goal Management Improvements
+#### [Goals.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Goals.tsx)
+- **Edit & Delete**: Fixed state bugs that prevented proper editing. Added a clear confirmation dialog for deletions.
+- **Status Field**: Added `active`, `paused`, `completed`, and `cancelled` statuses.
+- **UI**: Goal cards now show a badge with the current status (except when active).
 
-Removed the deprecated global setting:
-```diff
--android.defaults.buildfeatures.buildconfig=true
-```
+### AI Consultant Structured Responses
+#### [AIConsultant.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/AIConsultant.tsx)
+- Enhanced the "Posso comprar?" feature. Instead of just a text block, it now returns a structured analysis:
+  - **Compra**: Amount requested.
+  - **Impacto**: Percentage of your free money.
+  - **Saldo após compra**: What you'll have left.
+  - **Recomendação**: Strategic advice based on safety margins.
 
-#### [app/build.gradle](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/build.gradle)
-
-Explicitly enabled `buildConfig` for the app module:
-```diff
-+    buildFeatures {
-+        buildConfig = true
-+    }
-```
+### Push & Premium
+#### [native-push.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/lib/native-push.ts)
+- Added detailed console logging for the FCM registration process to help debug the "2xx error" mentioned in the backlog.
+#### [Premium.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Premium.tsx)
+- Updated the benefits list to align with the v1.0 vision (No ads, Cloud backup, Full reports, etc.).
 
 ## Verification Results
 
 ### Automated Tests
-- Executed `gradle sync`: Success.
-- Executed `assembleDebug`: Success. No deprecation warnings related to `buildConfig` were observed in the output.
+- Executed `npm run build:android`: Success.
+- Executed `gradle assembleDebug`: Success.
 
 ### Manual Verification
-- Verified that the `BuildConfig` class is still generated in the `app/build/generated` directory to ensure no breakage for modules that might depend on it.
+- Verified that the "Saúde Financeira" pill appears correctly on the Dashboard.
+- Confirmed that the Goal edit/delete flow works and handles the `status` field.
+- Tested the AI Consultant "Posso comprar" query and verified the structured summary.

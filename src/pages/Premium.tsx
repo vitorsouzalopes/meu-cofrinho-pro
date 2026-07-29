@@ -1,13 +1,15 @@
-import { Crown, Bell, Target, Users, Sparkles, ShieldCheck, Check } from "lucide-react";
+import { Crown, Bell, Target, Users, Sparkles, ShieldCheck, Check, History, Database, FileText, Zap, MegaphoneOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 const features = [
-  { icon: Bell, title: "Lembrete Diário", desc: "Nunca esqueça de poupar com alertas personalizados" },
-  { icon: Target, title: "Meta Personalizada", desc: "Crie desafios sob medida para seus objetivos" },
-  { icon: Users, title: "Comunidade VIP", desc: "Acesse o grupo exclusivo de poupadores" },
-  { icon: Sparkles, title: "Desafios Premium", desc: "Quitar dívidas, reserva de emergência e mais" },
-  { icon: ShieldCheck, title: "Relatórios Detalhados", desc: "Acompanhe sua evolução com gráficos avançados" },
+  { icon: MegaphoneOff, title: "Sem Anúncios", desc: "Experiência limpa e focada no seu dinheiro" },
+  { icon: Database, title: "Backup na Nuvem", desc: "Seus dados seguros e sincronizados sempre" },
+  { icon: FileText, title: "Relatórios Full", desc: "Exportação detalhada em PDF e Excel" },
+  { icon: Sparkles, title: "Consultor IA", desc: "Análise ilimitada de compras e gastos" },
+  { icon: Zap, title: "Planejamento Pro", desc: "Simulações avançadas de quitação de dívidas" },
+  { icon: History, title: "Histórico Infinito", desc: "Acesso a todo o seu passado financeiro" },
+  { icon: Bell, title: "Alertas Inteligentes", desc: "Notificações personalizadas de risco e metas" },
 ];
 
 const Premium = () => {

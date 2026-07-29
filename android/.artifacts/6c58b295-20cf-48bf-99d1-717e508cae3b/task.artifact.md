@@ -1,3 +1,6 @@
-- `[x]` Remove deprecated flag from `gradle.properties`
-- `[x]` Enable `buildConfig` in `app/build.gradle`
-- `[x]` Verify build and sync
+- `[x]` Dashboard: Add "Saúde Financeira" indicator (`Today.tsx`)
+- `[x]` Goals: Implement edit, delete confirmation, and status field (`Goals.tsx`)
+- `[x]` AI Consultant: Enhance "Posso comprar?" response with structured summary (`AIConsultant.tsx`)
+- `[x]` Push: Improve logging in `native-push.ts`
+- `[x]` Premium: Update benefits list in `Premium.tsx`
+- `[x]` Build and Verify
