@@ -1,6 +1,4 @@
-- `[x]` Dashboard: Add "Saúde Financeira" indicator (`Today.tsx`)
-- `[x]` Goals: Implement edit, delete confirmation, and status field (`Goals.tsx`)
-- `[x]` AI Consultant: Enhance "Posso comprar?" response with structured summary (`AIConsultant.tsx`)
-- `[x]` Push: Improve logging in `native-push.ts`
-- `[x]` Premium: Update benefits list in `Premium.tsx`
+- `[x]` Create `src/pages/Support.tsx` with the requested content and functionality
+- `[x]` Update `src/App.tsx` to add the `/support` route
+- `[x]` Update `src/pages/Profile.tsx` to navigate to `/support` and remove the old help dialog
 - `[x]` Build and Verify

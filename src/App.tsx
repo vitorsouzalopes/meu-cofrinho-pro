@@ -30,6 +30,7 @@ import Goals from "./pages/Goals.tsx";
 import Planner from "./pages/Planner.tsx";
 import AIConsultant from "./pages/AIConsultant.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
+import Support from "./pages/Support.tsx";
 import NotificationWall from "./components/NotificationWall.tsx";
 
 const queryClient = new QueryClient();
@@ -122,6 +123,7 @@ const AppContent = () => {
         <Route path="/telegram" element={<TelegramSettings />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/ai-consultant" element={<AIConsultant />} />
+        <Route path="/support" element={<Support />} />
       </Route>
 
       {/* 404 */}

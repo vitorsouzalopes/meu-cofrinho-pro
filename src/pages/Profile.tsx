@@ -39,7 +39,6 @@ const ProfilePage = () => {
   const [displayName, setDisplayName] = useState("");
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportMonth, setExportMonth] = useState(new Date().toISOString().slice(0, 7));
   const [isAdmin, setIsAdmin] = useState(false);
@@ -286,7 +285,7 @@ const ProfilePage = () => {
           { icon: <Bell className="w-5 h-5" />, label: "Notificações Push", onClick: () => navigate("/telegram") },
           { icon: <Target className="w-5 h-5" />, label: "Metas Financeiras", onClick: () => navigate("/goals") },
           { icon: <FileDown className="w-5 h-5" />, label: "Exportar Relatório Mensal (PDF)", onClick: () => setExportDialogOpen(true) },
-          { icon: <HelpCircle className="w-5 h-5" />, label: "Ajuda e Suporte", onClick: () => setHelpOpen(true) },
+          { icon: <HelpCircle className="w-5 h-5" />, label: "Ajuda e Suporte", onClick: () => navigate("/support") },
           ...(isAdmin ? [
             { icon: <RefreshCcw className="w-5 h-5" />, label: "Sincronizar Mês", onClick: loadData },
             { icon: <Sparkles className="w-5 h-5" />, label: "Testar Anúncio (Intersticial)", onClick: showInterstitialAd, color: "text-amber-500" },
@@ -385,49 +384,6 @@ const ProfilePage = () => {
             }}>
               Gerar PDF
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Help & Support Dialog */}
-      <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Ajuda e Suporte</DialogTitle>
-          </DialogHeader>
-          <div className="py-6 space-y-6">
-            <div className="flex flex-col items-center justify-center text-center space-y-2">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-                <MessageCircle className="w-6 h-6 text-primary" />
-              </div>
-              <h3 className="font-semibold text-lg">Precisa de ajuda?</h3>
-              <p className="text-sm text-muted-foreground">
-                Nossa equipe está pronta para ajudar você a resolver qualquer problema ou responder dúvidas sobre o app.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <Card className="p-3 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase">E-mail de Suporte</p>
-                  <p className="text-sm font-medium">vitorsouzalopes@souunisuam.com.br</p>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => {
-                  navigator.clipboard.writeText("vitorsouzalopes@souunisuam.com.br");
-                  toast({ title: "E-mail copiado!" });
-                }}>Copiar</Button>
-              </Card>
-
-              <Card className="p-3 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase">WhatsApp / Telefone</p>
-                  <p className="text-sm font-medium">+55 21 99999-9999</p>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => {
-                  window.open("https://wa.me/5521999999999", "_blank");
-                }}>Chamar</Button>
-              </Card>
-            </div>
           </div>
         </DialogContent>
       </Dialog>

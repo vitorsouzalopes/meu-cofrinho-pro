@@ -1,44 +1,28 @@
-# Walkthrough - Cofrinho Pro v1.0 Enhancements
+# Walkthrough - New Help & Support Page
 
-The high-priority items from the v1.0 backlog have been implemented, improving the Dashboard, Goal management, and the AI Consultant experience.
+A dedicated "Ajuda e Suporte" page has been implemented, providing direct contact options via E-mail and WhatsApp with pre-filled messages.
 
 ## Changes
 
-### Dashboard Enhancements
-#### [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)
-- Added a **"Saúde Financeira"** indicator in the main money card.
-- It dynamically calculates your status based on income vs. essential expenses + goals:
-  - 🟢 **Excelente**: Under 80% utilization.
-  - 🟡 **Atenção**: 80-95% utilization.
-  - 🔴 **Crítica**: Over 95% or negative balance.
+### New Support Page
+#### [NEW] [Support.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Support.tsx)
+- Implemented the layout with:
+  - Welcome section.
+  - **E-mail section**: Opens the default mail app with recipient `vitorsouzalopes@souunisuam.com.br`, subject "Suporte - Cofrinho Pro", and a structured body.
+  - **WhatsApp section**: Opens a chat with `+55 21 97944-9600` and the message "Olá! Preciso de ajuda com o aplicativo Cofrinho Pro."
 
-### Goal Management Improvements
-#### [Goals.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Goals.tsx)
-- **Edit & Delete**: Fixed state bugs that prevented proper editing. Added a clear confirmation dialog for deletions.
-- **Status Field**: Added `active`, `paused`, `completed`, and `cancelled` statuses.
-- **UI**: Goal cards now show a badge with the current status (except when active).
+### Routing and Integration
+#### [MODIFY] [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx)
+- Added the `/support` route to the protected layout.
 
-### AI Consultant Structured Responses
-#### [AIConsultant.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/AIConsultant.tsx)
-- Enhanced the "Posso comprar?" feature. Instead of just a text block, it now returns a structured analysis:
-  - **Compra**: Amount requested.
-  - **Impacto**: Percentage of your free money.
-  - **Saldo após compra**: What you'll have left.
-  - **Recomendação**: Strategic advice based on safety margins.
-
-### Push & Premium
-#### [native-push.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/lib/native-push.ts)
-- Added detailed console logging for the FCM registration process to help debug the "2xx error" mentioned in the backlog.
-#### [Premium.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Premium.tsx)
-- Updated the benefits list to align with the v1.0 vision (No ads, Cloud backup, Full reports, etc.).
+#### [MODIFY] [Profile.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Profile.tsx)
+- Updated the "Ajuda e Suporte" menu item to navigate to the new page.
+- Removed the legacy help dialog code.
 
 ## Verification Results
 
-### Automated Tests
-- Executed `npm run build:android`: Success.
-- Executed `gradle assembleDebug`: Success.
-
 ### Manual Verification
-- Verified that the "Saúde Financeira" pill appears correctly on the Dashboard.
-- Confirmed that the Goal edit/delete flow works and handles the `status` field.
-- Tested the AI Consultant "Posso comprar" query and verified the structured summary.
+- Navigated to the new support page from the profile.
+- Verified that "Enviar E-mail" triggers the correct `mailto:` link.
+- Verified that "Conversar no WhatsApp" triggers the correct `wa.me` link.
+- Verified the layout matches the requested specifications.
