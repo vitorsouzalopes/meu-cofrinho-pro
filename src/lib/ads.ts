@@ -1,9 +1,10 @@
 import { AdMob, BannerAdPosition, BannerAdSize, InterstitialAdPluginEvents, AdMobBannerSize } from '@capacitor-community/admob';
 import { Capacitor } from '@capacitor/core';
 
-// Test IDs provided by Google
+// Production IDs
+const BANNER_ID = 'ca-app-pub-2069353543110701/8184697025';
+// Note: If you have a real Interstitial ID, replace it here.
 const INTERSTITIAL_TEST_ID = 'ca-app-pub-3940256099942544/1033173712';
-const BANNER_TEST_ID = 'ca-app-pub-3940256099942544/6300978111';
 
 export async function initializeAds() {
   if (!Capacitor.isNativePlatform()) return;
@@ -12,7 +13,7 @@ export async function initializeAds() {
     await AdMob.initialize({
       requestTrackingAuthorization: true,
       testingDevices: [],
-      initializeForTesting: true,
+      initializeForTesting: false,
     });
   } catch (e) {
     console.error('AdMob init error:', e);
@@ -23,11 +24,11 @@ export async function showBannerAd() {
   if (!Capacitor.isNativePlatform()) return;
 
   const options = {
-    adId: BANNER_TEST_ID,
+    adId: BANNER_ID,
     adSize: BannerAdSize.ADAPTIVE_BANNER,
     position: BannerAdPosition.BOTTOM_CENTER,
     margin: 60, // Above bottom navigation
-    isTesting: true,
+    isTesting: false,
   };
 
   try {
@@ -52,7 +53,7 @@ export async function showInterstitialAd() {
   try {
     await AdMob.prepareInterstitial({
       adId: INTERSTITIAL_TEST_ID,
-      isTesting: true,
+      isTesting: false,
     });
     await AdMob.showInterstitial();
   } catch (e) {

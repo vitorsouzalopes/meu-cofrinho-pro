@@ -1,4 +1,4 @@
-- `[x]` Create `src/pages/Support.tsx` with the requested content and functionality
-- `[x]` Update `src/App.tsx` to add the `/support` route
-- `[x]` Update `src/pages/Profile.tsx` to navigate to `/support` and remove the old help dialog
-- `[x]` Build and Verify
+- `[x]` Update `AndroidManifest.xml` with real AdMob App ID
+- `[x]` Update `capacitor.config.ts` with AdMob plugin config
+- `[x]` Update `src/lib/ads.ts` with real Banner ID and disable testing flags
+- `[x]` Build and sync web assets

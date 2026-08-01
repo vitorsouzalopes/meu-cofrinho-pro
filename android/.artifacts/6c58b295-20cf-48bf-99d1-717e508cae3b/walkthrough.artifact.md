@@ -1,28 +1,27 @@
-# Walkthrough - New Help & Support Page
+# Walkthrough - AdMob Production Configuration
 
-A dedicated "Ajuda e Suporte" page has been implemented, providing direct contact options via E-mail and WhatsApp with pre-filled messages.
+The application has been updated with the real AdMob IDs provided, transitioning from test mode to production mode in preparation for the Play Store launch.
 
 ## Changes
 
-### New Support Page
-#### [NEW] [Support.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Support.tsx)
-- Implemented the layout with:
-  - Welcome section.
-  - **E-mail section**: Opens the default mail app with recipient `vitorsouzalopes@souunisuam.com.br`, subject "Suporte - Cofrinho Pro", and a structured body.
-  - **WhatsApp section**: Opens a chat with `+55 21 97944-9600` and the message "Olá! Preciso de ajuda com o aplicativo Cofrinho Pro."
+### Android Manifest
+- **File**: `android/app/src/main/AndroidManifest.xml`
+- Updated the `com.google.android.gms.ads.APPLICATION_ID` with the production App ID: `ca-app-pub-2069353543110701~5558799613`.
 
-### Routing and Integration
-#### [MODIFY] [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx)
-- Added the `/support` route to the protected layout.
+### Capacitor Configuration
+- **File**: `capacitor.config.ts`
+- Added the AdMob plugin configuration to ensure the App ID is correctly recognized by the Capacitor bridge.
 
-#### [MODIFY] [Profile.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Profile.tsx)
-- Updated the "Ajuda e Suporte" menu item to navigate to the new page.
-- Removed the legacy help dialog code.
+### AdMob Service (Web/Capacitor)
+- **File**: `src/lib/ads.ts`
+- Replaced the test Banner ID with the production ID: `ca-app-pub-2069353543110701/8184697025`.
+- Disabled `initializeForTesting`.
+- Set `isTesting: false` for banner and interstitial ads.
 
 ## Verification Results
 
-### Manual Verification
-- Navigated to the new support page from the profile.
-- Verified that "Enviar E-mail" triggers the correct `mailto:` link.
-- Verified that "Conversar no WhatsApp" triggers the correct `wa.me` link.
-- Verified the layout matches the requested specifications.
+### Automated Sync
+- Executed `npm run build:android`: **Success**. The production IDs are now bundled into the Android assets.
+
+> [!CAUTION]
+> **Production Ads Warning**: Real ads may take a few hours to start appearing. Avoid clicking on ads in your own device/emulator to prevent account suspension. It is recommended to add your device as a "Test Device" in the AdMob console if you need to test production IDs safely.

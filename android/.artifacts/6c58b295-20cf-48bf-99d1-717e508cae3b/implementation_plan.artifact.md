@@ -1,36 +1,28 @@
-# Implementation Plan - New Help & Support Page
+# Configuração de Anúncios Reais (AdMob)
 
-This plan describes the creation of a dedicated "Ajuda e Suporte" page with direct contact options via Email and WhatsApp, as requested.
+Este plano detalha a transição dos IDs de teste para os IDs de produção da AdMob fornecidos pelo usuário, preparando o aplicativo para o lançamento na Play Store.
 
-## Proposed Changes
+## Mudanças Propostas
 
-### 1. Support Page
-#### [NEW] [Support.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Support.tsx)
-- Create a new page component with the following features:
-  - Header with a back button.
-  - Welcome icon and text.
-  - Email section with a "mailto" link including predefined subject and body.
-  - WhatsApp section with a direct link to a conversation with a predefined message.
-  - Styled with the app's dark theme and glass-morphism cards.
+### 1. Android Manifest
+#### [MODIFY] [AndroidManifest.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/AndroidManifest.xml)
+- Substituir o App ID de teste pelo ID real: `ca-app-pub-2069353543110701~5558799613`.
 
-### 2. Routing
-#### [MODIFY] [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx)
-- Import the new `Support` page.
-- Add a new route `<Route path="/support" element={<Support />} />` inside the `ProtectedLayout`.
+### 2. Biblioteca de Anúncios (Web/Capacitor)
+#### [MODIFY] [ads.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/lib/ads.ts)
+- Atualizar `BANNER_ID` com o ID real: `ca-app-pub-2069353543110701/8184697025`.
+- Alterar `initializeForTesting` para `false`.
+- Alterar `isTesting` para `false` na exibição do banner.
+- Adicionar suporte para carregar o App ID da configuração (opcional, mas recomendado).
 
-### 3. Profile Integration
-#### [MODIFY] [Profile.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Profile.tsx)
-- Remove the old `helpOpen` state and the Support `Dialog`.
-- Update the "Ajuda e Suporte" list item to navigate to `/support` instead of opening the dialog.
+### 3. Configuração do Capacitor
+#### [MODIFY] [capacitor.config.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/capacitor.config.ts)
+- Adicionar a configuração do plugin AdMob com o App ID real para garantir consistência entre as plataformas.
 
-## Verification Plan
+## Plano de Verificação
 
-### Automated Tests
-- Run `npm run build` to ensure no syntax errors.
-
-### Manual Verification
-- Navigate to **Perfil** > **Ajuda e Suporte**.
-- Verify the layout matches the request.
-- Test "Enviar E-mail": Check if it opens the mail app with the correct recipient, subject, and body.
-- Test "Abrir WhatsApp": Check if it opens WhatsApp with the correct number and message.
-- Test "Voltar": Check if it returns to the Profile page.
+### Verificação Manual
+1.  **Build**: Executar `npm run build:android` para atualizar os assets web.
+2.  **Execução**: Rodar o app no emulador ou dispositivo físico.
+    - **Nota**: Anúncios reais podem demorar algumas horas para começar a aparecer após a configuração e geralmente não aparecem bem em emuladores (o Google pode bloquear a conta se houver cliques falsos). O ideal é testar com um dispositivo físico e **não clicar** nos próprios anúncios.
+3.  **Logs**: Verificar no Logcat se a inicialização do AdMob ocorre sem erros de "App ID mismatch".
