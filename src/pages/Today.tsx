@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { TrendingUp, Wallet, Clock, AlertCircle, Sparkles, CheckCircle2, Target, Menu, Settings, Pencil, Trash2, Calendar as CalendarIcon, CreditCard } from "lucide-react";
+import { TrendingUp, Wallet, Clock, AlertCircle, Sparkles, CheckCircle2, Target, Menu, Settings, Pencil, Trash2, Calendar as CalendarIcon, CreditCard, Lock, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { analyzeFinancialRisk } from "@/financial/notificationEngine";
 import { cn } from "@/lib/utils";
 import { initializeAds, showBannerAd, hideBannerAd } from "@/lib/ads";
 import { usePremium } from "@/lib/premium";
+import { scheduleFinancialReminders } from "@/lib/notification-engine";
 
 type Account = Tables<"accounts">;
 type Profile = Tables<"profiles">;
@@ -159,6 +160,18 @@ const Today = () => {
     window.addEventListener("finance-data-updated", handleSync);
     return () => window.removeEventListener("finance-data-updated", handleSync);
   }, [user?.id, fetchData]);
+
+  // Handle smart notification scheduling
+  useEffect(() => {
+    if (!loading && user && accounts.length > 0) {
+      scheduleFinancialReminders({
+        accounts,
+        salary,
+        goals,
+        disponivel: totais.disponivel
+      });
+    }
+  }, [loading, user, accounts, salary, goals, totais.disponivel]);
 
   // Ads initialization - Non-blocking
   useEffect(() => {
@@ -368,16 +381,32 @@ const Today = () => {
       {/* IA Consultant Quick Access */}
       <div className="mb-8">
         <Card
-          className="p-5 border border-primary/20 bg-primary/5 shadow-lg relative overflow-hidden group cursor-pointer"
+          className={cn(
+            "p-5 border border-primary/20 bg-primary/5 shadow-lg relative overflow-hidden group cursor-pointer",
+            !isPremium && "opacity-60 grayscale-[0.5] border-muted bg-muted/10"
+          )}
           onClick={() => navigate("/ai-consultant")}
         >
           <div className="flex items-center gap-4 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-              <Sparkles className="w-6 h-6 text-white" />
+            <div className={cn(
+              "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20",
+              isPremium ? "bg-primary" : "bg-muted text-muted-foreground"
+            )}>
+              {isPremium ? <Sparkles className="w-6 h-6 text-white" /> : <Lock className="w-6 h-6" />}
             </div>
-            <div>
-              <p className="text-sm font-bold text-foreground">Consultor IA</p>
-              <p className="text-[10px] text-muted-foreground font-medium italic">"Posso comprar um tênis de R$ 600?"</p>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-bold text-foreground">Consultor IA</p>
+                {!isPremium && (
+                  <div className="px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 flex items-center gap-1">
+                    <Crown className="w-2.5 h-2.5 text-primary" />
+                    <span className="text-[8px] font-bold text-primary uppercase">Premium</span>
+                  </div>
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground font-medium italic">
+                {isPremium ? '"Posso comprar um tênis de R$ 600?"' : "Análise inteligente de compras e saúde financeira"}
+              </p>
             </div>
           </div>
         </Card>

@@ -88,12 +88,9 @@ const NotificationWall = ({ onRetry }: { onRetry: () => void }) => {
             {!loading && <ArrowRight className="ml-2 w-5 h-5" />}
           </Button>
 
-          <button
-            onClick={onRetry}
-            className="text-[10px] text-muted-foreground underline uppercase tracking-tighter hover:text-white"
-          >
-            Já ativei manualmente, entrar no app
-          </button>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest px-4 leading-relaxed">
+            Se você já ativou nas configurações do sistema, tente clicar no botão acima para validar.
+          </p>
         </div>
       </div>
     </div>

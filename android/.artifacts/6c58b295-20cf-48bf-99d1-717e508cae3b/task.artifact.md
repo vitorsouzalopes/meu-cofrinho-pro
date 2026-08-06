@@ -1,4 +1,6 @@
-- `[x]` Update `AndroidManifest.xml` with real AdMob App ID
-- `[x]` Update `capacitor.config.ts` with AdMob plugin config
-- `[x]` Update `src/lib/ads.ts` with real Banner ID and disable testing flags
-- `[x]` Build and sync web assets
+- `[x]` AI Consultant: Enhance response logic and fix UI layout (`AIConsultant.tsx`)
+- `[x]` Dashboard: Apply locked style to AI Consultant card for free users (`Today.tsx`)
+- `[x]` App: Enforce mandatory notification permission in `ProtectedLayout` (`App.tsx`)
+- `[x]` Notifications: Create `notification-engine.ts` for smart triggers
+- `[x]` Integration: Hook up notification engine to data loading in `Today.tsx`
+- `[x]` Verification & Walkthrough

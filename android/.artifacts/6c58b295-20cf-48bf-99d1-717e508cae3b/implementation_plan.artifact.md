@@ -1,28 +1,54 @@
-# Configuração de Anúncios Reais (AdMob)
+# Implementation Plan - Cofrinho Pro v1.1 Enhancements
 
-Este plano detalha a transição dos IDs de teste para os IDs de produção da AdMob fornecidos pelo usuário, preparando o aplicativo para o lançamento na Play Store.
+This plan addresses AI Consultant improvements, mandatory notification enforcement, and smart notification triggers.
 
-## Mudanças Propostas
+## Proposed Changes
 
-### 1. Android Manifest
-#### [MODIFY] [AndroidManifest.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/AndroidManifest.xml)
-- Substituir o App ID de teste pelo ID real: `ca-app-pub-2069353543110701~5558799613`.
+### 1. AI Consultant Improvements
+#### [MODIFY] [AIConsultant.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/AIConsultant.tsx)
+- **Enhanced Logic:** Implement a keyword-based routing system for the AI bot.
+  - **"posso comprar"**: Current impact analysis.
+  - **"resumo" / "status"**: Summary of monthly health.
+  - **"dicas" / "ajuda"**: Financial saving tips based on current spending ratio.
+- **UI Fix:**
+  - Fix the input area layout to prevent clipping.
+  - Ensure the chat list auto-scrolls correctly and handles mobile keyboard viewports.
 
-### 2. Biblioteca de Anúncios (Web/Capacitor)
-#### [MODIFY] [ads.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/lib/ads.ts)
-- Atualizar `BANNER_ID` com o ID real: `ca-app-pub-2069353543110701/8184697025`.
-- Alterar `initializeForTesting` para `false`.
-- Alterar `isTesting` para `false` na exibição do banner.
-- Adicionar suporte para carregar o App ID da configuração (opcional, mas recomendado).
+### 2. Dashboard Premium Feedback
+#### [MODIFY] [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)
+- Apply a "Locked" visual style to the AI Consultant card for non-premium users.
+- Add a crown icon and a small "Premium" pill to indicate exclusivity.
 
-### 3. Configuração do Capacitor
-#### [MODIFY] [capacitor.config.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/capacitor.config.ts)
-- Adicionar a configuração do plugin AdMob com o App ID real para garantir consistência entre as plataformas.
+### 3. Mandatory Notifications & Smart Triggers
+#### [MODIFY] [App.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/App.tsx)
+- Tighten the `ProtectedLayout` to strictly block access unless notification permission is `granted`.
 
-## Plano de Verificação
+#### [NEW] [notification-engine.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/lib/notification-engine.ts)
+- A helper library to manage local notifications.
+- **Upcoming Due Dates:** Schedule warnings 3 days before any account's `due_day`.
+- **Goal Deadlines:** Reminders for active goals.
+- **Month-End Recap:** Logic to trigger a summary notification on the last day of the month.
+  - Checks if everything was paid.
+  - Advises on remaining balance.
 
-### Verificação Manual
-1.  **Build**: Executar `npm run build:android` para atualizar os assets web.
-2.  **Execução**: Rodar o app no emulador ou dispositivo físico.
-    - **Nota**: Anúncios reais podem demorar algumas horas para começar a aparecer após a configuração e geralmente não aparecem bem em emuladores (o Google pode bloquear a conta se houver cliques falsos). O ideal é testar com um dispositivo físico e **não clicar** nos próprios anúncios.
-3.  **Logs**: Verificar no Logcat se a inicialização do AdMob ocorre sem erros de "App ID mismatch".
+#### [MODIFY] [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)
+- Call the `NotificationEngine` whenever finance data is successfully loaded.
+
+## User Review Required
+
+> [!WARNING]
+> Local notifications are scheduled based on the device's clock. If the user changes data frequently, we will need to "cancel all and reschedule" to ensure accuracy.
+
+> [!IMPORTANT]
+> The AI Consultant will still use simulated logic (client-side) for now, but with much better context-aware responses.
+
+## Verification Plan
+
+### Automated Tests
+- Run `npm run build` to check for syntax errors.
+
+### Manual Verification
+- **AI Consultant**: Type non-"posso comprar" messages and verify they get relevant answers.
+- **Dashboard**: Check if the IA card is dimmed for free users.
+- **Notifications**: Change a bill's due date to "Today + 3 days" and verify if a local notification is scheduled (using logs).
+- **Mandatory Flow**: Reinstall the app and verify you cannot enter the dashboard without granting permissions.

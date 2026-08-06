@@ -79,13 +79,15 @@ const AIConsultant = () => {
     setInput("");
     setLoading(true);
 
-    // Simulação de IA "Posso comprar?"
+    // Simulação de IA contextual
     setTimeout(() => {
       let response: Message;
+      const userMsgLower = userMsg.toLowerCase();
       const amountMatch = userMsg.match(/R\$\s?(\d+([.,]\d+)?)|(\d+([.,]\d+)?)/);
       const purchaseAmount = amountMatch ? parseFloat(amountMatch[0].replace("R$", "").replace(",", ".")) : null;
 
-      if (userMsg.toLowerCase().includes("posso comprar") && purchaseAmount) {
+      // 1. ANÁLISE DE COMPRA ("Posso comprar...?")
+      if (userMsgLower.includes("posso comprar") && purchaseAmount) {
         const remaining = financeData.disponivel;
         const afterPurchase = remaining - purchaseAmount;
         const impactPercentage = (purchaseAmount / (remaining || 1)) * 100;
@@ -134,10 +136,43 @@ const AIConsultant = () => {
             type: "error"
           };
         }
-      } else {
+      }
+      // 2. RESUMO FINANCEIRO ("Resumo", "Como estou?")
+      else if (userMsgLower.includes("resumo") || userMsgLower.includes("status") || userMsgLower.includes("saude") || userMsgLower.includes("saúde")) {
+        const usageRatio = (financeData.gastos + financeData.totalMetas) / financeData.renda;
+        let healthMsg = usageRatio < 0.7 ? "sua saúde financeira está excelente! Você está gastando menos de 70% do que ganha." :
+                       usageRatio < 0.9 ? "você está em uma zona de atenção. Seus custos fixos e metas consomem grande parte da sua renda." :
+                       "você está em uma zona crítica. Quase toda sua renda está comprometida.";
+
         response = {
           role: "bot",
-          content: `Entendi. Com base no seu planejamento, sua renda total é ${formatCurrency(financeData.renda)} e você tem ${formatCurrency(financeData.disponivel)} de Dinheiro Livre após reservar ${formatCurrency(financeData.gastos)} para contas/dívidas e ${formatCurrency(financeData.totalMetas)} para seus objetivos.`,
+          content: `Vitor, ${healthMsg}
+
+📈 **Seus Números:**
+• **Renda Total:** ${formatCurrency(financeData.renda)}
+• **Gastos (Contas/Dívidas):** ${formatCurrency(financeData.gastos)}
+• **Economia para Metas:** ${formatCurrency(financeData.totalMetas)}
+• **Dinheiro Livre hoje:** ${formatCurrency(financeData.disponivel)}`,
+          type: usageRatio < 0.7 ? "success" : usageRatio < 0.9 ? "warning" : "error"
+        };
+      }
+      // 3. DICAS ("Dicas", "Ajuda", "Como poupar")
+      else if (userMsgLower.includes("dica") || userMsgLower.includes("ajuda") || userMsgLower.includes("poupar")) {
+        response = {
+          role: "bot",
+          content: `Aqui estão algumas dicas baseadas no seu perfil:
+
+1. 🎯 **Foque nas Metas**: Você reservou ${formatCurrency(financeData.totalMetas)} este mês. Tente não mexer nesse valor.
+2. 💸 **Pequenos Gastos**: Seu dinheiro livre é de ${formatCurrency(financeData.disponivel)}. Tente dividir esse valor por 4 para saber quanto pode gastar por semana.
+3. ⚠️ **Atenção**: Se surgir um imprevisto, veja qual conta ou meta pode ser adiada sem gerar juros altos.`,
+          type: "neutral"
+        };
+      }
+      // 4. PADRÃO
+      else {
+        response = {
+          role: "bot",
+          content: "Desculpe, não entendi bem. Você pode me perguntar se 'posso comprar algo', pedir um 'resumo' da sua conta ou 'dicas' para economizar!",
           type: "neutral"
         };
       }
@@ -275,14 +310,14 @@ const AIConsultant = () => {
       </div>
 
       {/* Input Area */}
-      <div className="p-6 bg-card/80 backdrop-blur-xl border-t border-border/50 sticky bottom-0">
-        <div className="relative flex items-center gap-2 bg-muted p-2 rounded-2xl border border-border/50 focus-within:border-primary/50 transition-all">
+      <div className="p-6 bg-card/80 backdrop-blur-xl border-t border-border/50 sticky bottom-0 z-30 pb-10">
+        <div className="relative flex items-center gap-2 bg-muted p-2 rounded-2xl border border-border/50 focus-within:border-primary/50 transition-all shadow-inner">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder="Pergunte qualquer coisa..."
-            className="border-none bg-transparent focus-visible:ring-0 h-10"
+            className="border-none bg-transparent focus-visible:ring-0 h-10 text-sm"
           />
           <Button
             size="icon"
@@ -293,7 +328,7 @@ const AIConsultant = () => {
             <Send className="w-4 h-4" />
           </Button>
         </div>
-        <p className="text-[9px] text-muted-foreground text-center mt-3 uppercase tracking-tighter font-bold">
+        <p className="text-[9px] text-muted-foreground text-center mt-3 uppercase tracking-tighter font-bold opacity-60">
           Dica: pergunte "Posso comprar um [item] de R$ [valor]?"
         </p>
       </div>
