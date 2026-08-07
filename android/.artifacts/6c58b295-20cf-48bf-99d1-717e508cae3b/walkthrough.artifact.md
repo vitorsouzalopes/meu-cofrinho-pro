@@ -1,37 +1,34 @@
-# Walkthrough - Cofrinho Pro v1.1 Enhancements
+# Walkthrough - Cofrinho Pro v1.1 Stability & Feature Update
 
-The application has been improved to offer a more contextual AI experience, mandatory notification enforcement for critical alerts, and a better premium feedback system.
+This update resolves a critical crash (blank screen) caused by circular dependencies and further refines the AI Consultant and Smart Notification systems.
 
-## Changes
+## Key Fixes & Improvements
 
-### 1. AI Consultant Contextual Logic
-#### [AIConsultant.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/AIConsultant.tsx)
-- **Expanded Brain:** The bot now understands keywords:
-  - `"resumo"` / `"status"`: Provides a personalized summary of your income vs expenses vs goals.
-  - `"dicas"` / `"poupar"`: Offers strategic saving advice based on your current free money.
-  - `"posso comprar"`: Continues providing structured impact analysis.
-- **UI Improvements:**
-  - Fixed the input bar styling to ensure it's always clickable and not obscured by navigation bars.
-  - Added better scrolling behavior for long conversations.
+### 1. Resolved Initialization Crash (Blank Screen)
+- **Problem**: A circular dependency between `ForecastReport.tsx` and `forecast-pdf.ts` caused a `ReferenceError: Cannot access 'ae' before initialization` in the production bundle.
+- **Solution**:
+  - Moved shared interfaces (`DebtSimulation`, `EvolutionRow`, `PayoffProjection`) to a dedicated file `src/financial/types.ts`.
+  - Refactored `App.tsx` by extracting the routing layouts to `src/components/layout/AppLayout.tsx`, ensuring a cleaner startup sequence.
+- **Result**: The app now launches correctly and reaches the login screen without crashing.
 
-### 2. Mandatory & Smart Notifications
-#### [notification-engine.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/lib/notification-engine.ts)
-- **Automated Scheduling:** A new engine schedules local alerts for:
-  - **3 Days Before Due Date:** Alerts for unpaid bills.
-  - **Salary Detect:** Notifies the user about their calculated free money when a salary is recorded.
-  - **Month-End Recap:** A summary alert on the last day of the month (18h) telling the user if everything was paid or if the balance is critical.
+### 2. Smarter AI Consultant
+- **Keyword Routing**: The bot is now much more selective. It won't give financial diagnostic answers to random chat messages.
+  - If you ask about unrelated topics, it politely redirects you to its financial features.
+  - Recognizes keywords like `"pagar"`, `"conta"`, `"saúde"`, `"resumo"` to provide relevant data.
+- **Mobile UI**: Further stabilized the sticky input bar to prevent it being covered by system navigation or virtual keyboards.
 
-#### [NotificationWall.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/components/NotificationWall.tsx)
-- **Strict Enforcement:** Removed the bypass button. Users *must* enable notifications to access the dashboard, ensuring they receive the critical financial alerts scheduled above.
+### 3. Expanded Smart Notifications
+- **Goal Deadlines**: Added logic to schedule a reminder **7 days before** a goal's deadline.
+- **Recap Logic**: Refined the end-of-month recap to specifically advise based on your remaining "Free Money":
+  - "If you have money and forgot a bill, pay it now."
+  - "If you don't have money, run the strategy planner."
 
-### 3. Dashboard Premium Feedback
-#### [Today.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Today.tsx)
-- **Visual Locking:** The AI Consultant card is now dimmed and shows a "Premium" badge with a Lock icon for free users. This clearly communicates it's a Pro feature without removing it from the UI.
+### 4. Visual Feedback
+- **Dashboard**: For non-premium users, the IA Consultant card is now grayscale/dimmed with a "Lock" icon and "Premium" badge, clearly indicating it's a paid feature.
 
 ## Verification Results
 
-### Manual Verification
-- **AI Consultant**: Verified that asking "como estou hoje?" returns a status summary.
-- **UI**: Verified the input bar is well-positioned on the mobile layout.
-- **Blocking**: Verified that denying notification permission keeps the "Acesso Obrigatório" screen visible.
-- **Scheduling**: Console logs confirm that reminders are being calculated and scheduled upon dashboard load.
+### Success
+- **Startup**: App loads to login screen successfully (verified on emulator after clearing data).
+- **Icons**: Confirmed all Lucide icons are correctly exported and bundled.
+- **Bundling**: Minified JS now correctly initializes modules.

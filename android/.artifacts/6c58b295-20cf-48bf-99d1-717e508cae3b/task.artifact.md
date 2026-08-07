@@ -3,4 +3,5 @@
 - `[x]` App: Enforce mandatory notification permission in `ProtectedLayout` (`App.tsx`)
 - `[x]` Notifications: Create `notification-engine.ts` for smart triggers
 - `[x]` Integration: Hook up notification engine to data loading in `Today.tsx`
+- `[x]` Fix: Resolve circular dependency causing `ReferenceError` crash
 - `[x]` Verification & Walkthrough

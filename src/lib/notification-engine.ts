@@ -49,7 +49,26 @@ export async function scheduleFinancialReminders(data: {
       }
     });
 
-    // 3. Recebimento de Salário (Notificar se houver saldo positivo ignorando contas pagas)
+    // 3. Lembrete de Metas (Próximo do deadline se houver)
+    data.goals.forEach(goal => {
+      if (goal.deadline && goal.status === 'active') {
+        const deadline = new Date(goal.deadline);
+        const alertDate = new Date(deadline);
+        alertDate.setDate(deadline.getDate() - 7); // 1 semana antes
+        alertDate.setHours(10, 0, 0);
+
+        if (alertDate > now) {
+          notifications.push({
+            id: Math.floor(Math.random() * 100000) + 100000,
+            title: "🎯 Meta se aproximando",
+            body: `Sua meta "${goal.name}" está próxima do prazo final. Como está o porquinho?`,
+            schedule: { at: alertDate },
+          });
+        }
+      }
+    });
+
+    // 4. Recebimento de Salário (Notificar se houver saldo positivo ignorando contas pagas)
     if (data.salary > 0) {
       notifications.push({
         id: 999,

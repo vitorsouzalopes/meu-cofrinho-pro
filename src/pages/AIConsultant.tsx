@@ -168,13 +168,28 @@ const AIConsultant = () => {
           type: "neutral"
         };
       }
-      // 4. PADRÃO
+      // 4. PADRÃO (Para perguntas fora do escopo financeiro)
       else {
-        response = {
-          role: "bot",
-          content: "Desculpe, não entendi bem. Você pode me perguntar se 'posso comprar algo', pedir um 'resumo' da sua conta ou 'dicas' para economizar!",
-          type: "neutral"
-        };
+        const keywords = ["quanto", "como", "posso", "dica", "ajuda", "resumo", "status", "saúde", "financeira", "dinheiro", "meta", "conta", "dívida", "pagar"];
+        const hasKeyword = keywords.some(k => userMsgLower.includes(k));
+
+        if (hasKeyword) {
+          response = {
+            role: "bot",
+            content: `Ainda estou aprendendo sobre esse assunto específico. No momento, consigo te ajudar com:
+
+1. 🛍️ **Análise de Compra**: Pergunte "Posso comprar um [item] de R$ [valor]?"
+2. 📊 **Resumo Financeiro**: Peça um "resumo" da sua saúde mensal.
+3. 💡 **Dicas**: Peça "dicas para economizar".`,
+            type: "neutral"
+          };
+        } else {
+          response = {
+            role: "bot",
+            content: "Olá! Como sou seu Consultor Financeiro, prefiro focar em assuntos relacionados ao seu dinheiro, contas e metas. Como posso ajudar com suas finanças hoje?",
+            type: "neutral"
+          };
+        }
       }
 
       setMessages(prev => [...prev, response]);
