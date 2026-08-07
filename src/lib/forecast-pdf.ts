@@ -1,6 +1,5 @@
-import type { DebtSimulation, EvolutionRow } from "@/components/planner/ForecastReport";
 import type { Strategy } from "@/financial/forecastSimulation";
-import type { Debt } from "@/financial/types";
+import type { Debt, DebtSimulation, EvolutionRow } from "@/financial/types";
 
 const safe = (v: number) => (Number.isFinite(v) ? v : 0);
 const fmt = (v: number) =>

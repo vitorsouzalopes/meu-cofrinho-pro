@@ -43,3 +43,34 @@ export interface ProjectionSummary {
   dataQuitacaoTotal: Date
   projecoes: DebtProjection[]
 }
+
+export interface PayoffProjection {
+  meses: number;
+  termino: string;
+  jurosTotal: number;
+  extraMensal: number;
+  economiaTempo: number;
+  economiaJuros: number;
+  valorLivrePreservado: number;
+  balances: number[];
+}
+
+export interface DebtSimulation {
+  id: string;
+  nome: string;
+  banco: string;
+  saldoDevedor: number;
+  parcelaMensal: number;
+  jurosMensal: number;
+  normal: PayoffProjection;
+  hard: PayoffProjection;
+  mista: PayoffProjection;
+}
+
+export interface EvolutionRow {
+  label: string;
+  normal: number;
+  hard: number;
+  mista: number;
+  selected: number;
+}

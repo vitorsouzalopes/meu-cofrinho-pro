@@ -30,7 +30,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebts, useGoals } from "@/hooks/use-finance-data";
 import type { Strategy } from "@/financial/forecastSimulation";
-import type { Debt } from "@/financial/types";
+import type { Debt, DebtSimulation, EvolutionRow } from "@/financial/types";
 import { cn } from "@/lib/utils";
 
 const fmt = (v: number) =>
@@ -63,37 +63,6 @@ const PROFILE_PCT: Record<Profile, number> = {
 };
 const USAGE_PCT: Record<Usage, number> = { hard: 0.9, mista: 0.5 };
 const MAX_SIMULATION_MONTHS = 360;
-
-interface PayoffProjection {
-  meses: number;
-  termino: string;
-  jurosTotal: number;
-  extraMensal: number;
-  economiaTempo: number;
-  economiaJuros: number;
-  valorLivrePreservado: number;
-  balances: number[];
-}
-
-export interface DebtSimulation {
-  id: string;
-  nome: string;
-  banco: string;
-  saldoDevedor: number;
-  parcelaMensal: number;
-  jurosMensal: number;
-  normal: PayoffProjection;
-  hard: PayoffProjection;
-  mista: PayoffProjection;
-}
-
-export interface EvolutionRow {
-  label: string;
-  normal: number;
-  hard: number;
-  mista: number;
-  selected: number;
-}
 
 function calcScore(args: {
   saldoLivre: number;
