@@ -28,101 +28,106 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [pushStatus, setPushStatus] = useState<string | null>(null);
-  const [pushChecked, setPushChecked] = useState(false);
+  const [state, setState] = useState<{
+    session: Session | null;
+    user: User | null;
+    isAdmin: boolean;
+    loading: boolean;
+    pushStatus: string | null;
+    pushChecked: boolean;
+  }>({
+    session: null,
+    user: null,
+    isAdmin: false,
+    loading: true,
+    pushStatus: null,
+    pushChecked: false,
+  });
 
   const checkingPushRef = useRef(false);
 
   const checkPushPermission = useCallback(async (force = false) => {
-    if (!user) return;
-    if (!force && (pushChecked || checkingPushRef.current)) return;
+    if (!state.user) return;
+    if (!force && (state.pushChecked || checkingPushRef.current)) return;
 
     if (!Capacitor.isNativePlatform()) {
-      setPushStatus('web');
-      setPushChecked(true);
+      setState(prev => ({ ...prev, pushStatus: 'web', pushChecked: true }));
       return;
     }
 
     console.log("[AuthContext] Requesting push check...");
     checkingPushRef.current = true;
 
-    // Safety Timeout: Proceed after 3s to avoid total app hang
-    const timeout = setTimeout(() => {
-      if (!pushChecked) {
-        console.warn("[AuthContext] Push check safety timeout.");
-        setPushStatus('timeout');
-        setPushChecked(true);
-        checkingPushRef.current = false;
-      }
-    }, 3000);
-
     try {
       const { registerNativePush } = await import("@/lib/native-push");
-      const res = await registerNativePush(user.id);
-      clearTimeout(timeout);
-      setPushStatus(res.status);
+      const res = await registerNativePush(state.user.id);
+      setState(prev => ({ ...prev, pushStatus: res.status, pushChecked: true }));
     } catch (e) {
       console.error("[AuthContext] Push registration failed:", e);
-      setPushStatus('error');
+      setState(prev => ({ ...prev, pushStatus: 'error', pushChecked: true }));
     } finally {
-      setPushChecked(true);
       checkingPushRef.current = false;
     }
-  }, [user, pushChecked]);
+  }, [state.user, state.pushChecked]);
 
   useEffect(() => {
     let isMounted = true;
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const initSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!isMounted) return;
+
+        let isAdmin = false;
+        if (session?.user) {
+          const { data } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .eq("role", "admin")
+            .maybeSingle();
+          isAdmin = !!data;
+        }
+
+        setState(prev => ({
+          ...prev,
+          session,
+          user: session?.user ?? null,
+          isAdmin,
+          loading: false
+        }));
+      } catch (err) {
+        console.error("[AuthContext] Session fetch error:", err);
+        if (isMounted) setState(prev => ({ ...prev, loading: false }));
+      }
+    };
+
+    initSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) return;
-      setSession(session);
 
-      const nextUser = session?.user ?? null;
-      setUser(prev => (prev?.id === nextUser?.id && prev?.email === nextUser?.email) ? prev : nextUser);
-
+      let isAdmin = false;
       if (session?.user) {
-        supabase
+        const { data } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", session.user.id)
           .eq("role", "admin")
-          .maybeSingle()
-          .then(({ data }) => {
-            if (isMounted) setIsAdmin(!!data);
-          });
+          .maybeSingle();
+        isAdmin = !!data;
       }
-    }).catch(err => {
-      console.error("[AuthContext] Session fetch error:", err);
-    }).finally(() => {
-      if (isMounted) setLoading(false);
-    });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!isMounted) return;
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-
-      if (session?.user) {
-        supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.user.id)
-          .eq("role", "admin")
-          .maybeSingle()
-          .then(({ data }) => {
-            if (isMounted) setIsAdmin(!!data);
-          });
-      } else {
-        setIsAdmin(false);
-        setPushChecked(false);
-        setPushStatus(null);
-        checkingPushRef.current = false;
-      }
+      setState(prev => ({
+        ...prev,
+        session,
+        user: session?.user ?? null,
+        isAdmin,
+        loading: false,
+        // Reset push check if logging out
+        pushChecked: session ? prev.pushChecked : false,
+        pushStatus: session ? prev.pushStatus : null
+      }));
     });
 
     return () => {
@@ -133,10 +138,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Run push check once user is loaded
   useEffect(() => {
-    if (user && !pushChecked) {
-      checkPushPermission();
+    if (state.user && !state.pushChecked && !state.loading) {
+      // Delay slightly to ensure everything is stable
+      const t = setTimeout(() => {
+        checkPushPermission();
+      }, 500);
+      return () => clearTimeout(t);
     }
-  }, [user, pushChecked, checkPushPermission]);
+  }, [state.user, state.pushChecked, state.loading, checkPushPermission]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -144,9 +153,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={{
-      session, user, isAdmin, loading,
-      pushStatus, pushChecked, checkPushPermission,
-      signOut
+      ...state,
+      signOut,
+      checkPushPermission
     }}>
       {children}
     </AuthContext.Provider>
