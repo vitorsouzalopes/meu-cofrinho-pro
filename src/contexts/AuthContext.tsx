@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { registerNativePush } from "@/lib/native-push";
 import { Capacitor } from "@capacitor/core";
 
 interface AuthContextType {
@@ -62,6 +61,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }, 3000);
 
     try {
+      const { registerNativePush } = await import("@/lib/native-push");
       const res = await registerNativePush(user.id);
       clearTimeout(timeout);
       setPushStatus(res.status);

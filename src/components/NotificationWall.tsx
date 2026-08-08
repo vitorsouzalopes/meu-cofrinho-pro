@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { NativeSettings, AndroidSettings } from 'capacitor-native-settings';
 import { Capacitor } from '@capacitor/core';
-import { PushNotifications } from '@capacitor/push-notifications';
 import { useState } from "react";
 
 const NotificationWall = ({ onRetry }: { onRetry: () => void }) => {
@@ -17,6 +16,7 @@ const NotificationWall = ({ onRetry }: { onRetry: () => void }) => {
 
     setLoading(true);
     try {
+      const { PushNotifications } = await import('@capacitor/push-notifications');
       const permStatus = await PushNotifications.checkPermissions();
 
       if (permStatus.receive === 'prompt') {

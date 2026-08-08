@@ -263,31 +263,31 @@ const AIConsultant = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background max-w-lg mx-auto border-x border-border/50 shadow-2xl">
+    <div className="flex flex-col h-screen bg-background overflow-hidden max-w-lg mx-auto border-x border-border/50">
       {/* Header */}
-      <div className="p-6 border-b border-border/50 bg-card/50 backdrop-blur-xl flex items-center gap-4 sticky top-0 z-20">
+      <div className="p-4 border-b border-border/50 bg-card/50 backdrop-blur-xl flex items-center gap-3 shrink-0 z-20">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-xl bg-card border border-border/50">
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="font-bold text-lg">Consultor IA</h1>
+            <h1 className="font-bold text-sm leading-tight text-white">Consultor IA</h1>
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Premium</p>
           </div>
         </div>
       </div>
 
       {/* Chat Area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32 scroll-smooth">
         {messages.map((m, i) => (
           <div key={i} className={cn("flex w-full", m.role === "user" ? "justify-end" : "justify-start animate-slide-up")}>
             <div className={cn(
               "max-w-[85%] p-4 rounded-3xl text-sm leading-relaxed shadow-sm",
               m.role === "user"
-                ? "bg-primary text-white rounded-tr-none"
+                ? "bg-primary text-white rounded-tr-none font-medium"
                 : cn(
                     "bg-card border border-border/50 rounded-tl-none flex gap-3 items-start",
                     m.type === "success" && "border-emerald-500/30 bg-emerald-500/5",
@@ -307,7 +307,7 @@ const AIConsultant = () => {
                    m.type === "error" ? <XCircle className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                 </div>
               )}
-              <p className={m.role === "bot" ? "text-foreground font-medium" : "font-medium"}>{m.content}</p>
+              <p className={m.role === "bot" ? "text-foreground font-medium whitespace-pre-wrap" : "font-medium whitespace-pre-wrap text-[#0A0E1A]"}>{m.content}</p>
             </div>
           </div>
         ))}
@@ -322,23 +322,24 @@ const AIConsultant = () => {
             </div>
           </div>
         )}
+        <div ref={scrollRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="p-6 bg-card/80 backdrop-blur-xl border-t border-border/50 sticky bottom-0 z-30 pb-10">
-        <div className="relative flex items-center gap-2 bg-muted p-2 rounded-2xl border border-border/50 focus-within:border-primary/50 transition-all shadow-inner">
+      {/* Input Area - FIXED STICKY POSITION */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background/90 to-transparent shrink-0 z-30">
+        <div className="max-w-lg mx-auto flex items-center gap-2 bg-muted p-2 rounded-2xl border border-border/50 focus-within:border-primary/50 transition-all shadow-2xl">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder="Pergunte qualquer coisa..."
-            className="border-none bg-transparent focus-visible:ring-0 h-10 text-sm"
+            className="border-none bg-transparent focus-visible:ring-0 h-10 text-sm flex-1 text-white placeholder:text-muted-foreground/50"
           />
           <Button
             size="icon"
             onClick={handleSend}
             disabled={!input.trim() || loading}
-            className="rounded-xl shrink-0 h-10 w-10 shadow-lg shadow-primary/20"
+            className="rounded-xl shrink-0 h-10 w-10 shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             <Send className="w-4 h-4" />
           </Button>
@@ -346,6 +347,7 @@ const AIConsultant = () => {
         <p className="text-[9px] text-muted-foreground text-center mt-3 uppercase tracking-tighter font-bold opacity-60">
           Dica: pergunte "Posso comprar um [item] de R$ [valor]?"
         </p>
+        <div className="h-safe-bottom" />
       </div>
     </div>
   );
