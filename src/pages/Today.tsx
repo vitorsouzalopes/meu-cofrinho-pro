@@ -18,7 +18,7 @@ import { analyzeFinancialRisk } from "@/financial/notificationEngine";
 import { cn } from "@/lib/utils";
 import { initializeAds, showBannerAd, hideBannerAd } from "@/lib/ads";
 import { usePremium } from "@/lib/premium";
-import { scheduleFinancialReminders } from "@/lib/notification-engine";
+import { scheduleFinancialReminders, requestNotificationPermission } from "@/lib/notification-engine";
 
 type Account = Tables<"accounts">;
 type Profile = Tables<"profiles">;
@@ -163,14 +163,20 @@ const Today = () => {
 
   // Handle smart notification scheduling
   useEffect(() => {
-    if (!loading && user && accounts.length > 0) {
-      scheduleFinancialReminders({
-        accounts,
-        salary,
-        goals,
-        disponivel: totais.disponivel
-      });
-    }
+    const handleNotifications = async () => {
+      if (!loading && user && accounts.length > 0) {
+        const granted = await requestNotificationPermission();
+        if (granted) {
+          scheduleFinancialReminders({
+            accounts,
+            salary,
+            goals,
+            disponivel: totais.disponivel
+          });
+        }
+      }
+    };
+    handleNotifications();
   }, [loading, user, accounts, salary, goals, totais.disponivel]);
 
   // Ads initialization - Non-blocking

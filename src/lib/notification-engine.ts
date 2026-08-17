@@ -3,8 +3,17 @@ import { Capacitor } from '@capacitor/core';
 
 export async function requestNotificationPermission() {
   if (!Capacitor.isNativePlatform()) return true;
-  const status = await LocalNotifications.requestPermissions();
-  return status.display === 'granted';
+  try {
+    const status = await LocalNotifications.checkPermissions();
+    if (status.display === 'prompt') {
+      const request = await LocalNotifications.requestPermissions();
+      return request.display === 'granted';
+    }
+    return status.display === 'granted';
+  } catch (e) {
+    console.error("Error requesting notifications:", e);
+    return false;
+  }
 }
 
 /**
@@ -19,6 +28,9 @@ export async function scheduleFinancialReminders(data: {
   if (!Capacitor.isNativePlatform()) return;
 
   try {
+    const { display } = await LocalNotifications.checkPermissions();
+    if (display !== 'granted') return;
+
     // 1. Limpar agendamentos anteriores para evitar duplicidade
     const pending = await LocalNotifications.getPending();
     if (pending.notifications.length > 0) {
@@ -34,6 +46,7 @@ export async function scheduleFinancialReminders(data: {
     if (Array.isArray(data.accounts)) {
       data.accounts.forEach(acc => {
         if (acc && acc.status !== 'pago' && acc.due_day) {
+          // Simplificação: Assume que a conta vence no mês atual
           const due = new Date(currentYear, currentMonth, acc.due_day);
           const alertDate = new Date(due);
           alertDate.setDate(due.getDate() - 3);
@@ -41,69 +54,33 @@ export async function scheduleFinancialReminders(data: {
 
           if (alertDate > now) {
             notifications.push({
-              id: Math.floor(Math.random() * 100000),
+              id: Math.abs(Math.floor(Math.random() * 1000000)),
               title: "⏰ Conta próxima do vencimento",
-              body: `Sua conta "${acc.nome || 'Pendente'}" de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(acc.valor || 0)} vence em 3 dias.`,
+              body: `Sua conta "${acc.nome || 'Pendente'}" vence em 3 dias. Não esqueça de pagar!`,
               schedule: { at: alertDate },
+              extra: { type: 'bill-reminder' }
             });
           }
         }
       });
     }
 
-    // 3. Lembrete de Metas (Próximo do deadline se houver)
-    if (Array.isArray(data.goals)) {
-      data.goals.forEach(goal => {
-        if (goal && goal.deadline && goal.status === 'active') {
-          const deadline = new Date(goal.deadline);
-          const alertDate = new Date(deadline);
-          alertDate.setDate(deadline.getDate() - 7); // 1 semana antes
-          alertDate.setHours(10, 0, 0);
-
-          if (alertDate > now) {
-            notifications.push({
-              id: Math.floor(Math.random() * 100000) + 100000,
-              title: "🎯 Meta se aproximando",
-              body: `Sua meta "${goal.name || 'Alvo'}" está próxima do prazo final. Como está o porquinho?`,
-              schedule: { at: alertDate },
-            });
-          }
-        }
-      });
-    }
-
-    // 4. Recebimento de Salário (Notificar se houver saldo positivo ignorando contas pagas)
-    if (data.salary > 0) {
-      notifications.push({
-        id: 999,
-        title: "💰 Salário Detectado",
-        body: `Seu salário foi registrado. Você tem ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.disponivel || 0)} de dinheiro livre para o mês.`,
-        schedule: { at: new Date(Date.now() + 10000) }, // 10 segundos após carregar
-      });
-    }
-
-    // 5. Recapitulação de Final de Mês (Último dia do mês as 18h)
-    const lastDay = new Date(currentYear, currentMonth + 1, 0);
-    lastDay.setHours(18, 0, 0);
-
-    if (lastDay > now) {
-      const unpaid = Array.isArray(data.accounts) ? data.accounts.filter(a => a && a.status !== 'pago') : [];
-      let body = "Mês concluído! Todas as suas contas foram pagas. 🎉";
-
-      if (unpaid.length > 0) {
-        body = `Ainda restam ${unpaid.length} contas pendentes. `;
-        if (data.disponivel < 0) {
-          body += "Atenção: seu saldo está negativo! Use o Planejador para ajustar.";
-        } else {
-          body += "Você tem saldo suficiente. Não esqueça de pagar!";
-        }
+    // 3. Recapitulação de Final de Mês (Dia 28 às 10h)
+    const recapDate = new Date(currentYear, currentMonth, 28, 10, 0, 0);
+    if (recapDate > now) {
+      let body = "O mês está acabando! Veja como ficaram suas economias.";
+      if (data.disponivel < 0) {
+        body = "Atenção! Seu saldo do mês está negativo. Abra o app para ajustar.";
+      } else if (data.disponivel > 500) {
+        body = "Parabéns! Você tem um bom saldo sobrando. Que tal investir em uma meta?";
       }
 
       notifications.push({
-        id: 888,
+        id: 888888,
         title: "📊 Resumo do Mês",
         body,
-        schedule: { at: lastDay },
+        schedule: { at: recapDate },
+        extra: { type: 'monthly-recap' }
       });
     }
 

@@ -7,29 +7,27 @@ import { checkForUpdates } from "./lib/version";
 
 console.log("[Main] App entry point reached");
 
-// --- Hard Reset Logic (Testing only) ---
-const INIT_VERSION = 'v1.0.4_final_reset';
-if (localStorage.getItem('cofrinho_init_check') !== INIT_VERSION) {
-  localStorage.clear();
-  localStorage.setItem('cofrinho_init_check', INIT_VERSION);
-}
+try {
+  const rootElement = document.getElementById("root");
+  if (rootElement) {
+    console.log("[Main] Root element found, rendering...");
+    const root = createRoot(rootElement);
+    root.render(<App />);
 
-const rootElement = document.getElementById("root");
-if (rootElement) {
-  const root = createRoot(rootElement);
-
-  // RENDER IMMEDIATELY - Do not block on network/updates
-  root.render(<App />);
-
-  // Run update check in background
-  if (!Capacitor.isNativePlatform()) {
-    checkForUpdates().then((updated) => {
-      if (updated) {
-        console.log("[Update] App updated, reloading...");
-        window.location.reload();
-      }
-    }).catch(console.error);
+    // Run update check in background (Web only)
+    if (!Capacitor.isNativePlatform()) {
+      checkForUpdates().then((updated) => {
+        if (updated) {
+          console.log("[Update] App updated, reloading...");
+          window.location.reload();
+        }
+      }).catch(console.error);
+    }
+  } else {
+    console.error("[Main] Root element NOT found!");
   }
+} catch (e) {
+  console.error("[Main] Critical render error:", e);
 }
 
 // Capacitor Platform setup
