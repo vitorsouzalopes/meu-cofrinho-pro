@@ -5,7 +5,7 @@ export async function requestNotificationPermission() {
   if (!Capacitor.isNativePlatform()) return true;
   try {
     const status = await LocalNotifications.checkPermissions();
-    if (status.display === 'prompt') {
+    if (status.display === 'prompt' || status.display === 'denied') {
       const request = await LocalNotifications.requestPermissions();
       return request.display === 'granted';
     }
@@ -29,7 +29,10 @@ export async function scheduleFinancialReminders(data: {
 
   try {
     const { display } = await LocalNotifications.checkPermissions();
-    if (display !== 'granted') return;
+    if (display !== 'granted') {
+      console.log("[NotificationEngine] No permission to schedule.");
+      return;
+    }
 
     // 1. Limpar agendamentos anteriores para evitar duplicidade
     const pending = await LocalNotifications.getPending();
@@ -42,11 +45,10 @@ export async function scheduleFinancialReminders(data: {
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    // 2. Lembrete de Contas (3 dias antes)
+    // 2. Lembrete de Contas (3 dias antes do vencimento)
     if (Array.isArray(data.accounts)) {
       data.accounts.forEach(acc => {
         if (acc && acc.status !== 'pago' && acc.due_day) {
-          // Simplificação: Assume que a conta vence no mês atual
           const due = new Date(currentYear, currentMonth, acc.due_day);
           const alertDate = new Date(due);
           alertDate.setDate(due.getDate() - 3);
@@ -65,21 +67,23 @@ export async function scheduleFinancialReminders(data: {
       });
     }
 
-    // 3. Recapitulação de Final de Mês (Dia 28 às 10h)
-    const recapDate = new Date(currentYear, currentMonth, 28, 10, 0, 0);
-    if (recapDate > now) {
-      let body = "O mês está acabando! Veja como ficaram suas economias.";
+    // 3. Resumo de Final de Mês (Último dia do mês às 19:00)
+    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+    lastDayOfMonth.setHours(19, 0, 0);
+
+    if (lastDayOfMonth > now) {
+      let body = "O mês terminou! Veja o resumo do seu porquinho e prepare o próximo mês.";
       if (data.disponivel < 0) {
-        body = "Atenção! Seu saldo do mês está negativo. Abra o app para ajustar.";
-      } else if (data.disponivel > 500) {
-        body = "Parabéns! Você tem um bom saldo sobrando. Que tal investir em uma meta?";
+        body = `Atenção! Você fechou o mês com R$ ${Math.abs(data.disponivel).toFixed(2)} negativo. Vamos planejar melhor o próximo?`;
+      } else if (data.disponivel > 0) {
+        body = `Parabéns! Você fechou o mês com R$ ${data.disponivel.toFixed(2)} de saldo livre.`;
       }
 
       notifications.push({
-        id: 888888,
+        id: 999999,
         title: "📊 Resumo do Mês",
         body,
-        schedule: { at: recapDate },
+        schedule: { at: lastDayOfMonth },
         extra: { type: 'monthly-recap' }
       });
     }
