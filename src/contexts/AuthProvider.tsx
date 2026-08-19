@@ -1,31 +1,9 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from "react";
+import { useEffect, useState, ReactNode, useCallback, useRef } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from "@capacitor/core";
-
-export interface AuthContextType {
-  session: Session | null;
-  user: User | null;
-  isAdmin: boolean;
-  loading: boolean;
-  pushStatus: string | null;
-  pushChecked: boolean;
-  signOut: () => Promise<void>;
-  checkPushPermission: (force?: boolean) => Promise<void>;
-}
-
-export const AuthContext = createContext<AuthContextType>({
-  session: null,
-  user: null,
-  isAdmin: false,
-  loading: true,
-  pushStatus: null,
-  pushChecked: false,
-  signOut: async () => {},
-  checkPushPermission: async () => {},
-});
-
-export const useAuth = () => useContext(AuthContext);
+import { AuthContext } from "./AuthContext";
+import { registerNativePush } from "@/lib/native-push";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<{
@@ -55,16 +33,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    console.log("[AuthContext] Checking push permission...");
+    console.log("[AuthProvider] Checking push permission...");
     checkingPushRef.current = true;
 
     try {
-      // DYNAMIC IMPORT to avoid circular dependencies and TDZ
-      const { registerNativePush } = await import("@/lib/native-push");
       const res = await registerNativePush(state.user.id);
       setState(prev => ({ ...prev, pushStatus: res.status, pushChecked: true }));
     } catch (e) {
-      console.error("[AuthContext] Push check failed:", e);
+      console.error("[AuthProvider] Push check failed:", e);
       setState(prev => ({ ...prev, pushStatus: 'error', pushChecked: true }));
     } finally {
       checkingPushRef.current = false;
@@ -103,7 +79,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           loading: false
         }));
       } catch (err) {
-        console.error("[AuthContext] Init error:", err);
+        console.error("[AuthProvider] Init error:", err);
         if (isMounted) setState(prev => ({ ...prev, loading: false }));
       }
     };
@@ -132,12 +108,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Trigger push check after user is stable
   useEffect(() => {
     if (state.user && !state.pushChecked && !state.loading) {
       const t = setTimeout(() => {
         checkPushPermission();
-      }, 1000);
+      }, 1500); // Wait for app to be stable
       return () => clearTimeout(t);
     }
   }, [state.user, state.pushChecked, state.loading, checkPushPermission]);
