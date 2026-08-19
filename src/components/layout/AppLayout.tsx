@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import BottomNav from "@/components/BottomNav";
 import NotificationWall from "@/components/NotificationWall";
 import { Capacitor } from "@capacitor/core";

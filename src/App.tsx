@@ -1,7 +1,7 @@
 import { useEffect, Suspense, lazy } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/contexts/AuthProvider";
 import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
 import { useGestureBack } from "@/hooks/use-gesture-back";
 import { App as CapacitorApp } from "@capacitor/app";
