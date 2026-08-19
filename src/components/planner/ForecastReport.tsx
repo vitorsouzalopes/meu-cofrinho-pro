@@ -26,7 +26,7 @@ import {
   Scale,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebts, useGoals } from "@/hooks/use-finance-data";
 import type { Strategy } from "@/financial/forecastSimulation";

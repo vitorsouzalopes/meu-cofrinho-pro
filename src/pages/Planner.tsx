@@ -4,7 +4,7 @@ import { Target, BrainCircuit, Brain, TrendingUp } from "lucide-react";
 import FinancialGoals from "@/components/planner/FinancialGoals";
 import SmartDebtDashboard from "@/components/planner/SmartDebtDashboard";
 import ForecastReport from "@/components/planner/ForecastReport";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { calcularTotaisFinanceiros, sincronizarDividas } from "@/lib/finance-utils";
 

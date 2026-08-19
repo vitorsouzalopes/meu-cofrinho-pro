@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Bell, BellOff, Send, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { enableFcmPush, disableFcmPush } from "@/lib/fcm";
 import { isFirebaseConfigured } from "@/constants/firebase";
