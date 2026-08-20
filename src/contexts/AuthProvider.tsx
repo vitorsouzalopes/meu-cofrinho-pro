@@ -3,7 +3,6 @@ import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { Capacitor } from "@capacitor/core";
 import { AuthContext } from "./AuthContext";
-import { registerNativePush } from "@/lib/native-push";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [state, setState] = useState<{
@@ -37,6 +36,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkingPushRef.current = true;
 
     try {
+      // Dynamic import to avoid TDZ/Circular dependency during auth state change
+      const { registerNativePush } = await import("@/lib/native-push");
       const res = await registerNativePush(state.user.id);
       setState(prev => ({ ...prev, pushStatus: res.status, pushChecked: true }));
     } catch (e) {

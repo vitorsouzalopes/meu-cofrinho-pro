@@ -26,5 +26,14 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-core': ['@supabase/supabase-js', '@tanstack/react-query'],
+          'vendor-ui': ['lucide-react', 'clsx', 'tailwind-merge'],
+        },
+      },
+    },
   },
 }));

@@ -109,10 +109,14 @@ class ErrorBoundary extends Component<Props, State> {
             fontSize: '10px',
             textAlign: 'left',
             maxWidth: '100%',
+            maxHeight: '200px',
             overflow: 'auto',
-            color: '#ef4444'
+            color: '#ef4444',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-all'
           }}>
             {this.state.error?.name}: {this.state.error?.message}
+            {this.state.error?.stack && `\n\nStack:\n${this.state.error.stack}`}
           </div>
         </div>
       );
