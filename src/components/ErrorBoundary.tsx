@@ -1,6 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from "react";
-import { Button } from "@/components/ui/button";
-import { AlertCircle, RefreshCcw } from "lucide-react";
+import { Component, ErrorInfo, ReactNode } from "react";
 
 interface Props {
   children?: ReactNode;
@@ -22,45 +20,100 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
+    // Log to console for ADB debugging
+    console.error("[ErrorBoundary] Caught error:", error.message);
+    console.error("[ErrorBoundary] Stack:", errorInfo.componentStack);
   }
+
+  private handleReload = () => {
+    window.location.reload();
+  };
+
+  private handleReset = () => {
+    localStorage.clear();
+    window.location.reload();
+  };
 
   public render() {
     if (this.state.hasError) {
+      // Use minimal inline styles and NO external components to avoid TDZ errors
       return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-[#0A0E1A] text-white p-6 text-center">
-          <div className="w-16 h-16 bg-destructive/20 rounded-full flex items-center justify-center mb-6">
-            <AlertCircle className="w-10 h-10 text-destructive" />
+        <div style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#0A0E1A',
+          color: 'white',
+          padding: '24px',
+          textAlign: 'center',
+          fontFamily: 'sans-serif'
+        }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            backgroundColor: 'rgba(239, 68, 68, 0.2)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '24px'
+          }}>
+            <span style={{ fontSize: '32px' }}>⚠️</span>
           </div>
-          <h1 className="text-xl font-bold mb-2">Ops! Algo deu errado.</h1>
-          <p className="text-sm text-muted-foreground mb-8 max-w-xs mx-auto">
-            Ocorreu um erro inesperado ao carregar o aplicativo. Tente recarregar.
+          <h1 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '8px' }}>Ops! Algo deu errado.</h1>
+          <p style={{ fontSize: '14px', color: '#94A3B8', marginBottom: '32px', maxWidth: '280px' }}>
+            Ocorreu um erro inesperado. Isso pode ser um problema de conexão ou cache.
           </p>
-          <div className="space-y-4 w-full max-w-xs">
-            <Button
-              variant="outline"
-              className="w-full h-12 border-white/10 text-white"
-              onClick={() => window.location.reload()}
-            >
-              <RefreshCcw className="w-4 h-4 mr-2" />
-              Recarregar App
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full text-xs text-muted-foreground"
-              onClick={() => {
-                localStorage.clear();
-                window.location.reload();
-              }}
-            >
-              Limpar dados e reiniciar
-            </Button>
+
+          <button
+            onClick={this.handleReload}
+            style={{
+              width: '100%',
+              maxWidth: '280px',
+              height: '48px',
+              backgroundColor: 'transparent',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: '8px',
+              color: 'white',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              marginBottom: '16px'
+            }}
+          >
+            Recarregar Aplicativo
+          </button>
+
+          <button
+            onClick={this.handleReset}
+            style={{
+              width: '100%',
+              maxWidth: '280px',
+              backgroundColor: 'transparent',
+              border: 'none',
+              color: '#94A3B8',
+              fontSize: '12px',
+              textDecoration: 'underline',
+              cursor: 'pointer'
+            }}
+          >
+            Limpar dados e reiniciar
+          </button>
+
+          <div style={{
+            marginTop: '32px',
+            padding: '16px',
+            backgroundColor: 'rgba(0,0,0,0.3)',
+            borderRadius: '8px',
+            fontSize: '10px',
+            textAlign: 'left',
+            maxWidth: '100%',
+            overflow: 'auto',
+            color: '#ef4444'
+          }}>
+            {this.state.error?.name}: {this.state.error?.message}
           </div>
-          {process.env.NODE_ENV === 'development' && (
-            <pre className="mt-8 p-4 bg-black/50 rounded-lg text-[10px] text-left overflow-auto max-w-full">
-              {this.state.error?.message}
-            </pre>
-          )}
         </div>
       );
     }
