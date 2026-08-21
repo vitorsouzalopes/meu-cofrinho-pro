@@ -14,11 +14,11 @@ import type { Tables } from "@/integrations/supabase/types";
 import { notifyEvent } from "@/lib/notify";
 import { useDebts } from "@/hooks/use-finance-data";
 import { forecastMonth } from "@/financial/forecastEngine";
-import { analyzeFinancialRisk } from "@/financial/notificationEngine";
 import { cn } from "@/lib/utils";
 import { initializeAds, showBannerAd, hideBannerAd } from "@/lib/ads";
 import { usePremium } from "@/lib/premium";
 import { scheduleFinancialReminders, requestNotificationPermission } from "@/lib/notification-engine";
+import { Capacitor } from "@capacitor/core";
 
 type Account = Tables<"accounts">;
 type Profile = Tables<"profiles">;
@@ -92,9 +92,39 @@ const Today = () => {
   const [savingExtra, setSavingExtra] = useState(false);
 
   const uiMode = localStorage.getItem("cofrinho:ui_mode") || "simple";
-
   const hasGenerated = useRef(false);
   const currentMonthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(today).toUpperCase();
+
+  // 1. Move MEMOS to the top so they are initialized before use in Effects
+  const totais = useMemo(() => {
+    const totalExtra = extraIncomes.reduce((s, e) => s + Number(e.amount), 0);
+    const dividasParaSoma = debts.map((d: any) => ({ amount: d.parcela_mensal }));
+
+    const allContas = [
+      ...accounts,
+      ...expensesData.map(e => ({ amount: e.amount, tipo: "expense", billing_type: "expense" }))
+    ];
+
+    return calcularTotaisFinanceiros({
+      salario: salary,
+      extra: totalExtra,
+      contas: allContas,
+      dividas: dividasParaSoma,
+      metas: goals
+    });
+  }, [accounts, salary, extraIncomes, debts, expensesData, goals]);
+
+  const stats = useMemo(() => {
+    const pendentes = accounts.filter(a => a.status !== "pago");
+    const nextAccount = [...pendentes].sort((a, b) => (a.due_day || 99) - (b.due_day || 99))[0];
+    const economy = goals.reduce((s, g) => s + Number(g.current_amount || 0), 0);
+
+    return {
+      remainingAccounts: pendentes.length,
+      nextAccount,
+      economy
+    };
+  }, [accounts, goals]);
 
   const fetchData = useCallback(async () => {
     if (!user?.id) {
@@ -161,23 +191,27 @@ const Today = () => {
     return () => window.removeEventListener("finance-data-updated", handleSync);
   }, [user?.id, fetchData]);
 
-  // Handle smart notification scheduling
+  // Handle smart notification scheduling - Uses totais.disponivel safely now
   useEffect(() => {
     const handleNotifications = async () => {
-      if (!loading && user && accounts.length > 0) {
-        const granted = await requestNotificationPermission();
-        if (granted) {
-          scheduleFinancialReminders({
-            accounts,
-            salary,
-            goals,
-            disponivel: totais.disponivel
-          });
+      try {
+        if (!loading && user && accounts.length > 0 && Capacitor.isNativePlatform()) {
+          const granted = await requestNotificationPermission();
+          if (granted) {
+            await scheduleFinancialReminders({
+              accounts,
+              salary,
+              goals,
+              disponivel: totais.disponivel
+            });
+          }
         }
+      } catch (e) {
+        console.error("[Today] Notification setup fail:", e);
       }
     };
     handleNotifications();
-  }, [loading, user, accounts, salary, goals, totais.disponivel]);
+  }, [loading, user, accounts.length, salary, goals, totais.disponivel]);
 
   // Ads initialization - Non-blocking
   useEffect(() => {
@@ -201,36 +235,6 @@ const Today = () => {
       hideBannerAd().catch(() => {});
     };
   }, [isPremium, premiumLoading]);
-
-  const totais = useMemo(() => {
-    const totalExtra = extraIncomes.reduce((s, e) => s + Number(e.amount), 0);
-    const dividasParaSoma = debts.map((d: any) => ({ amount: d.parcela_mensal }));
-    
-    const allContas = [
-      ...accounts,
-      ...expensesData.map(e => ({ amount: e.amount, tipo: "expense", billing_type: "expense" }))
-    ];
-
-    return calcularTotaisFinanceiros({
-      salario: salary,
-      extra: totalExtra,
-      contas: allContas,
-      dividas: dividasParaSoma,
-      metas: goals
-    });
-  }, [accounts, salary, extraIncomes, debts, expensesData, goals]);
-
-  const stats = useMemo(() => {
-    const pendentes = accounts.filter(a => a.status !== "pago");
-    const nextAccount = [...pendentes].sort((a, b) => (a.due_day || 99) - (b.due_day || 99))[0];
-    const economy = goals.reduce((s, g) => s + Number(g.current_amount || 0), 0);
-
-    return {
-      remainingAccounts: pendentes.length,
-      nextAccount,
-      economy
-    };
-  }, [accounts, goals]);
 
   const saveSalary = async () => {
     if (!user) return;
