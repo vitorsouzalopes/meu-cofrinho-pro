@@ -67,10 +67,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const initSession = async () => {
       try {
+        console.log("[AuthProvider] Calling getSession...");
         const { data: { session } } = await supabase.auth.getSession();
+        console.log("[AuthProvider] Session received:", !!session);
         if (!isMounted) return;
 
         const isAdmin = session?.user ? await checkAdmin(session.user.id) : false;
+        console.log("[AuthProvider] Is admin:", isAdmin);
 
         setState(prev => ({
           ...prev,
