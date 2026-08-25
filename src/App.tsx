@@ -60,7 +60,7 @@ const AppContent = () => {
     if (Capacitor.isNativePlatform()) {
       const t = setTimeout(() => {
         SplashScreen.hide().catch(() => {});
-      }, 1500); // More time for React to settle
+      }, 2500); // More time for React to settle and prevent freeze
 
       const backListener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
         if (!canGoBack) {

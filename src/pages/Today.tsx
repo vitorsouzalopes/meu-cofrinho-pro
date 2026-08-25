@@ -196,6 +196,9 @@ const Today = () => {
     const handleNotifications = async () => {
       try {
         if (!loading && user && accounts.length > 0 && Capacitor.isNativePlatform()) {
+          // Add delay to prevent CPU spike during startup
+          await new Promise(resolve => setTimeout(resolve, 3000));
+
           const granted = await requestNotificationPermission();
           if (granted) {
             await scheduleFinancialReminders({
@@ -218,6 +221,10 @@ const Today = () => {
     let active = true;
     const handleAds = async () => {
       try {
+        // Add delay to let the app settle
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        if (!active) return;
+
         await initializeAds();
         if (!active) return;
         if (!premiumLoading && !isPremium) {
