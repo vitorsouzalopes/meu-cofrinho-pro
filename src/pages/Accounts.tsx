@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { useDebts, useInvalidateFinance } from "@/hooks/use-finance-data";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -52,10 +53,8 @@ const StatusBadge = ({
 
   if (dueDay) {
     const [year, month] = monthYear.split("-").map(Number);
-    // Data de vencimento real (com mês e ano corretos)
     const dueDate = new Date(year, month - 1, dueDay);
     const now = new Date();
-    // Zera as horas para comparar só datas
     now.setHours(0, 0, 0, 0);
     dueDate.setHours(0, 0, 0, 0);
 
@@ -89,7 +88,7 @@ interface AccountFormProps {
   open: boolean;
   onClose: () => void;
   onSaved: () => void;
-  editing?: any;
+  editing?: any; // Keep any here as it could be a Debt or Account, but handle types inside
   userId: string;
   monthYear: string;
 }
@@ -105,7 +104,6 @@ const AccountForm = ({ open, onClose, onSaved, editing, userId, monthYear }: Acc
   const [startDate, setStartDate] = useState("");
   const [parcelas, setParcelas] = useState("");
 
-  // Preenche ao editar
   useEffect(() => {
     if (editing) {
       if (editing.__source === "debt") {
@@ -116,12 +114,13 @@ const AccountForm = ({ open, onClose, onSaved, editing, userId, monthYear }: Acc
         setStartDate("");
         setParcelas(String(editing.parcelas_restantes || ""));
       } else {
-        setTipo(editing.billing_type || "monthly");
-        setNome(editing.name || "");
-        setValor(String(editing.amount || ""));
-        setDueDay(String(editing.due_day || ""));
-        setStartDate(editing.start_date || "");
-        setParcelas(String(editing.remaining_months || ""));
+        const acc = editing as Tables<"accounts">;
+        setTipo((acc.billing_type as any) || "monthly");
+        setNome(acc.name || "");
+        setValor(String(acc.amount || ""));
+        setDueDay(String(acc.due_day || ""));
+        setStartDate(acc.start_date || "");
+        setParcelas(String(acc.remaining_months || ""));
       }
     } else {
       setTipo("monthly");
@@ -142,14 +141,12 @@ const AccountForm = ({ open, onClose, onSaved, editing, userId, monthYear }: Acc
     }
 
     setSaving(true);
-
     let error: any = null;
 
     if (isDebt) {
-      // Dívidas vão para a tabela `debts` (fonte única para Planejamento + Dashboard)
       const parcelasInt = parcelas !== "" ? parseInt(parcelas, 10) : null;
       const valorParcela = parseFloat(valor);
-      const debtPayload: any = {
+      const debtPayload: TablesInsert<"debts"> = {
         user_id: userId,
         nome: nome.trim(),
         tipo: "credito",
@@ -162,12 +159,14 @@ const AccountForm = ({ open, onClose, onSaved, editing, userId, monthYear }: Acc
         dia_vencimento: dueDay ? parseInt(dueDay, 10) : 1,
       };
       if (editing?.__source === "debt") {
-        ({ error } = await supabase.from("debts" as any).update(debtPayload).eq("id", editing.id));
+        const res = await supabase.from("debts").update(debtPayload as TablesUpdate<"debts">).eq("id", editing.id);
+        error = res.error;
       } else {
-        ({ error } = await supabase.from("debts" as any).insert(debtPayload));
+        const res = await supabase.from("debts").insert([debtPayload]);
+        error = res.error;
       }
     } else {
-      const payload: any = {
+      const payload: TablesInsert<"accounts"> = {
         user_id: userId,
         name: nome.trim(),
         billing_type: tipo,
@@ -177,11 +176,14 @@ const AccountForm = ({ open, onClose, onSaved, editing, userId, monthYear }: Acc
         is_template: tipo === "monthly",
         paid: false,
         account_type: "Outros",
+        start_date: startDate || new Date().toISOString().split("T")[0],
       };
       if (editing && editing.__source !== "debt") {
-        ({ error } = await supabase.from("accounts").update(payload).eq("id", editing.id));
+        const res = await supabase.from("accounts").update(payload as TablesUpdate<"accounts">).eq("id", editing.id);
+        error = res.error;
       } else {
-        ({ error } = await supabase.from("accounts").insert(payload));
+        const res = await supabase.from("accounts").insert([payload]);
+        error = res.error;
       }
     }
 
@@ -209,7 +211,6 @@ const AccountForm = ({ open, onClose, onSaved, editing, userId, monthYear }: Acc
         </DialogHeader>
 
         <div className="space-y-5 mt-2">
-
           <div>
             <label className="text-[10px] uppercase font-bold text-muted-foreground mb-2 block tracking-widest">
               Tipo de Conta
@@ -404,7 +405,7 @@ const Accounts = () => {
 
   const [selectedMonth, setSelectedMonth] = useState(TODAY_MY);
   const [displayAccounts, setDisplayAccounts] = useState<any[]>([]);
-  const [debtPayments, setDebtPayments] = useState<any[]>([]);
+  const [debtPayments, setDebtPayments] = useState<Tables<"debt_payments">[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -440,15 +441,15 @@ const Accounts = () => {
           .eq("is_template", true)
           .order("name", { ascending: true }),
         supabase
-          .from("debt_payments" as any)
+          .from("debt_payments")
           .select("*")
           .eq("user_id", user.id)
           .gte("data_pagamento", startDate)
           .lte("data_pagamento", endDate),
       ]);
 
-      const instances: any[] = instRes.data ?? [];
-      const templates: any[] = tmplRes.data ?? [];
+      const instances = instRes.data ?? [];
+      const templates = tmplRes.data ?? [];
       setDebtPayments(payRes.data ?? []);
 
       const merged: any[] = templates.map((t) => {
@@ -467,7 +468,7 @@ const Accounts = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, selectedMonth]);
+  }, [user?.id, selectedMonth, toast]);
 
   useEffect(() => {
     load();
@@ -479,7 +480,7 @@ const Accounts = () => {
   const deleteAccount = async (account: any) => {
     if (account.__source === "debt") {
       if (!window.confirm(`Excluir a dívida "${account.nome}" e seu histórico?`)) return;
-      const { error } = await supabase.from("debts" as any).delete().eq("id", account.id);
+      const { error } = await supabase.from("debts").delete().eq("id", account.id);
       if (error) {
         toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
         return;
@@ -527,67 +528,47 @@ const Accounts = () => {
 
     if (payingAccount.__source === "debt") {
       setPaying(true);
-      const novoSaldo = Math.max(0, Number(payingAccount.valor_restante) - Number(payingAccount.parcela_mensal));
-      const novasParcelas = payingAccount.parcelas_restantes ? Math.max(0, payingAccount.parcelas_restantes - 1) : null;
+      const valorRestante = Number(payingAccount.valor_restante ?? 0);
+      const parcelaMensal = Number(payingAccount.parcela_mensal ?? 0);
+      const novoSaldo = Math.max(0, valorRestante - parcelaMensal);
+      const parcelasRestantes = Number(payingAccount.parcelas_restantes ?? 0);
+      const novasParcelas = parcelasRestantes > 0 ? parcelasRestantes - 1 : 0;
+
       const paymentDate = new Date().toISOString().slice(0, 10);
-      const [{ error: e1 }, { error: e2 }, { error: e3 }] = await Promise.all([
-        supabase.from("debt_payments" as any).insert({
-          user_id: user.id,
-          debt_id: payingAccount.id,
-          valor_pago: Number(payingAccount.parcela_mensal),
-          data_pagamento: paymentDate,
-          tipo_pagamento: "parcela",
-          parcelas_quitadas: 1,
-        }),
-        supabase.from("debts" as any).update({
-          valor_restante: novoSaldo,
-          parcelas_restantes: novasParcelas,
-        }).eq("id", payingAccount.id),
-        supabase.from("accounts").insert({
-          user_id: user.id,
-          name: payingAccount.nome || payingAccount.name,
-          amount: Number(payingAccount.parcela_mensal),
-          billing_type: "debt",
-          due_day: payingAccount.dia_vencimento || payingAccount.due_day,
-          account_type: "Dívida",
-          account_category: "expense",
-          bank: "Dívida",
-          month_year: selectedMonth,
-          start_date: new Date().toISOString().slice(0, 10),
-          paid: true,
-          paid_at: new Date().toISOString(),
-        }),
-      ]);
+
+      const res1 = await supabase.from("debt_payments").insert({
+        user_id: user.id,
+        debt_id: payingAccount.id,
+        valor_pago: parcelaMensal,
+        data_pagamento: paymentDate,
+        tipo_pagamento: "parcela",
+        parcelas_quitadas: 1,
+      });
+
+      const res2 = await supabase.from("debts").update({
+        valor_restante: novoSaldo,
+        parcelas_restantes: novasParcelas,
+      } as TablesUpdate<"debts">).eq("id", payingAccount.id);
+
+      const res3 = await supabase.from("accounts").insert({
+        user_id: user.id,
+        name: payingAccount.nome || payingAccount.name,
+        amount: parcelaMensal,
+        billing_type: "debt",
+        due_day: payingAccount.dia_vencimento || payingAccount.due_day,
+        account_type: "Dívida",
+        account_category: "expense",
+        bank: "Dívida",
+        month_year: selectedMonth,
+        start_date: paymentDate,
+        paid: true,
+        paid_at: new Date().toISOString(),
+      });
+
       setPaying(false);
-      if (e1 || e2 || e3) {
-        toast({ title: "Erro ao pagar", description: (e1 || e2 || e3)?.message, variant: "destructive" });
+      if (res1.error || res2.error || res3.error) {
+        toast({ title: "Erro ao pagar", description: (res1.error || res2.error || res3.error)?.message, variant: "destructive" });
       } else {
-        setDebtPayments((prev) => [
-          ...prev,
-          {
-            debt_id: payingAccount.id,
-            valor_pago: Number(payingAccount.parcela_mensal),
-            data_pagamento: paymentDate,
-          },
-        ]);
-        setDisplayAccounts((prev) => [
-          ...prev,
-          {
-            user_id: user.id,
-            name: payingAccount.nome || payingAccount.name,
-            amount: Number(payingAccount.parcela_mensal),
-            billing_type: "debt",
-            due_day: payingAccount.dia_vencimento || payingAccount.due_day,
-            account_type: "Dívida",
-            account_category: "expense",
-            bank: "Dívida",
-            start_date: new Date().toISOString().slice(0, 10),
-            month_year: selectedMonth,
-            is_template: false,
-            paid: true,
-            paid_at: new Date().toISOString(),
-          },
-        ]);
         toast({ title: "Parcela quitada!" });
         invalidate();
         load();
@@ -599,7 +580,7 @@ const Accounts = () => {
     setPaying(true);
     let error: any = null;
     if (payingAccount.is_template) {
-      const { error: insertError } = await supabase.from("accounts").insert({
+      const res = await supabase.from("accounts").insert({
         user_id: user.id,
         parent_id: payingAccount.id,
         name: payingAccount.name,
@@ -615,13 +596,13 @@ const Accounts = () => {
         paid: true,
         paid_at: new Date().toISOString(),
       });
-      error = insertError;
+      error = res.error;
     } else {
-      const { error: updateError } = await supabase
+      const res = await supabase
         .from("accounts")
         .update({ paid: true, paid_at: new Date().toISOString() })
         .eq("id", payingAccount.id);
-      error = updateError;
+      error = res.error;
     }
 
     setPaying(false);
@@ -638,24 +619,23 @@ const Accounts = () => {
   const monthly = displayAccounts.filter((a) => a.billing_type === "monthly");
   const singles = displayAccounts.filter((a) => a.billing_type === "single");
 
-  const debts = (debtsData || []).map((d: any) => {
-    // Busca pagamento vinculado ao ID da dívida OU um registro manual com o mesmo nome.
+  const debts = (debtsData || []).map((d) => {
     const hasPayment = debtPayments.some((p) => p.debt_id === d.id);
     const hasAccountRecord = displayAccounts.some(
-      (a) => a.billing_type === "debt" && (a.name === d.nome || a.name === d.name) && a.paid
+      (a) => a.billing_type === "debt" && a.name === d.nome && a.paid
     );
-    const isFullySettled = Number(d.parcelas_restantes) === 0 || Number(d.valor_restante) <= 0;
+    const isFullySettled = Number(d.parcelasRestantes) === 0 || Number(d.valorTotal) <= 0;
     const isPaid = hasPayment || hasAccountRecord || isFullySettled;
 
     return {
       ...d,
       __source: "debt",
       name: d.nome,
-      amount: d.parcela_mensal,
-      due_day: d.dia_vencimento,
+      amount: d.valorParcela,
+      due_day: parseInt(d.vencimento),
       billing_type: "debt",
       paid: isPaid,
-      remaining_months: d.parcelas_restantes,
+      remaining_months: d.parcelasRestantes,
     };
   });
 
@@ -726,7 +706,6 @@ const Accounts = () => {
         ))}
       </div>
 
-      {/* ── Abas ───────────────────────────────────────────────────────────── */}
       <Tabs defaultValue="mensais" className="space-y-5 animate-slide-up">
         <TabsList className="bg-card/60 p-1 rounded-full border border-border/40 w-full">
           <TabsTrigger
@@ -749,7 +728,6 @@ const Accounts = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* Mensais */}
         <TabsContent value="mensais" className="space-y-3">
           {monthly.length === 0 ? (
             <EmptyState label="Nenhuma conta mensal" />
@@ -768,7 +746,6 @@ const Accounts = () => {
           )}
         </TabsContent>
 
-        {/* Dívidas */}
         <TabsContent value="dividas" className="space-y-3">
           {debts.length === 0 ? (
             <EmptyState label="Nenhuma dívida registrada 🎉" />
@@ -787,7 +764,6 @@ const Accounts = () => {
           )}
         </TabsContent>
 
-        {/* Únicas */}
         <TabsContent value="unicas" className="space-y-3">
           {singles.length === 0 ? (
             <EmptyState label="Nenhuma conta única" />
@@ -807,7 +783,6 @@ const Accounts = () => {
         </TabsContent>
       </Tabs>
 
-      {/* ── FAB ────────────────────────────────────────────────────────────── */}
       <button
         onClick={() => {
           setEditingAccount(null);
@@ -818,7 +793,6 @@ const Accounts = () => {
         <Plus className="w-7 h-7 text-white" />
       </button>
 
-      {/* ── Modal Nova / Editar Conta ───────────────────────────────────────── */}
       {user && (
         <AccountForm
           open={dialogOpen}
@@ -833,7 +807,6 @@ const Accounts = () => {
         />
       )}
 
-      {/* ── Modal Confirmar Pagamento ───────────────────────────────────────── */}
       <Dialog open={payDialogOpen} onOpenChange={setPayDialogOpen}>
         <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)] rounded-3xl">
           <DialogHeader>

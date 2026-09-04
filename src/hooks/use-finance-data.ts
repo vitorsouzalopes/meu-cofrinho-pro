@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Debt } from "@/financial/types";
+import type { Tables } from "@/integrations/supabase/types";
 
 const todayMY = () => {
   const d = new Date();
@@ -22,7 +23,7 @@ export function useAccounts(monthYear: string = todayMY()) {
         supabase.from("accounts").select("*")
           .eq("user_id", user!.id).eq("is_template", true)
           .order("name", { ascending: true }),
-        supabase.from("debt_payments" as any).select("*")
+        supabase.from("debt_payments").select("*")
           .eq("user_id", user!.id)
           .gte("data_pagamento", `${monthYear}-01`)
           .lte("data_pagamento", `${monthYear}-31`),
@@ -38,21 +39,23 @@ export function useAccounts(monthYear: string = todayMY()) {
 
 export async function fetchDebts(userId: string): Promise<Debt[]> {
   const { data, error } = await supabase
-    .from("debts" as any)
+    .from("debts")
     .select("*")
     .eq("user_id", userId)
     .order("juros_mensal", { ascending: false });
+
   if (error) throw error;
-  return (data ?? []).map((d: any) => ({
+
+  return (data ?? []).map((d) => ({
     ...d,
     id: d.id,
     nome: d.nome,
-    banco: d.banco || d.nome,
+    banco: d.bank || d.nome, // Use bank if exists
     valorTotal: Number(d.valor_total),
     valorParcela: Number(d.parcela_mensal),
     parcelasRestantes: Number(d.parcelas_restantes ?? 0),
     jurosMensal: Number(d.juros_mensal) * 100,
-    tipo: d.tipo as any,
+    tipo: d.tipo as any, // Cast specific only where strictly necessary for external engine
     vencimento: String(d.dia_vencimento),
     permiteAmortizacao: d.permite_amortizacao ?? true,
     permiteQuitacao: d.permite_antecipacao ?? true,
@@ -76,12 +79,12 @@ export function useGoals() {
     enabled: !!user?.id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("goals" as any)
+        .from("goals")
         .select("*")
         .eq("user_id", user!.id)
         .order("priority", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as any[];
+      return (data ?? []) as Tables<"goals">[];
     },
   });
 }

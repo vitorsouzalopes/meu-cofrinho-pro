@@ -22,10 +22,10 @@ const URLS: Record<EventType, string> = {
 };
 
 const BODIES: Record<EventType, (p: any) => string> = {
-  challenge_progress: (p) => `Desafio ${p.challenge_id} • +R$${Number(p.amount).toFixed(2)} • ${p.streak} dia(s) de sequência`,
-  challenge_completed: (p) => `${p.challenge_id} concluído! Total: R$${Number(p.total).toFixed(2)}`,
-  salary: (p) => `${p.month_year}: R$${Number(p.amount).toFixed(2)}`,
-  extra_income: (p) => `${p.description}: +R$${Number(p.amount).toFixed(2)}`,
+  challenge_progress: (p) => `Desafio ${p.challenge_id ?? 'N/A'} • +R$${Number(p.amount || 0).toFixed(2)} • ${p.streak || 0} dia(s) de sequência`,
+  challenge_completed: (p) => `${p.challenge_id ?? 'Desafio'} concluído! Total: R$${Number(p.total || 0).toFixed(2)}`,
+  salary: (p) => `${p.month_year ?? ''}: R$${Number(p.amount || 0).toFixed(2)}`,
+  extra_income: (p) => `${p.description ?? 'Renda'}: +R$${Number(p.amount || 0).toFixed(2)}`,
 };
 
 Deno.serve(async (req) => {
@@ -34,8 +34,19 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const { event, payload, user_id } = body as { event: EventType; payload: any; user_id?: string };
+
+    // Payload Validation
     if (!event || !TITLES[event]) {
+      console.error("[Notify] Invalid event type:", event);
       return new Response(JSON.stringify({ error: "invalid event" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!payload || typeof payload !== 'object') {
+      console.error("[Notify] Missing or invalid payload for event:", event);
+      return new Response(JSON.stringify({ error: "invalid payload" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -59,6 +70,8 @@ Deno.serve(async (req) => {
       targetUserId = user.id;
     }
 
+    console.log(`[Notify] Sending event ${event} to user ${targetUserId}`);
+
     const fcmRes = await fetch(`${SUPA_URL}/functions/v1/send-fcm`, {
       method: "POST",
       headers: {
@@ -73,15 +86,19 @@ Deno.serve(async (req) => {
         url: URLS[event],
       }),
     }).catch((e) => {
-      console.warn("send-fcm failed:", e);
+      console.warn("[Notify] send-fcm failed:", e);
       return null;
     });
 
-    return new Response(JSON.stringify({ ok: true, fcm: fcmRes?.ok ?? false }), {
+    return new Response(JSON.stringify({
+      ok: true,
+      fcm: fcmRes?.ok ?? false,
+      eventId: crypto.randomUUID()
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error(e);
+    console.error("[Notify] Critical error:", e);
     return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

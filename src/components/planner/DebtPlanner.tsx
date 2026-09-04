@@ -29,6 +29,7 @@ import {
 } from "@/lib/debt-utils";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import ForecastReport from "@/components/planner/ForecastReport";
+import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 interface Props {
   initialIncome: number;
@@ -73,12 +74,12 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
       id: d.id,
       nome: d.nome,
       tipo: d.tipo,
-      valor_total: (d as any).valor_total ?? d.valorTotal,
-      valor_restante: (d as any).valor_restante ?? d.valorTotal,
+      valor_total: d.valorTotal,
+      valor_restante: d.valorTotal, // Using valorTotal as base if not specialized
       parcela_mensal: d.valorParcela,
-      total_parcelas: (d as any).total_parcelas ?? null,
+      total_parcelas: null,
       parcelas_restantes: d.parcelasRestantes,
-      juros_mensal: d.jurosMensal / 100, // convert percentage to decimal ratio
+      juros_mensal: d.jurosMensal / 100,
       dia_vencimento: parseInt(d.vencimento) || 1,
       permite_antecipacao: d.permiteQuitacao,
       permite_amortizacao: d.permiteAmortizacao,
@@ -122,9 +123,9 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
     setEditing(d);
     setNome(d.nome); setTipo(d.tipo);
     setValorTotal(String(d.valorTotal));
-    setValorRestante(String((d as any).valor_restante ?? d.valorTotal));
+    setValorRestante(String(d.valorTotal));
     setParcelaMensal(String(d.valorParcela));
-    setTotalParcelasInput((d as any).total_parcelas ? String((d as any).total_parcelas) : "");
+    setTotalParcelasInput("");
     setParcelasRestantes(d.parcelasRestantes ? String(d.parcelasRestantes) : "");
     setJurosMensal(String(d.jurosMensal));
     setDiaVencimento(d.vencimento);
@@ -136,7 +137,7 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
       toast({ title: "Preencha os campos obrigatórios", variant: "destructive" });
       return;
     }
-    const payload: any = {
+    const payload: TablesInsert<"debts"> = {
       user_id: user.id,
       nome,
       tipo,
@@ -150,11 +151,11 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
     };
     try {
       if (editing) {
-        const { error } = await supabase.from("debts" as any).update(payload).eq("id", editing.id);
+        const { error } = await supabase.from("debts").update(payload as TablesUpdate<"debts">).eq("id", editing.id);
         if (error) throw error;
         toast({ title: "Dívida atualizada!" });
       } else {
-        const { error } = await supabase.from("debts" as any).insert([payload]);
+        const { error } = await supabase.from("debts").insert([payload]);
         if (error) throw error;
         toast({ title: "Dívida cadastrada!" });
       }
@@ -168,7 +169,7 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
 
   const remove = async (id: string) => {
     if (!confirm("Remover esta dívida e seu histórico?")) return;
-    const { error } = await supabase.from("debts" as any).delete().eq("id", id);
+    const { error } = await supabase.from("debts").delete().eq("id", id);
     if (error) {
       toast({ title: "Erro ao remover", description: error.message, variant: "destructive" });
       return;
@@ -178,7 +179,7 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
   };
 
   // Totais agregados
-  const totalRestante = debtsData.reduce((s, d) => s + Number((d as any).valor_restante || d.valorTotal), 0);
+  const totalRestante = debtsData.reduce((s, d) => s + Number(d.valorTotal), 0);
   const totalParcelasMes = debtsData.reduce((s, d) => s + Number(d.valorParcela || 0), 0);
 
   if (isLoading) {
@@ -191,7 +192,6 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Resumo */}
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4 bg-destructive/10 border-destructive/20">
           <p className="text-[10px] uppercase font-bold text-destructive/80 mb-1">Total em Dívidas</p>
@@ -203,7 +203,6 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
         </Card>
       </div>
 
-      {/* Renda disponível para quitar */}
       <Card className="p-4 bg-primary/5 border-primary/20">
         <div className="flex items-center justify-between">
           <div>
@@ -224,23 +223,12 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
             <p className="text-[9px] text-muted-foreground mt-0.5">pagamento extra</p>
           </div>
         </div>
-        <div className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-2.5">
-          <p className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
-            <Flame className="w-3 h-3" /> Regra: simular todas as dívidas
-          </p>
-          <ol className="text-[10px] text-foreground/80 mt-1 space-y-0.5 list-decimal list-inside">
-            <li>Calcular o cenário atual de cada dívida cadastrada.</li>
-            <li>Aplicar Hard e Mista individualmente em todas as dívidas.</li>
-            <li>Preservar o saldo livre restante conforme cada simulação.</li>
-          </ol>
-        </div>
       </Card>
 
       {debtsData.length > 0 && (
         <ForecastReport debts={debtsData} />
       )}
 
-      {/* Alerta de Risco Financeiro */}
       {riskAlert && (
         <Card className={`p-4 border-none flex items-center gap-3 ${
           riskAlert.type === 'danger'
@@ -259,7 +247,6 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
         </Card>
       )}
 
-      {/* Header da lista de dívidas e ordenação */}
       <div className="flex items-center justify-between pt-2">
         <h2 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
           Minhas Dívidas
@@ -278,7 +265,6 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
         </div>
       </div>
 
-      {/* Lista de dívidas */}
       <div className="space-y-3">
         {debtsData.length === 0 ? (
           <div className="text-center py-12 bg-card/50 rounded-2xl border border-dashed border-border">
@@ -289,7 +275,7 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
             </Button>
           </div>
         ) : (
-          sortedDebts.map((d, idx) => {
+          sortedDebts.map((d) => {
             const localDebt = mapToLocalDebt(d);
             const expanded = expandedId === d.id;
 
@@ -302,11 +288,9 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
             const simMista = simular(localDebt, pagamentoMista);
             const economiaHard = simAtual.totalJuros - simHard.totalJuros;
             const economiaMista = simAtual.totalJuros - simMista.totalJuros;
-            const sobraMista = Math.max(0, rendaDisponivel - extraMista);
 
             const grafico = gerarGraficoDivida(localDebt, pagamentoMista, Math.min(simMista.meses + 2, 36));
 
-            // Dynamic suggestions using the engines
             const amortizeAlert = shouldAmortize(d, rendaDisponivel);
             const negotiateAlert = shouldNegotiate(d, rendaDisponivel);
             const recommendations: string[] = [];
@@ -385,7 +369,6 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
 
                 {expanded && (
                   <div className="border-t border-border/50 p-4 space-y-4 bg-background/50 animate-in fade-in-50">
-                    {/* Estratégias */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <div className="bg-muted/50 rounded-xl p-3">
                         <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Pagamento Normal</p>
@@ -406,7 +389,6 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
                       </div>
                     </div>
 
-                    {/* Gráfico */}
                     <div>
                       <p className="text-[10px] uppercase font-bold text-muted-foreground mb-2">Evolução do Saldo (Estratégia Mista)</p>
                       <div className="h-40">
@@ -433,7 +415,6 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
         )}
       </div>
 
-      {/* FAB */}
       <Button
         className="fixed bottom-24 right-8 w-14 h-14 rounded-full bg-primary shadow-2xl shadow-primary/40 p-0 flex items-center justify-center z-10"
         onClick={() => { reset(); setOpenDialog(true); }}
@@ -441,7 +422,6 @@ export default function DebtPlanner({ initialIncome, initialExpenses }: Props) {
         <Plus className="w-7 h-7 text-primary-foreground" />
       </Button>
 
-      {/* Dialog */}
       <Dialog open={openDialog} onOpenChange={(o) => { setOpenDialog(o); if (!o) reset(); }}>
         <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto rounded-3xl">
           <DialogHeader>

@@ -4,8 +4,10 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { checkForUpdates } from "./lib/version";
+import { initSentry } from "./lib/sentry";
 
 console.log("[Main] App entry point reached");
+initSentry();
 
 try {
   const rootElement = document.getElementById("root");
