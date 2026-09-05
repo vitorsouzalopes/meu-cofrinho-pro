@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { usePremium } from "@/lib/premium";
 import { showInterstitialAd } from "@/lib/ads";
 import { safeStorage } from "@/lib/safe-storage";
+import { LocalNotifications } from '@capacitor/local-notifications';
 
 type Profile = Tables<"profiles">;
 type Account = Tables<"accounts">;
@@ -46,6 +47,31 @@ const ProfilePage = () => {
   const [uiMode, setUiMode] = useState<"simple" | "advanced">(() =>
     safeStorage.get("ui_mode", "simple")
   );
+
+  const testNotification = async () => {
+    try {
+      const granted = await LocalNotifications.checkPermissions();
+      if (granted.display !== 'granted') {
+        await LocalNotifications.requestPermissions();
+      }
+
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            title: "🔔 Teste de Notificação",
+            body: "Parabéns! O sistema de notificações do Cofrinho PRO está funcionando corretamente.",
+            id: 123,
+            schedule: { at: new Date(Date.now() + 2000) }, // 2 seconds from now
+            sound: 'res://default',
+          }
+        ]
+      });
+      toast({ title: "Notificação agendada para 2 segundos!" });
+    } catch (e) {
+      console.error("Test notification fail:", e);
+      toast({ title: "Erro ao testar notificação", variant: "destructive" });
+    }
+  };
 
   const toggleUiMode = () => {
     const next = uiMode === "simple" ? "advanced" : "simple";
@@ -287,6 +313,7 @@ const ProfilePage = () => {
           { icon: <Target className="w-5 h-5" />, label: "Metas Financeiras", onClick: () => navigate("/goals") },
           { icon: <FileDown className="w-5 h-5" />, label: "Exportar Relatório Mensal (PDF)", onClick: () => setExportDialogOpen(true) },
           { icon: <HelpCircle className="w-5 h-5" />, label: "Ajuda e Suporte", onClick: () => navigate("/support") },
+          { icon: <Bell className="w-5 h-5" />, label: "Testar Notificação (Local)", onClick: testNotification, color: "text-amber-500" },
           ...(isAdmin ? [
             { icon: <RefreshCcw className="w-5 h-5" />, label: "Sincronizar Mês", onClick: loadData },
             { icon: <Sparkles className="w-5 h-5" />, label: "Testar Anúncio (Intersticial)", onClick: showInterstitialAd, color: "text-amber-500" },
