@@ -48,6 +48,44 @@ const ProfilePage = () => {
     safeStorage.get("ui_mode", "simple")
   );
 
+  const runDiagnostic = async () => {
+    toast({ title: "Iniciando diagnóstico...", description: "Verificando conexão e serviços." });
+    try {
+      // 1. Test local token
+      const { fcm_token } = safeStorage.get("auth_data", {} as any);
+      console.log("[Diagnostic] Local token exists:", !!fcm_token);
+
+      // 2. Test Supabase connectivity
+      const { data: ping, error: pingError } = await supabase.from("profiles").select("id").limit(1);
+      if (pingError) throw new Error(`Banco de dados inacessível: ${pingError.message}`);
+      console.log("[Diagnostic] Database reachable");
+
+      // 3. Test Edge Function Ping
+      const { data: funcData, error: funcError } = await supabase.functions.invoke("notify-event", {
+        body: { event: "salary", payload: { amount: 0, month_year: "test" } },
+      });
+
+      if (funcError) {
+        console.error("[Diagnostic] Edge Function error:", funcError);
+        throw new Error(`Edge Function falhou: ${funcError.message}. Verifique se a função foi implantada (deployed).`);
+      }
+
+      console.log("[Diagnostic] Edge Function response:", funcData);
+
+      toast({
+        title: "Diagnóstico Concluído ✅",
+        description: "Conexão e funções básicas estão operacionais. Se o push não chega, verifique os segredos (secrets) no painel Supabase."
+      });
+    } catch (e: any) {
+      console.error("[Diagnostic] Failed:", e);
+      toast({
+        title: "Falha no Diagnóstico ❌",
+        description: e.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   const testNotification = async () => {
     try {
       const granted = await LocalNotifications.checkPermissions();
@@ -313,6 +351,7 @@ const ProfilePage = () => {
           { icon: <Target className="w-5 h-5" />, label: "Metas Financeiras", onClick: () => navigate("/goals") },
           { icon: <FileDown className="w-5 h-5" />, label: "Exportar Relatório Mensal (PDF)", onClick: () => setExportDialogOpen(true) },
           { icon: <HelpCircle className="w-5 h-5" />, label: "Ajuda e Suporte", onClick: () => navigate("/support") },
+          { icon: <ShieldAlert className="w-5 h-5" />, label: "Diagnóstico do Sistema", onClick: runDiagnostic, color: "text-blue-500" },
           { icon: <Bell className="w-5 h-5" />, label: "Testar Notificação (Local)", onClick: testNotification, color: "text-amber-500" },
           ...(isAdmin ? [
             { icon: <RefreshCcw className="w-5 h-5" />, label: "Sincronizar Mês", onClick: loadData },
