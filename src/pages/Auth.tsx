@@ -196,9 +196,11 @@ const Auth = () => {
         <form onSubmit={handleSubmit} className="glass-card p-6 space-y-4">
           {!isLogin && (
             <div className="relative">
-              <User className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+              <User className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" aria-hidden="true" />
               <Input
+                id="displayName"
                 placeholder="Seu nome"
+                aria-label="Seu nome completo"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 className="pl-10 bg-muted/50 border-border/50"
@@ -207,10 +209,12 @@ const Auth = () => {
             </div>
           )}
           <div className="relative">
-            <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+            <Mail className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" aria-hidden="true" />
             <Input
+              id="email"
               type="email"
               placeholder="Email"
+              aria-label="Endereço de email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="pl-10 bg-muted/50 border-border/50"
@@ -218,10 +222,12 @@ const Auth = () => {
             />
           </div>
           <div className="relative">
-            <Lock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+            <Lock className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" aria-hidden="true" />
             <Input
+              id="password"
               type="password"
               placeholder="Senha"
+              aria-label="Sua senha"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="pl-10 bg-muted/50 border-border/50"
