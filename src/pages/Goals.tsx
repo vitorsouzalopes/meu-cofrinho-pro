@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import DebtPlanner from "@/components/planner/DebtPlanner";
@@ -192,6 +193,9 @@ const Goals = () => {
 
   return (
     <div className="min-h-screen pb-24 px-6 pt-10 max-w-lg mx-auto bg-background">
+      <Helmet>
+        <title>Metas e Sonhos | Cofrinho PRO</title>
+      </Helmet>
       <div className="flex items-center gap-4 mb-8">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-xl bg-card border border-border/50">
           <ArrowLeft className="w-5 h-5" />

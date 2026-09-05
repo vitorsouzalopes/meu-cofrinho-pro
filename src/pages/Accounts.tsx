@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { useDebts, useInvalidateFinance } from "@/hooks/use-finance-data";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
@@ -654,6 +655,9 @@ const Accounts = () => {
 
   return (
     <div className="min-h-screen pb-28 px-4 pt-6 max-w-lg mx-auto bg-background">
+      <Helmet>
+        <title>Contas e Dívidas | Cofrinho PRO</title>
+      </Helmet>
       <div className="mb-6 animate-slide-up">
         <h1 className="text-2xl font-bold text-foreground mb-4">Contas</h1>
         <div className="flex items-center gap-2">

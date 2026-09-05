@@ -29,6 +29,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useDebts, useGoals } from "@/hooks/use-finance-data";
+import { safeStorage } from "@/lib/safe-storage";
 import type { Strategy } from "@/financial/forecastSimulation";
 import type { Debt, DebtSimulation, EvolutionRow } from "@/financial/types";
 import { cn } from "@/lib/utils";
@@ -232,17 +233,17 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
   }, [debtsProp, debtsHook]);
   const { data: goals = [] } = useGoals();
   const [strategy, setStrategy] = useState<Strategy>(
-    () => (localStorage.getItem("cofrinho:strategy") as Strategy) || "avalanche",
+    () => safeStorage.get("strategy", "avalanche"),
   );
   const [usage, setUsage] = useState<Usage>(
-    () => (localStorage.getItem("cofrinho:usage") as Usage) || "hard",
+    () => safeStorage.get("usage", "hard"),
   );
   const [profile, setProfile] = useState<Profile>(
-    () => (localStorage.getItem("cofrinho:profile") as Profile) || "moderado",
+    () => safeStorage.get("profile", "moderado"),
   );
   const [horizon, setHorizon] = useState<3 | 6 | 12>(12);
 
-  const persist = (key: string, val: string) => localStorage.setItem(`cofrinho:${key}`, val);
+  const persist = (key: string, val: string) => safeStorage.set(key, val);
 
   const { data: finance } = useQuery({
     queryKey: ["forecast-finance", user?.id, my],

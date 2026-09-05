@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +20,7 @@ import { initializeAds, showBannerAd, hideBannerAd } from "@/lib/ads";
 import { usePremium } from "@/lib/premium";
 import { scheduleFinancialReminders, requestNotificationPermission } from "@/lib/notification-engine";
 import { Capacitor } from "@capacitor/core";
+import { safeStorage } from "@/lib/safe-storage";
 
 type Account = Tables<"accounts">;
 type Profile = Tables<"profiles">;
@@ -91,7 +93,7 @@ const Today = () => {
   const [extraListOpen, setExtraListOpen] = useState(false);
   const [savingExtra, setSavingExtra] = useState(false);
 
-  const uiMode = localStorage.getItem("cofrinho:ui_mode") || "simple";
+  const uiMode = safeStorage.get("ui_mode", "simple");
   const hasGenerated = useRef(false);
   const currentMonthName = new Intl.DateTimeFormat('pt-BR', { month: 'long' }).format(today).toUpperCase();
 
@@ -302,6 +304,9 @@ const Today = () => {
 
   return (
     <div className="min-h-screen pb-24 px-6 pt-6 max-w-lg mx-auto bg-background overflow-x-hidden">
+      <Helmet>
+        <title>Dashboard | Cofrinho PRO</title>
+      </Helmet>
       <div className="flex justify-between items-center mb-8">
         <Menu className="w-6 h-6 text-foreground" />
         <p className="font-heading font-bold text-lg text-foreground">

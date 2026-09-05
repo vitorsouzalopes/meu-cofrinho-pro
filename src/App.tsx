@@ -1,6 +1,7 @@
 import { useEffect, Suspense, lazy } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/contexts/AuthProvider";
 import { useScrollRestoration } from "@/hooks/use-scroll-restoration";
 import { useGestureBack } from "@/hooks/use-gesture-back";
@@ -118,17 +119,19 @@ const AppContent = () => {
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <Suspense fallback={<PageLoader />}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AuthProvider>
-              <AppContent />
-            </AuthProvider>
-          </BrowserRouter>
-        </TooltipProvider>
-      </Suspense>
+      <HelmetProvider>
+        <Suspense fallback={<PageLoader />}>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <AuthProvider>
+                <AppContent />
+              </AuthProvider>
+            </BrowserRouter>
+          </TooltipProvider>
+        </Suspense>
+      </HelmetProvider>
     </QueryClientProvider>
   </ErrorBoundary>
 );

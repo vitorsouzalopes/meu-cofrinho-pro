@@ -16,6 +16,7 @@ import { generateMonthlyReport } from "@/lib/monthly-report";
 import { cn } from "@/lib/utils";
 import { usePremium } from "@/lib/premium";
 import { showInterstitialAd } from "@/lib/ads";
+import { safeStorage } from "@/lib/safe-storage";
 
 type Profile = Tables<"profiles">;
 type Account = Tables<"accounts">;
@@ -43,13 +44,13 @@ const ProfilePage = () => {
   const [exportMonth, setExportMonth] = useState(new Date().toISOString().slice(0, 7));
   const [isAdmin, setIsAdmin] = useState(false);
   const [uiMode, setUiMode] = useState<"simple" | "advanced">(() =>
-    (localStorage.getItem("cofrinho:ui_mode") as any) || "simple"
+    safeStorage.get("ui_mode", "simple")
   );
 
   const toggleUiMode = () => {
     const next = uiMode === "simple" ? "advanced" : "simple";
     setUiMode(next);
-    localStorage.setItem("cofrinho:ui_mode", next);
+    safeStorage.set("ui_mode", next);
     toast({ title: `Modo ${next === "simple" ? "Simples" : "Avançado"} ativado!` });
   };
 

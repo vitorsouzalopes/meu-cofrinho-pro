@@ -168,6 +168,9 @@ const Auth = () => {
               src="/logo.png"
               alt="Cofrinho PRO"
               className="w-full h-full object-contain drop-shadow-2xl"
+              fetchPriority="high"
+              loading="eager"
+              decoding="async"
               onError={(e) => {
                 // Fallback if image not found
                 e.currentTarget.style.display = 'none';
