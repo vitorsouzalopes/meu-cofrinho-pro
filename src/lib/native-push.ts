@@ -17,9 +17,9 @@ export async function registerNativePush(userId: string): Promise<{ status: stri
       if (request.receive !== 'granted') return { status: request.receive };
     }
 
-    await PushNotifications.register();
+    // IMPORTANT: Attach listeners BEFORE calling register() to avoid race conditions
+    // Token might be delivered instantly if already cached by OS
 
-    // Cleanup old listeners to avoid memory leaks/multiple triggers
     await PushNotifications.removeAllListeners();
 
     PushNotifications.addListener('registration', async (token) => {
@@ -45,6 +45,9 @@ export async function registerNativePush(userId: string): Promise<{ status: stri
     PushNotifications.addListener('registrationError', (error) => {
       console.error('[Push] Registration error:', error);
     });
+
+    // After listeners are ready, trigger registration
+    await PushNotifications.register();
 
     return { status: 'granted' };
   } catch (e) {

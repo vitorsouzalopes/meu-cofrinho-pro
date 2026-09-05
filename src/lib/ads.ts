@@ -1,22 +1,31 @@
-import { AdMob, BannerAdPosition, BannerAdSize, InterstitialAdPluginEvents, AdMobBannerSize } from '@capacitor-community/admob';
+import { AdMob, BannerAdPosition, BannerAdSize, AdMobBannerSize } from '@capacitor-community/admob';
 import { Capacitor } from '@capacitor/core';
 
 // Production IDs
 const BANNER_ID = 'ca-app-pub-2069353543110701/8184697025';
-// Note: If you have a real Interstitial ID, replace it here.
 const INTERSTITIAL_TEST_ID = 'ca-app-pub-3940256099942544/1033173712';
 
 export async function initializeAds() {
   if (!Capacitor.isNativePlatform()) return;
 
   try {
+    // Request Tracking Authorization and UMP Consent
+    // This is required for GDPR compliance and personalized ads
+    const consentInfo = await AdMob.requestConsentInfo();
+
+    if (consentInfo.isConsentFormAvailable && consentInfo.status === 'required') {
+      await AdMob.showConsentForm();
+    }
+
     await AdMob.initialize({
       requestTrackingAuthorization: true,
       testingDevices: [],
       initializeForTesting: false,
     });
+
+    console.log('[AdMob] Initialized with consent info');
   } catch (e) {
-    console.error('AdMob init error:', e);
+    console.error('[AdMob] Init error:', e);
   }
 }
 
@@ -34,7 +43,7 @@ export async function showBannerAd() {
   try {
     await AdMob.showBanner(options);
   } catch (e) {
-    console.error('Banner show error:', e);
+    console.error('[AdMob] Banner show error:', e);
   }
 }
 
@@ -43,7 +52,7 @@ export async function hideBannerAd() {
   try {
     await AdMob.hideBanner();
   } catch (e) {
-    console.warn('Banner hide error:', e);
+    console.warn('[AdMob] Banner hide error:', e);
   }
 }
 
@@ -57,6 +66,6 @@ export async function showInterstitialAd() {
     });
     await AdMob.showInterstitial();
   } catch (e) {
-    console.error('Interstitial show error:', e);
+    console.error('[AdMob] Interstitial show error:', e);
   }
 }
