@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     // Payload Validation
     if (!event || !TITLES[event]) {
       console.error("[Notify] Invalid event type:", event);
-      return new Response(JSON.stringify({ error: "invalid event" }), {
+      return new Response(JSON.stringify({ error: `Evento inválido: ${event}` }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -46,14 +46,22 @@ Deno.serve(async (req) => {
 
     if (!payload || typeof payload !== 'object') {
       console.error("[Notify] Missing or invalid payload for event:", event);
-      return new Response(JSON.stringify({ error: "invalid payload" }), {
+      return new Response(JSON.stringify({ error: "Payload ausente ou inválido" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const SUPA_URL = Deno.env.get("SUPABASE_URL")!;
-    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const SUPA_URL = Deno.env.get("SUPABASE_URL");
+    const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!SUPA_URL || !SERVICE_KEY) {
+      console.error("[Notify] Missing environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+      return new Response(JSON.stringify({ error: "Configuração de servidor incompleta (SUPABASE_URL/KEY)" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     let targetUserId = user_id;
     if (!targetUserId) {
@@ -62,7 +70,7 @@ Deno.serve(async (req) => {
       });
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        return new Response(JSON.stringify({ error: "unauthenticated" }), {
+        return new Response(JSON.stringify({ error: "Sessão expirada ou não autenticada" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -70,7 +78,7 @@ Deno.serve(async (req) => {
       targetUserId = user.id;
     }
 
-    console.log(`[Notify] Sending event ${event} to user ${targetUserId}`);
+    console.log(`[Notify] Forwarding event ${event} to send-fcm for user ${targetUserId}`);
 
     const fcmRes = await fetch(`${SUPA_URL}/functions/v1/send-fcm`, {
       method: "POST",
@@ -85,20 +93,32 @@ Deno.serve(async (req) => {
         body: BODIES[event](payload).slice(0, 200),
         url: URLS[event],
       }),
-    }).catch((e) => {
-      console.warn("[Notify] send-fcm failed:", e);
-      return null;
     });
+
+    if (!fcmRes.ok) {
+      const errorText = await fcmRes.text();
+      console.error("[Notify] send-fcm call failed:", fcmRes.status, errorText);
+      return new Response(JSON.stringify({
+        error: `Sub-função send-fcm falhou com status ${fcmRes.status}`,
+        details: errorText.slice(0, 100)
+      }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const fcmData = await fcmRes.json();
+    console.log("[Notify] send-fcm response:", fcmData);
 
     return new Response(JSON.stringify({
       ok: true,
-      fcm: fcmRes?.ok ?? false,
+      fcm: fcmData.ok || false,
       eventId: crypto.randomUUID()
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("[Notify] Critical error:", e);
+    console.error("[Notify] Critical error in Deno serve:", e);
     return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
