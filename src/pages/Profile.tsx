@@ -351,10 +351,10 @@ const ProfilePage = () => {
           { icon: <Target className="w-5 h-5" />, label: "Metas Financeiras", onClick: () => navigate("/goals") },
           { icon: <FileDown className="w-5 h-5" />, label: "Exportar Relatório Mensal (PDF)", onClick: () => setExportDialogOpen(true) },
           { icon: <HelpCircle className="w-5 h-5" />, label: "Ajuda e Suporte", onClick: () => navigate("/support") },
-          { icon: <ShieldAlert className="w-5 h-5" />, label: "Diagnóstico do Sistema", onClick: runDiagnostic, color: "text-blue-500" },
-          { icon: <Bell className="w-5 h-5" />, label: "Testar Notificação (Local)", onClick: testNotification, color: "text-amber-500" },
           ...(isAdmin ? [
             { icon: <RefreshCcw className="w-5 h-5" />, label: "Sincronizar Mês", onClick: loadData },
+            { icon: <ShieldAlert className="w-5 h-5" />, label: "Diagnóstico do Sistema", onClick: runDiagnostic, color: "text-blue-500" },
+            { icon: <Bell className="w-5 h-5" />, label: "Testar Notificação (Local)", onClick: testNotification, color: "text-amber-500" },
             { icon: <Sparkles className="w-5 h-5" />, label: "Testar Anúncio (Intersticial)", onClick: showInterstitialAd, color: "text-amber-500" },
             { icon: <Bell className="w-5 h-5" />, label: "Testar Push (Ir para Menu)", onClick: () => navigate("/telegram"), color: "text-blue-500" },
           ] : []),
