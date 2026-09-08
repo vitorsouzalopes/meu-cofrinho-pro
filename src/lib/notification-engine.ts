@@ -1,19 +1,10 @@
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
+import { ensureNotificationPermission } from './native-notification-permission';
 
 export async function requestNotificationPermission() {
   if (!Capacitor.isNativePlatform()) return true;
-  try {
-    const status = await LocalNotifications.checkPermissions();
-    if (status.display === 'prompt' || status.display === 'denied') {
-      const request = await LocalNotifications.requestPermissions();
-      return request.display === 'granted';
-    }
-    return status.display === 'granted';
-  } catch (e) {
-    console.error("Error requesting notifications:", e);
-    return false;
-  }
+  return await ensureNotificationPermission();
 }
 
 /**

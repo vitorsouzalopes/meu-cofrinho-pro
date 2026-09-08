@@ -10,6 +10,7 @@ export interface AuthContextType {
   pushChecked: boolean;
   signOut: () => Promise<void>;
   checkPushPermission: (force?: boolean) => Promise<void>;
+  skipPush: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

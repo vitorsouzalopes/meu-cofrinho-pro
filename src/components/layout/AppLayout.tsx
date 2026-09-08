@@ -25,8 +25,8 @@ export const ProtectedLayout = () => {
 
   if (!session) return <Navigate to="/auth" replace />;
 
-  // BLOQUEIO OBRIGATÓRIO DE NOTIFICAÇÕES (Modo Nativo)
-  const isBypass = ['granted', 'web', 'timeout', 'error'].includes(pushStatus || '');
+  // BLOQUEIO DE NOTIFICAÇÕES (Opcional agora conforme auditoria)
+  const isBypass = ['granted', 'web', 'timeout', 'error', 'skipped'].includes(pushStatus || '');
   if (Capacitor.isNativePlatform() && pushChecked && !isBypass) {
     return <NotificationWall onRetry={() => checkPushPermission(true)} />;
   }

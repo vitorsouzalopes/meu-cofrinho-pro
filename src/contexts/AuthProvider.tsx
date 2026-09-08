@@ -125,11 +125,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
   };
 
+  const skipPush = () => {
+    setState(prev => ({ ...prev, pushStatus: 'skipped', pushChecked: true }));
+  };
+
   return (
     <AuthContext.Provider value={{
       ...state,
       signOut,
-      checkPushPermission
+      checkPushPermission,
+      skipPush
     }}>
       {children}
     </AuthContext.Provider>

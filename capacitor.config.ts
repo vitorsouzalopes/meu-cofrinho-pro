@@ -18,6 +18,13 @@ const config: CapacitorConfig = {
     AdMob: {
       appId: 'ca-app-pub-2069353543110701~5558799613',
     },
+    PushNotifications: {
+      presentationOptions: ["badge", "sound", "alert"],
+    },
+    LocalNotifications: {
+      smallIcon: "ic_stat_icon_config_sample", // Should match native resource if exists
+      iconColor: "#D4A017",
+    },
   },
 };
 
