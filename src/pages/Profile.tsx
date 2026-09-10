@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { User, LogOut, Settings, HelpCircle, RefreshCcw, Target, ChevronRight, FileDown, Plus, MessageCircle, X, Bell, Clock, Sparkles, ShieldAlert } from "lucide-react";
+import { User, LogOut, Settings, HelpCircle, RefreshCcw, Target, ChevronRight, FileDown, Plus, MessageCircle, X, Bell, Clock, Sparkles, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,6 +18,7 @@ import { usePremium } from "@/lib/premium";
 import { showInterstitialAd } from "@/lib/ads";
 import { safeStorage } from "@/lib/safe-storage";
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { ensureNotificationPermission } from "@/lib/native-notification-permission";
 
 type Profile = Tables<"profiles">;
 type Account = Tables<"accounts">;
@@ -88,9 +89,10 @@ const ProfilePage = () => {
 
   const testNotification = async () => {
     try {
-      const granted = await LocalNotifications.checkPermissions();
-      if (granted.display !== 'granted') {
-        await LocalNotifications.requestPermissions();
+      const granted = await ensureNotificationPermission();
+      if (!granted) {
+        toast({ title: "Permissão negada", description: "Ative as notificações nas configurações do Android.", variant: "destructive" });
+        return;
       }
 
       await LocalNotifications.schedule({
@@ -353,7 +355,7 @@ const ProfilePage = () => {
           { icon: <HelpCircle className="w-5 h-5" />, label: "Ajuda e Suporte", onClick: () => navigate("/support") },
           ...(isAdmin ? [
             { icon: <RefreshCcw className="w-5 h-5" />, label: "Sincronizar Mês", onClick: loadData },
-            { icon: <ShieldAlert className="w-5 h-5" />, label: "Diagnóstico do Sistema", onClick: runDiagnostic, color: "text-blue-500" },
+            { icon: <AlertCircle className="w-5 h-5" />, label: "Diagnóstico do Sistema", onClick: runDiagnostic, color: "text-blue-500" },
             { icon: <Bell className="w-5 h-5" />, label: "Testar Notificação (Local)", onClick: testNotification, color: "text-amber-500" },
             { icon: <Sparkles className="w-5 h-5" />, label: "Testar Anúncio (Intersticial)", onClick: showInterstitialAd, color: "text-amber-500" },
             { icon: <Bell className="w-5 h-5" />, label: "Testar Push (Ir para Menu)", onClick: () => navigate("/telegram"), color: "text-blue-500" },

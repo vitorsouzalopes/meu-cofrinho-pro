@@ -1,4 +1,4 @@
-import { Bell, ShieldAlert, ArrowRight, X } from "lucide-react";
+import { Bell, AlertCircle, ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { NativeSettings, AndroidSettings } from 'capacitor-native-settings';
@@ -24,9 +24,9 @@ const NotificationWall = ({ onRetry }: { onRetry: () => void }) => {
 
       if (status === 'prompt') {
         const request = await NotificationPermission.requestPermission();
-        if (request.status === 'granted') {
-          onRetry();
-        }
+        console.log("[NotificationWall] Native dialog result:", request.status);
+        // Always call onRetry to trigger a fresh check in AuthProvider
+        onRetry();
       } else if (status === 'denied') {
         // If denied, they must go to settings
         await NativeSettings.open({
@@ -61,7 +61,7 @@ const NotificationWall = ({ onRetry }: { onRetry: () => void }) => {
               <Bell className="w-12 h-12 text-[#D4A017]" />
            </div>
            <div className="absolute -top-1 -right-1 w-8 h-8 bg-destructive rounded-full flex items-center justify-center border-4 border-[#0A0E1A]">
-              <ShieldAlert className="w-4 h-4 text-white" />
+              <AlertCircle className="w-4 h-4 text-white" />
            </div>
         </div>
 

@@ -18,7 +18,7 @@ import {
   Calendar,
   Sparkles,
   Gauge,
-  ShieldAlert,
+  AlertCircle,
   ShieldCheck,
   Shield,
   Zap,
@@ -420,7 +420,7 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
       {crisisActive && (
         <Card className="p-4 bg-gradient-to-br from-red-500/15 to-transparent border border-red-500/50">
           <div className="flex items-start gap-2">
-            <ShieldAlert className="w-5 h-5 text-red-400 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-red-400 mt-0.5" />
             <div className="flex-1">
               <h3 className="font-heading font-bold text-red-300">Modo Crise ativado</h3>
               <p className="text-xs text-foreground/80 mt-1">
