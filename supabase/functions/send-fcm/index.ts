@@ -157,6 +157,13 @@ Deno.serve(async (req) => {
       tokens: tokenList,
       notification: { title, body },
       data: { url: url || "/" },
+      android: {
+        notification: {
+          channelId: 'default',
+          priority: 'high',
+          sound: 'default',
+        },
+      },
       webpush: { fcmOptions: { link: url || "/" } },
     });
 

@@ -1,5 +1,5 @@
 import { Capacitor } from '@capacitor/core';
-import { PushNotifications, Token } from '@capacitor/push-notifications';
+import { PushNotifications, Token, ActionPerformed, PushNotificationSchema } from '@capacitor/push-notifications';
 import { supabase } from "@/integrations/supabase/client";
 import { ensureNotificationPermission } from './native-notification-permission';
 
@@ -14,8 +14,35 @@ export async function registerNativePush(userId: string): Promise<{ status: stri
       return { status: 'denied' };
     }
 
-    // 2. Setup listeners BEFORE registering
+    // 2. Create Notification Channel (Android 8+)
+    // Without a channel, notifications might be delivered but not shown.
+    try {
+      await PushNotifications.createChannel({
+        id: 'default',
+        name: 'Padrão',
+        description: 'Notificações gerais do app',
+        importance: 5, // High importance
+        visibility: 1, // Public
+        vibration: true,
+      });
+      console.log('[Push] Notification channel "default" ensured.');
+    } catch (channelErr) {
+      console.warn('[Push] Failed to create notification channel:', channelErr);
+    }
+
+    // 3. Setup listeners BEFORE registering
     await PushNotifications.removeAllListeners();
+
+    // Listener for when a notification is received while app is in foreground
+    PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
+      console.log('[Push] Notification received in foreground:', notification);
+    });
+
+    // Listener for when a user performs an action on a notification (clicks it)
+    PushNotifications.addListener('pushNotificationActionPerformed', (notification: ActionPerformed) => {
+      console.log('[Push] Notification action performed:', notification);
+      // Optional: handle navigation based on notification data
+    });
 
     // Wrap registration in a promise to handle success/error/timeout
     const registrationPromise = new Promise<{ status: string }>((resolve, reject) => {
@@ -55,7 +82,7 @@ export async function registerNativePush(userId: string): Promise<{ status: stri
       });
     });
 
-    // 3. Trigger native registration
+    // 4. Trigger native registration
     await PushNotifications.register();
 
     return await registrationPromise;

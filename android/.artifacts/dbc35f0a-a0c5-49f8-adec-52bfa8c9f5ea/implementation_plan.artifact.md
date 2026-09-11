@@ -1,35 +1,34 @@
-# Plano de Correção: Notificações e Ícones (Fase 11)
+# Plano de Ação: Correção Estrutural de Notificações (Baseado na Auditoria)
 
-Este plano corrige o erro de execução (`ReferenceError`) na tela de Perfil e otimiza o fluxo de permissão para garantir que o app avance após a concessão.
+Este plano resolve os GAPs identificados na auditoria técnica, focando na criação de canais de notificação, tratamento de foreground e metadados do manifesto.
 
 ## User Review Required
 
-> [!WARNING]
-> **Troca de Ícones**: Vou substituir o ícone `ShieldAlert` por `AlertCircle`. Isso é para garantir que não haja erros de importação dependendo da versão da biblioteca instalada no seu ambiente.
+> [!IMPORTANT]
+> **Canais de Notificação**: No Android 8+, as notificações só aparecem se estiverem vinculadas a um canal. Vou criar o canal "Padrao" automaticamente ao abrir o app.
 
 ## Proposed Changes
 
-### 1. Correção de Erro de Execução (Bug Crítico)
-Objetivo: Eliminar o erro "ShieldAlert is not defined" que trava o app.
+### 1. Configuração de Sistema (Android)
+#### [MODIFY] [AndroidManifest.xml](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/android/app/src/main/AndroidManifest.xml)
+- Definir `default_notification_channel_id` como "default".
+- Definir `default_notification_color` como o tom de dourado do app (`#D4A017`).
 
-#### [MODIFY] [Profile.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Profile.tsx) e [NotificationWall.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/components/NotificationWall.tsx)
-- Substituir `ShieldAlert` por `AlertCircle` nas importações e no JSX.
+### 2. Infraestrutura de Notificações
+#### [MODIFY] [src/lib/native-push.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/lib/native-push.ts)
+- Criar o canal de notificação "default" via `PushNotifications.createChannel`.
+- Adicionar listeners `pushNotificationReceived` e `pushNotificationActionPerformed` para garantir que o app responda a cliques e mensagens em foreground.
 
-### 2. Fluxo de Permissão (UX)
-Objetivo: Garantir que o app saia da tela de bloqueio assim que o usuário permitir as notificações.
+#### [MODIFY] [capacitor.config.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/capacitor.config.ts)
+- Remover a referência a ícone inexistente para evitar erros de renderização.
 
-#### [MODIFY] [NotificationWall.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/components/NotificationWall.tsx)
-- Garantir que `onRetry()` seja chamado de forma resiliente após o fechamento do diálogo nativo.
-- Adicionar logs extras para depurar caso o Android demore a atualizar o estado da permissão.
-
-### 3. Teste de Notificação Local
-#### [MODIFY] [Profile.tsx](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/src/pages/Profile.tsx)
-- Usar a nova ponte nativa (`NotificationPermission`) para validar a permissão antes de disparar o agendamento local. Isso unifica o comportamento do app.
+### 3. Backend (Edge Functions)
+#### [MODIFY] [supabase/functions/send-fcm/index.ts](file:///C:/Users/vitor/StudioProjects/meu-cofrinho-pro/supabase/functions/send-fcm/index.ts)
+- Incluir a chave `android` no payload do FCM para forçar o uso do canal `default` e prioridade alta.
 
 ## Verification Plan
 
 ### Manual Verification
-1.  **Instalar novo APK**.
-2.  Abrir a aba **Perfil**: O app não deve mais dar erro de tela preta/vermelha.
-3.  Clicar em **"Diagnóstico"**: Validar se o ícone agora aparece corretamente.
-4.  Refazer o fluxo de **NotificationWall**: Confirmar se, ao permitir, a tela some e a Dashboard aparece.
+1.  **Reiniciar o App**: Verificar se o log mostra `[Push] Notification channel created`.
+2.  **Teste Local**: Clicar em "Testar Notificação (Local)" no perfil. A notificação deve aparecer com o ícone e cor corretos.
+3.  **Teste de Push**: Enviar um push de teste pelo painel (ou botão de teste) e validar se ele aparece mesmo com o app aberto.

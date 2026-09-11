@@ -22,7 +22,6 @@ const config: CapacitorConfig = {
       presentationOptions: ["badge", "sound", "alert"],
     },
     LocalNotifications: {
-      smallIcon: "ic_stat_icon_config_sample", // Should match native resource if exists
       iconColor: "#D4A017",
     },
   },

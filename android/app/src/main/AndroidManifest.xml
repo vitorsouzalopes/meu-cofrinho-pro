@@ -57,6 +57,14 @@
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-2069353543110701~5558799613"/>
+
+        <!-- Push Notifications Configuration -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="default"/>
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/colorAccent"/>
     </application>
 
     <!-- Permissions -->
