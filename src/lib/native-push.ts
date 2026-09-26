@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications, Token, ActionPerformed, PushNotificationSchema } from '@capacitor/push-notifications';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { supabase } from "@/integrations/supabase/client";
 import { ensureNotificationPermission } from './native-notification-permission';
 
@@ -34,8 +35,27 @@ export async function registerNativePush(userId: string): Promise<{ status: stri
     await PushNotifications.removeAllListeners();
 
     // Listener for when a notification is received while app is in foreground
-    PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
+    PushNotifications.addListener('pushNotificationReceived', async (notification: PushNotificationSchema) => {
       console.log('[Push] Notification received in foreground:', notification);
+
+      // Android does not automatically display every FCM notification while
+      // the app is in the foreground. Mirror it as a local notification.
+      try {
+        const permission = await LocalNotifications.checkPermissions();
+        if (permission.display !== 'granted') return;
+
+        await LocalNotifications.schedule({
+          notifications: [{
+            id: Math.floor(Date.now() % 2147483647),
+            title: notification.title || 'Cofrinho PRO',
+            body: notification.body || 'Você recebeu uma nova notificação.',
+            schedule: { at: new Date(Date.now() + 100) },
+            extra: notification.data || {},
+          }],
+        });
+      } catch (err) {
+        console.warn('[Push] Failed to display foreground notification:', err);
+      }
     });
 
     // Listener for when a user performs an action on a notification (clicks it)
