@@ -399,36 +399,48 @@ export type Database = {
       }
       goals: {
         Row: {
+          category: string | null
           created_at: string
           current_amount: number
+          deadline: string | null
           id: string
           is_auto: boolean
           monthly_amount: number
           name: string
           priority: number
+          status: "active" | "paused" | "completed" | "cancelled"
           target_amount: number
+          updated_at: string | null
           user_id: string
         }
         Insert: {
+          category?: string | null
           created_at?: string
           current_amount?: number
+          deadline?: string | null
           id?: string
           is_auto?: boolean
           monthly_amount?: number
           name: string
           priority?: number
+          status?: "active" | "paused" | "completed" | "cancelled"
           target_amount: number
+          updated_at?: string | null
           user_id: string
         }
         Update: {
+          category?: string | null
           created_at?: string
           current_amount?: number
+          deadline?: string | null
           id?: string
           is_auto?: boolean
           monthly_amount?: number
           name?: string
           priority?: number
+          status?: "active" | "paused" | "completed" | "cancelled"
           target_amount?: number
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
