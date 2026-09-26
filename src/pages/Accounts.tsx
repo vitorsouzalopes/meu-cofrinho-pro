@@ -147,22 +147,40 @@ const AccountForm = ({ open, onClose, onSaved, editing, userId, monthYear }: Acc
     if (isDebt) {
       const parcelasInt = parcelas !== "" ? parseInt(parcelas, 10) : null;
       const valorParcela = parseFloat(valor);
-      const debtPayload: TablesInsert<"debts"> = {
-        user_id: userId,
-        nome: nome.trim(),
-        tipo: "credito",
-        valor_total: valorParcela * (parcelasInt || 1),
-        valor_restante: valorParcela * (parcelasInt || 1),
-        parcela_mensal: valorParcela,
-        total_parcelas: parcelasInt,
-        parcelas_restantes: parcelasInt,
-        juros_mensal: 0,
-        dia_vencimento: dueDay ? parseInt(dueDay, 10) : 1,
-      };
+
       if (editing?.__source === "debt") {
-        const res = await supabase.from("debts").update(debtPayload as TablesUpdate<"debts">).eq("id", editing.id);
+        // Ao editar uma dívida existente, não recalculamos o saldo restante
+        // a partir da parcela. O saldo é um estado financeiro próprio e já
+        // considera os pagamentos realizados.
+        const debtUpdate: TablesUpdate<"debts"> = {
+          nome: nome.trim(),
+          parcela_mensal: valorParcela,
+          dia_vencimento: dueDay ? parseInt(dueDay, 10) : 1,
+        };
+
+        if (parcelasInt !== null) {
+          debtUpdate.total_parcelas = parcelasInt;
+          debtUpdate.parcelas_restantes = Math.min(
+            Number(editing.parcelas_restantes ?? parcelasInt),
+            parcelasInt
+          );
+        }
+
+        const res = await supabase.from("debts").update(debtUpdate).eq("id", editing.id);
         error = res.error;
       } else {
+        const debtPayload: TablesInsert<"debts"> = {
+          user_id: userId,
+          nome: nome.trim(),
+          tipo: "credito",
+          valor_total: valorParcela * (parcelasInt || 1),
+          valor_restante: valorParcela * (parcelasInt || 1),
+          parcela_mensal: valorParcela,
+          total_parcelas: parcelasInt,
+          parcelas_restantes: parcelasInt,
+          juros_mensal: 0,
+          dia_vencimento: dueDay ? parseInt(dueDay, 10) : 1,
+        };
         const res = await supabase.from("debts").insert([debtPayload]);
         error = res.error;
       }
