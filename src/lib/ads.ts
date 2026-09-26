@@ -3,7 +3,7 @@ import { Capacitor } from '@capacitor/core';
 
 // Production IDs
 const BANNER_ID = 'ca-app-pub-2069353543110701/8184697025';
-const INTERSTITIAL_TEST_ID = 'ca-app-pub-3940256099942544/1033173712';
+const INTERSTITIAL_ID = import.meta.env.VITE_ADMOB_INTERSTITIAL_ID || '';
 
 export async function initializeAds() {
   if (!Capacitor.isNativePlatform()) return;
@@ -60,8 +60,13 @@ export async function showInterstitialAd() {
   if (!Capacitor.isNativePlatform()) return;
 
   try {
+    if (!INTERSTITIAL_ID) {
+      console.warn('[AdMob] Interstitial ID not configured; ad skipped.');
+      return;
+    }
+
     await AdMob.prepareInterstitial({
-      adId: INTERSTITIAL_TEST_ID,
+      adId: INTERSTITIAL_ID,
       isTesting: false,
     });
     await AdMob.showInterstitial();
