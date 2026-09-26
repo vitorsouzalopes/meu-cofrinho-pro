@@ -252,7 +252,7 @@ const Today = () => {
   const saveSalary = async () => {
     if (!user) return;
     const amount = parseFloat(salaryInput);
-    if (isNaN(amount) || amount < 0 || !/^\\d{4}-\\d{2}$/.test(salaryMonthInput)) {
+    if (isNaN(amount) || amount < 0 || !/^\d{4}-\d{2}$/.test(salaryMonthInput)) {
       toast({ title: "Informe um valor e mês válidos", variant: "destructive" });
       return;
     }
