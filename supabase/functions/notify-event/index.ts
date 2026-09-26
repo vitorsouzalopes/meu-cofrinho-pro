@@ -63,18 +63,45 @@ Deno.serve(async (req) => {
       });
     }
 
-    let targetUserId = user_id;
-    if (!targetUserId) {
-      const supabase = createClient(SUPA_URL, SERVICE_KEY, {
-        global: { headers: { Authorization: req.headers.get("Authorization") || "" } },
+    const authorization = req.headers.get("Authorization") || "";
+    const bearerToken = authorization.replace(/^Bearer\\s+/i, "").trim();
+    const isServiceRoleRequest = bearerToken === SERVICE_KEY;
+
+    let targetUserId: string | undefined;
+
+    if (isServiceRoleRequest && user_id) {
+      // Calls authenticated with the service role are trusted server-to-server calls.
+      targetUserId = user_id;
+    } else {
+      // Client calls must always resolve the target from the authenticated user.
+      // A client is never allowed to choose another user's ID.
+      const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+      if (!ANON_KEY || !bearerToken) {
+        return new Response(JSON.stringify({ error: "Sessão não autenticada" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const authClient = createClient(SUPA_URL, ANON_KEY, {
+        global: { headers: { Authorization: `Bearer ${bearerToken}` } },
       });
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await authClient.auth.getUser();
+
       if (!user) {
         return new Response(JSON.stringify({ error: "Sessão expirada ou não autenticada" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      if (user_id && user_id !== user.id) {
+        return new Response(JSON.stringify({ error: "Você não pode enviar notificações para outro usuário" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       targetUserId = user.id;
     }
 
