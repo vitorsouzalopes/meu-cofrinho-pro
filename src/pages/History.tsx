@@ -48,6 +48,12 @@ const History = () => {
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  const createReceiptUrl = useCallback(async (path: string) => {
+    const { data, error } = await supabase.storage.from("receipts").createSignedUrl(path, 60 * 60);
+    if (error) return null;
+    return data?.signedUrl ?? null;
+  }, []);
+
   const fetchAllHistory = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -74,7 +80,7 @@ const History = () => {
           date: e.date,
           type: "expense",
           category: e.category,
-          receipt_url: undefined,
+          receipt_url: e.receipt_url || undefined,
           month_year: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`,
         });
       });
@@ -91,7 +97,7 @@ const History = () => {
           amount: Number(a.amount),
           date: dateStr,
           type: "bill",
-          receipt_url: undefined,
+          receipt_url: a.receipt_url || undefined,
           month_year: my,
         });
       });
@@ -130,12 +136,18 @@ const History = () => {
       return;
     }
 
-    const { data: urlData } = supabase.storage.from("receipts").getPublicUrl(path);
-    const publicUrl = urlData.publicUrl;
-
-    // Atualiza na tabela certa
+    // O bucket é privado: persistimos apenas o caminho do objeto.
     const table = receiptItem.type === "bill" ? "accounts" : "expenses";
-    await supabase.from(table as any).update({ receipt_url: publicUrl }).eq("id", receiptItem.paid_id!);
+    const { error: updateError } = await supabase
+      .from(table as any)
+      .update({ receipt_url: path })
+      .eq("id", receiptItem.paid_id!);
+
+    if (updateError) {
+      toast({ title: "Erro ao salvar comprovante", description: updateError.message, variant: "destructive" });
+      setUploading(false);
+      return;
+    }
 
     toast({ title: "Comprovante salvo!" });
     setUploading(false);
@@ -239,14 +251,26 @@ const History = () => {
                             <div className="flex items-center gap-1.5">
                               {item.receipt_url && (
                                 <button
-                                  onClick={() => window.open(item.receipt_url, "_blank")}
+                                  onClick={async () => {
+                                    const url = await createReceiptUrl(item.receipt_url!);
+                                    if (url) window.open(url, "_blank", "noopener,noreferrer");
+                                    else toast({ title: "Comprovante indisponível", variant: "destructive" });
+                                  }}
                                   className="flex items-center gap-1 text-[9px] bg-primary/10 text-primary px-2 py-1 rounded-lg font-bold hover:bg-primary/20 transition-colors"
                                 >
                                   <Eye className="w-3 h-3" /> Ver
                                 </button>
                               )}
                               <button
-                                onClick={() => { setReceiptItem(item); setPreviewUrl(item.receipt_url || null); }}
+                                onClick={async () => {
+                                  setReceiptItem(item);
+                                  if (item.receipt_url) {
+                                    const url = await createReceiptUrl(item.receipt_url);
+                                    setPreviewUrl(url);
+                                  } else {
+                                    setPreviewUrl(null);
+                                  }
+                                }}
                                 className="flex items-center gap-1 text-[9px] bg-muted text-muted-foreground px-2 py-1 rounded-lg font-bold hover:text-primary hover:bg-primary/10 transition-colors"
                               >
                                 <Upload className="w-3 h-3" />
