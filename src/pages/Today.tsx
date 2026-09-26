@@ -83,8 +83,10 @@ const Today = () => {
   const [loading, setLoading] = useState(true);
   const [salary, setSalary] = useState(0);
   const [salaryId, setSalaryId] = useState<string | null>(null);
+  const [salaryHistory, setSalaryHistory] = useState<any[]>([]);
   const [salaryDialogOpen, setSalaryDialogOpen] = useState(false);
   const [salaryInput, setSalaryInput] = useState("");
+  const [salaryMonthInput, setSalaryMonthInput] = useState(currentMonthYear);
   const [extraIncomes, setExtraIncomes] = useState<any[]>([]);
   const [extraDialogOpen, setExtraDialogOpen] = useState(false);
   const [extraInput, setExtraInput] = useState("");
@@ -142,11 +144,12 @@ const Today = () => {
         hasGenerated.current = true;
       }
 
-      const [resProf, resInst, resTemp, resSal, resExtra, resGoals, resExp] = await Promise.all([
+      const [resProf, resInst, resTemp, resSal, resSalaryHistory, resExtra, resGoals, resExp] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).single(),
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", false).eq("month_year", currentMonthYear),
         supabase.from("accounts").select("*").eq("user_id", user.id).eq("is_template", true),
         supabase.from("salary" as any).select("*").eq("user_id", user.id).eq("month_year", currentMonthYear).maybeSingle(),
+        supabase.from("salary" as any).select("*").eq("user_id", user.id).order("month_year", { ascending: false }),
         supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear),
         supabase.from("goals" as any).select("*").eq("user_id", user.id),
         supabase.from("expenses").select("*").eq("user_id", user.id).gte("date", `${currentMonthYear}-01`).lte("date", `${currentMonthYear}-31`),
@@ -167,6 +170,7 @@ const Today = () => {
 
       setAccounts(mappedAccounts);
       setTemplates(resTemp.data || []);
+      setSalaryHistory((resSalaryHistory.data || []) as any[]);
       setExtraIncomes(resExtra.data || []);
       setGoals(resGoals.data || []);
       setExpensesData(resExp.data || []);
@@ -248,16 +252,27 @@ const Today = () => {
   const saveSalary = async () => {
     if (!user) return;
     const amount = parseFloat(salaryInput);
-    if (isNaN(amount)) return;
-    if (salaryId) {
-      await supabase.from("salary" as any).update({ amount }).eq("id", salaryId);
-    } else {
-      await supabase.from("salary" as any).insert({ user_id: user.id, amount, month_year: currentMonthYear });
+    if (isNaN(amount) || amount < 0 || !/^\\d{4}-\\d{2}$/.test(salaryMonthInput)) {
+      toast({ title: "Informe um valor e mês válidos", variant: "destructive" });
+      return;
     }
+
+    const { error } = await supabase.from("salary" as any).upsert(
+      { user_id: user.id, amount, month_year: salaryMonthInput },
+      { onConflict: "user_id,month_year" }
+    );
+
+    if (error) {
+      toast({ title: "Erro ao salvar salário", description: error.message, variant: "destructive" });
+      return;
+    }
+
     setSalaryDialogOpen(false);
     fetchData();
-    toast({ title: "Salário atualizado!" });
-    notifyEvent("salary", { amount, month_year: currentMonthYear, received: !!salaryId });
+    toast({ title: "Salário salvo!", description: `Referência: ${salaryMonthInput}` });
+    if (salaryMonthInput === currentMonthYear) {
+      notifyEvent("salary", { amount, month_year: salaryMonthInput, received: !!salaryId });
+    }
   };
 
   const saveExtra = async () => {
@@ -436,7 +451,11 @@ const Today = () => {
 
       {/* Quick Settings */}
       <div className="flex gap-2">
-        <Button variant="outline" className="flex-1 rounded-2xl text-[11px] font-bold" onClick={() => { setSalaryInput(String(salary || "")); setSalaryDialogOpen(true); }}>
+        <Button variant="outline" className="flex-1 rounded-2xl text-[11px] font-bold" onClick={() => {
+          setSalaryInput(String(salary || ""));
+          setSalaryMonthInput(currentMonthYear);
+          setSalaryDialogOpen(true);
+        }}>
           Configurar Renda
         </Button>
         <Button variant="outline" className="flex-1 rounded-2xl text-[11px] font-bold" onClick={() => { setEditingExtraId(null); setExtraInput(""); setExtraDesc(""); setExtraDialogOpen(true); }}>
@@ -473,8 +492,35 @@ const Today = () => {
         <DialogContent className="bg-card border-border max-w-[calc(100vw-2rem)]">
           <DialogHeader><DialogTitle>Configurar Renda</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-3">
-            <Input type="number" value={salaryInput} onChange={(e) => setSalaryInput(e.target.value)} placeholder="0.00" className="h-12" />
-            <Button className="w-full h-12" onClick={saveSalary}>Salvar</Button>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Mês de referência</p>
+              <Input type="month" value={salaryMonthInput} onChange={(e) => {
+                const month = e.target.value;
+                setSalaryMonthInput(month);
+                const existing = salaryHistory.find((s: any) => s.month_year === month);
+                setSalaryInput(existing ? String(existing.amount) : "");
+              }} className="h-12" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Salário</p>
+              <Input type="number" min="0" step="0.01" value={salaryInput} onChange={(e) => setSalaryInput(e.target.value)} placeholder="0.00" className="h-12" />
+            </div>
+            {salaryHistory.length > 0 && (
+              <div className="rounded-2xl border border-border/50 p-3 max-h-48 overflow-y-auto space-y-2">
+                <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Histórico</p>
+                {salaryHistory.map((item: any) => (
+                  <button key={item.id} type="button" className="w-full flex items-center justify-between p-3 rounded-xl bg-muted/40 hover:bg-muted text-left"
+                    onClick={() => {
+                      setSalaryMonthInput(item.month_year);
+                      setSalaryInput(String(item.amount));
+                    }}>
+                    <span className="text-sm font-medium">{item.month_year}</span>
+                    <span className="text-sm font-bold">{formatCurrency(Number(item.amount))}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <Button className="w-full h-12" onClick={saveSalary}>Salvar salário</Button>
           </div>
         </DialogContent>
       </Dialog>
