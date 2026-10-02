@@ -19,6 +19,8 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // Transitional: keep `any` visible as a warning while reducing legacy usage safely.
+      "@typescript-eslint/no-explicit-any": "warn",
       "react-refresh/only-export-components": "off",
       "@typescript-eslint/no-unused-vars": "off",
     },
