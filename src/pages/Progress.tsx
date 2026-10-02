@@ -98,7 +98,7 @@ const Progress = () => {
     if (completedDates.length === 0) return 0;
     const sorted = [...completedDates].sort().reverse();
     let streak = 0;
-    let expectedDate = new Date(); // Start checking from today OR yesterday
+    const expectedDate = new Date(); // Start checking from today OR yesterday
     const todayStr = expectedDate.toISOString().split("T")[0];
     
     // Se não fez hoje, check extra se fez ontem para contar streak ativo
