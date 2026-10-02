@@ -140,7 +140,7 @@ const AIConsultant = () => {
       // 2. RESUMO FINANCEIRO ("Resumo", "Como estou?")
       else if (userMsgLower.includes("resumo") || userMsgLower.includes("status") || userMsgLower.includes("saude") || userMsgLower.includes("saúde")) {
         const usageRatio = (financeData.gastos + financeData.totalMetas) / financeData.renda;
-        let healthMsg = usageRatio < 0.7 ? "sua saúde financeira está excelente! Você está gastando menos de 70% do que ganha." :
+        const healthMsg = usageRatio < 0.7 ? "sua saúde financeira está excelente! Você está gastando menos de 70% do que ganha." :
                        usageRatio < 0.9 ? "você está em uma zona de atenção. Seus custos fixos e metas consomem grande parte da sua renda." :
                        "você está em uma zona crítica. Quase toda sua renda está comprometida.";
 
