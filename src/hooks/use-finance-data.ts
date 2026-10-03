@@ -2,7 +2,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Debt } from "@/financial/types";
-import type { Tables } from "@/integrations/supabase/types";
 
 const todayMY = () => {
   const d = new Date();
@@ -12,19 +11,21 @@ const todayMY = () => {
 /** Contas do mês (instâncias + templates não-dívida) */
 export function useAccounts(monthYear: string = todayMY()) {
   const { user } = useAuth();
+  const userId = user?.id;
   return useQuery({
-    queryKey: ["accounts", user?.id, monthYear],
-    enabled: !!user?.id,
+    queryKey: ["accounts", userId, monthYear],
+    enabled: !!userId,
     queryFn: async () => {
+      if (!userId) throw new Error("Usuário não autenticado");
       const [inst, tmpl, pay] = await Promise.all([
         supabase.from("accounts").select("*")
-          .eq("user_id", user!.id).eq("is_template", false)
+          .eq("user_id", userId).eq("is_template", false)
           .eq("month_year", monthYear).order("due_day", { ascending: true }),
         supabase.from("accounts").select("*")
-          .eq("user_id", user!.id).eq("is_template", true)
+          .eq("user_id", userId).eq("is_template", true)
           .order("name", { ascending: true }),
         supabase.from("debt_payments").select("*")
-          .eq("user_id", user!.id)
+          .eq("user_id", userId)
           .gte("data_pagamento", `${monthYear}-01`)
           .lte("data_pagamento", `${monthYear}-31`),
       ]);
@@ -65,26 +66,32 @@ export async function fetchDebts(userId: string): Promise<Debt[]> {
 /** Dívidas (fonte única para Planejamento e dashboard) */
 export function useDebts() {
   const { user } = useAuth();
+  const userId = user?.id;
   return useQuery({
-    queryKey: ["debts", user?.id],
-    enabled: !!user?.id,
-    queryFn: () => fetchDebts(user!.id),
+    queryKey: ["debts", userId],
+    enabled: !!userId,
+    queryFn: () => {
+      if (!userId) throw new Error("Usuário não autenticado");
+      return fetchDebts(userId);
+    },
   });
 }
 
 export function useGoals() {
   const { user } = useAuth();
+  const userId = user?.id;
   return useQuery({
-    queryKey: ["goals", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["goals", userId],
+    enabled: !!userId,
     queryFn: async () => {
+      if (!userId) throw new Error("Usuário não autenticado");
       const { data, error } = await supabase
         .from("goals")
         .select("*")
-        .eq("user_id", user!.id)
+        .eq("user_id", userId)
         .order("priority", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as Tables<"goals">[];
+      return data ?? [];
     },
   });
 }
