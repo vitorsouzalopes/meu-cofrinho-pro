@@ -1,16 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { Debt } from "@/financial/types";
-
-const DEBT_TYPES = ["credito", "emprestimo", "consignado", "cheque_especial"] as const;
-
-type DebtType = (typeof DEBT_TYPES)[number];
-
-function parseDebtType(value: string): DebtType {
-  if ((DEBT_TYPES as readonly string[]).includes(value)) return value as DebtType;
-  throw new Error(`Tipo de dívida não reconhecido: ${value}`);
-}
+import { parseDebtType, type Debt } from "@/financial/types";
 
 const todayMY = () => {
   const d = new Date();
