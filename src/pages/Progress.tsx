@@ -2,7 +2,7 @@ import CalendarGrid from "@/components/CalendarGrid";
 import ProgressRing from "@/components/ProgressRing";
 import { challenges, type Challenge } from "@/data/challenges";
 import { TrendingUp, Calendar, Target, Flame, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +19,7 @@ const formatCurrency = (value: number) =>
 
 const Progress = () => {
   const { user } = useAuth();
+  const userId = user?.id;
   const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -28,8 +29,8 @@ const Progress = () => {
 
   const activeChallengeData = activeUserChallenges[currentIndex];
 
-  const fetchData = async () => {
-    if (!user) return;
+  const fetchData = useCallback(async () => {
+    if (!userId) return;
     setLoading(true);
     
     try {
@@ -37,7 +38,7 @@ const Progress = () => {
       const { data: userChallenges, error: ucError } = await supabase
         .from("user_challenges" as any)
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("status", "active") as { data: any[] | null, error: any };
 
       if (ucError) {
@@ -65,11 +66,11 @@ const Progress = () => {
       console.warn("Challenge tables might not exist", e);
     }
     setLoading(false);
-  };
+  }, [userId, toast]);
 
   useEffect(() => {
     fetchData();
-  }, [user]);
+  }, [fetchData]);
 
   const currentChallengeInfo = useMemo(() => {
     if (!activeChallengeData) return null;
@@ -87,7 +88,7 @@ const Progress = () => {
     const totalDays = parseInt(currentChallengeInfo.duration) || 30; // fallback depending on type
     const completedDays = completedDates.length;
     return Math.min(100, Math.round((completedDays / totalDays) * 100));
-  }, [currentChallengeInfo, completedDates]);
+  }, [currentChallengeInfo, activeChallengeData, completedDates]);
 
   const totalSaved = useMemo(() => {
     if (!currentChallengeInfo || !activeChallengeData) return 0;
