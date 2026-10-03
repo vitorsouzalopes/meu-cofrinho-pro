@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { Debt } from "../financial/types";
+import { DEBT_TYPES, parseDebtType, type Debt } from "../financial/types";
 import {
   avalancheStrategy,
   snowballStrategy,
@@ -52,6 +52,19 @@ const sampleDebts: Debt[] = [
     permiteQuitacao: true,
   },
 ];
+
+describe("Debt category validation", () => {
+  it("accepts every category supported by the debt planner", () => {
+    for (const type of DEBT_TYPES) {
+      expect(parseDebtType(type)).toBe(type);
+    }
+    expect(DEBT_TYPES).toHaveLength(6);
+  });
+
+  it("rejects unknown categories instead of silently mapping them", () => {
+    expect(() => parseDebtType("unknown")).toThrow("Tipo de dívida não reconhecido: unknown");
+  });
+});
 
 describe("Smart Debt Engines", () => {
   it("should sort debts using avalanche strategy (highest interest rate first)", () => {
