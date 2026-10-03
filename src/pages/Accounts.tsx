@@ -435,9 +435,10 @@ const Accounts = () => {
   const [paying, setPaying] = useState(false);
 
   const { data: debtsData = [] } = useDebts();
+  const userId = user?.id;
 
   const load = useCallback(async () => {
-    if (!user) return;
+    if (!userId) return;
     setLoading(true);
     try {
       const [year, month] = selectedMonth.split("-").map(Number);
@@ -449,20 +450,20 @@ const Accounts = () => {
         supabase
           .from("accounts")
           .select("*")
-          .eq("user_id", user.id)
+          .eq("user_id", userId)
           .eq("is_template", false)
           .eq("month_year", selectedMonth)
           .order("due_day", { ascending: true }),
         supabase
           .from("accounts")
           .select("*")
-          .eq("user_id", user.id)
+          .eq("user_id", userId)
           .eq("is_template", true)
           .order("name", { ascending: true }),
         supabase
           .from("debt_payments")
           .select("*")
-          .eq("user_id", user.id)
+          .eq("user_id", userId)
           .gte("data_pagamento", startDate)
           .lte("data_pagamento", endDate),
       ]);
@@ -487,7 +488,7 @@ const Accounts = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, selectedMonth, toast]);
+  }, [userId, selectedMonth, toast]);
 
   useEffect(() => {
     load();
