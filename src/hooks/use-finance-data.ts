@@ -3,6 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Debt } from "@/financial/types";
 
+const DEBT_TYPES = ["credito", "emprestimo", "consignado", "cheque_especial"] as const;
+
+type DebtType = (typeof DEBT_TYPES)[number];
+
+function parseDebtType(value: string): DebtType {
+  if ((DEBT_TYPES as readonly string[]).includes(value)) return value as DebtType;
+  throw new Error(`Tipo de dívida não reconhecido: ${value}`);
+}
+
 const todayMY = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -56,7 +65,7 @@ export async function fetchDebts(userId: string): Promise<Debt[]> {
     valorParcela: Number(d.parcela_mensal),
     parcelasRestantes: Number(d.parcelas_restantes ?? 0),
     jurosMensal: Number(d.juros_mensal) * 100,
-    tipo: d.tipo as any, // Cast specific only where strictly necessary for external engine
+    tipo: parseDebtType(d.tipo),
     vencimento: String(d.dia_vencimento),
     permiteAmortizacao: d.permite_amortizacao ?? true,
     permiteQuitacao: d.permite_antecipacao ?? true,
