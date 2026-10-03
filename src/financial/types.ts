@@ -1,3 +1,19 @@
+export const DEBT_TYPES = [
+  'credito',
+  'emprestimo',
+  'consignado',
+  'cheque_especial',
+  'financiamento',
+  'outro',
+] as const
+
+export type DebtType = (typeof DEBT_TYPES)[number]
+
+export function parseDebtType(value: string): DebtType {
+  if ((DEBT_TYPES as readonly string[]).includes(value)) return value as DebtType
+  throw new Error(`Tipo de dívida não reconhecido: ${value}`)
+}
+
 export interface Debt {
   id: string
   nome: string
@@ -10,11 +26,7 @@ export interface Debt {
 
   jurosMensal: number
 
-  tipo:
-    | 'credito'
-    | 'emprestimo'
-    | 'consignado'
-    | 'cheque_especial'
+  tipo: DebtType
 
   vencimento: string
 
