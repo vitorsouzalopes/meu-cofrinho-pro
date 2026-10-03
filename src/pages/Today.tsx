@@ -220,7 +220,7 @@ const Today = () => {
       }
     };
     handleNotifications();
-  }, [loading, user, accounts.length, salary, goals, totais.disponivel]);
+  }, [loading, user, accounts, salary, goals, totais.disponivel]);
 
   // Ads initialization - Non-blocking
   useEffect(() => {
