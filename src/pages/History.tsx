@@ -109,7 +109,7 @@ const History = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, toast]);
 
   useEffect(() => {
     fetchAllHistory();
