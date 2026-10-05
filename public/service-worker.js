@@ -1,5 +1,5 @@
 // service-worker.js - Enhanced for Offline Experience
-const CACHE_NAME = 'cofrinho-cache-v3';
+const CACHE_NAME = 'cofrinho-cache-v4';
 const OFFLINE_URL = '/index.html';
 
 const ASSETS_TO_CACHE = [
