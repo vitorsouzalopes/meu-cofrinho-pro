@@ -9,6 +9,12 @@ export const DEBT_TYPES = [
 
 export type DebtType = (typeof DEBT_TYPES)[number]
 
+/** Representação de juros no domínio: percentual, ex. 10 = 10% a.m. */
+export const jurosMensalFromDb = (value: number): number => Number(value) * 100
+
+/** Converte o percentual do domínio para decimal de cálculo, ex. 10 -> 0.10. */
+export const jurosMensalToDecimal = (value: number): number => Number(value) / 100
+
 export function parseDebtType(value: string): DebtType {
   if ((DEBT_TYPES as readonly string[]).includes(value)) return value as DebtType
   throw new Error(`Tipo de dívida não reconhecido: ${value}`)
