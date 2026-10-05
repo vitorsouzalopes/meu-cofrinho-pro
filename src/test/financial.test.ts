@@ -10,6 +10,7 @@ import {
 } from "../financial/debtEngine";
 import { forecastMonth } from "../financial/forecastEngine";
 import { analyzeFinancialRisk } from "../financial/notificationEngine";
+import { simularMultiplasDividas } from "../financial/multiDebtEngine";
 
 const sampleDebts: Debt[] = [
   {
@@ -144,5 +145,24 @@ describe("Notification Engine", () => {
       message: "Saldo baixo",
     });
     expect(analyzeFinancialRisk(400)).toBeNull();
+  });
+});
+
+
+describe("Multi-debt balance semantics", () => {
+  it("uses current outstanding balance for payoff simulation while preserving original total", () => {
+    const debtWithBalance: Debt = {
+      ...sampleDebts[0],
+      valorTotal: 5000,
+      saldoAtual: 1000,
+      valorParcela: 600,
+      jurosMensal: 10,
+    };
+
+    const result = simularMultiplasDividas([debtWithBalance], 600, "avalanche");
+
+    expect(result.mesesTotais).toBe(2);
+    expect(result.totalPago).toBe(1150);
+    expect(result.totalJuros).toBe(150);
   });
 });
