@@ -12,6 +12,7 @@ import {
 import { forecastMonth } from "../financial/forecastEngine";
 import { analyzeFinancialRisk } from "../financial/notificationEngine";
 import { simularAtacarDividaIndividual, simularMultiplasDividas } from "../financial/multiDebtEngine";
+import { mapDebtRowToDomainDebt, type DebtRow } from "../hooks/use-finance-data";
 
 const sampleDebts: Debt[] = [
   {
@@ -168,6 +169,38 @@ describe("Multi-debt balance semantics", () => {
   });
 });
 
+
+describe("Debt database mapping", () => {
+  it("maps database debt fields to the domain without mixing interest units", () => {
+    const row: DebtRow = {
+      id: "db-1",
+      account_id: null,
+      created_at: "2026-10-05T00:00:00Z",
+      dia_vencimento: 10,
+      juros_mensal: 0.1,
+      nome: "Cartão Nubank",
+      parcela_mensal: 600,
+      parcelas_restantes: 3,
+      permite_amortizacao: true,
+      permite_antecipacao: true,
+      tipo: "credito",
+      total_parcelas: 12,
+      updated_at: "2026-10-05T00:00:00Z",
+      user_id: "user-1",
+      valor_restante: 1000,
+      valor_total: 5000,
+    };
+
+    expect(mapDebtRowToDomainDebt(row)).toMatchObject({
+      nome: "Cartão Nubank",
+      banco: "Cartão Nubank",
+      valorTotal: 5000,
+      saldoAtual: 1000,
+      jurosMensal: 10,
+      tipo: "credito",
+    });
+  });
+});
 
 describe("Monthly interest representation", () => {
   it("converts database decimal interest to domain percentage", () => {
