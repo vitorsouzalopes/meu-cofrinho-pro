@@ -20,6 +20,8 @@ export interface Debt {
   banco: string
 
   valorTotal: number
+  /** Saldo devedor atual; quando ausente, valorTotal é usado por compatibilidade. */
+  saldoAtual?: number
   valorParcela: number
 
   parcelasRestantes: number
