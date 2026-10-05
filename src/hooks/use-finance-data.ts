@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { jurosMensalFromDb, parseDebtType, type Debt } from "@/financial/types";
+import type { Tables } from "@/integrations/supabase/types";
 
 const todayMY = () => {
   const d = new Date();
@@ -38,20 +39,14 @@ export function useAccounts(monthYear: string = todayMY()) {
   });
 }
 
-export async function fetchDebts(userId: string): Promise<Debt[]> {
-  const { data, error } = await supabase
-    .from("debts")
-    .select("*")
-    .eq("user_id", userId)
-    .order("juros_mensal", { ascending: false });
+export type DebtRow = Tables<"debts">;
 
-  if (error) throw error;
-
-  return (data ?? []).map((d) => ({
+export function mapDebtRowToDomainDebt(d: DebtRow): Debt {
+  return {
     ...d,
     id: d.id,
     nome: d.nome,
-    banco: d.bank || d.nome, // Use bank if exists
+    banco: d.nome,
     valorTotal: Number(d.valor_total),
     saldoAtual: Number(d.valor_restante ?? d.valor_total),
     valorParcela: Number(d.parcela_mensal),
@@ -61,7 +56,19 @@ export async function fetchDebts(userId: string): Promise<Debt[]> {
     vencimento: String(d.dia_vencimento),
     permiteAmortizacao: d.permite_amortizacao ?? true,
     permiteQuitacao: d.permite_antecipacao ?? true,
-  }));
+  };
+}
+
+export async function fetchDebts(userId: string): Promise<Debt[]> {
+  const { data, error } = await supabase
+    .from("debts")
+    .select("*")
+    .eq("user_id", userId)
+    .order("juros_mensal", { ascending: false });
+
+  if (error) throw error;
+
+  return (data ?? []).map(mapDebtRowToDomainDebt);
 }
 
 /** Dívidas (fonte única para Planejamento e dashboard) */
