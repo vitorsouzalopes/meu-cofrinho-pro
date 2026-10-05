@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { parseDebtType, type Debt } from "@/financial/types";
+import { jurosMensalFromDb, parseDebtType, type Debt } from "@/financial/types";
 
 const todayMY = () => {
   const d = new Date();
@@ -56,7 +56,7 @@ export async function fetchDebts(userId: string): Promise<Debt[]> {
     saldoAtual: Number(d.valor_restante ?? d.valor_total),
     valorParcela: Number(d.parcela_mensal),
     parcelasRestantes: Number(d.parcelas_restantes ?? 0),
-    jurosMensal: Number(d.juros_mensal) * 100,
+    jurosMensal: jurosMensalFromDb(Number(d.juros_mensal)),
     tipo: parseDebtType(d.tipo),
     vencimento: String(d.dia_vencimento),
     permiteAmortizacao: d.permite_amortizacao ?? true,
