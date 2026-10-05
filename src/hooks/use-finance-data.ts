@@ -53,6 +53,7 @@ export async function fetchDebts(userId: string): Promise<Debt[]> {
     nome: d.nome,
     banco: d.bank || d.nome, // Use bank if exists
     valorTotal: Number(d.valor_total),
+    saldoAtual: Number(d.valor_restante ?? d.valor_total),
     valorParcela: Number(d.parcela_mensal),
     parcelasRestantes: Number(d.parcelas_restantes ?? 0),
     jurosMensal: Number(d.juros_mensal) * 100,
