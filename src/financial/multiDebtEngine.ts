@@ -72,7 +72,7 @@ export function simularMultiplasDividas(
   const estados = debts.map((d) => ({
     debtId: d.id,
     nome: d.nome,
-    saldoRestante: d.valorTotal,
+    saldoRestante: d.saldoAtual ?? d.valorTotal,
     parcelasRestantes: d.parcelasRestantes,
     jurosMensal: d.jurosMensal / 100,
     valorParcela: d.valorParcela,
@@ -569,7 +569,7 @@ export function calcularProjecoes(
       debtId: debt.id,
       nome: debt.nome,
       banco: debt.banco,
-      saldoAtual: debt.valorTotal,
+      saldoAtual: debt.saldoAtual ?? debt.valorTotal,
       parcelaAtual: debt.valorParcela,
       extraRecebido: pagamentoMensal - debt.valorParcela,
       pagamentoTotal: pagamentoMensal,
@@ -584,7 +584,7 @@ export function calcularProjecoes(
   projecoes.sort((a, b) => a.dataQuitacao.getTime() - b.dataQuitacao.getTime());
   
   return {
-    totalDividas: debts.reduce((sum, d) => sum + d.valorTotal, 0),
+    totalDividas: debts.reduce((sum, d) => sum + (d.saldoAtual ?? d.valorTotal), 0),
     saldoLivre: pagamentoMensal,
     estrategia,
     dataQuitacaoTotal: resultado.dataQuitacaoTotal,
