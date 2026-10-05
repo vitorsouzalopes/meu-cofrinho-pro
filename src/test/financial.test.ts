@@ -1,3 +1,4 @@
+import { jurosMensalFromDb, jurosMensalToDecimal } from "../financial/types";
 import { describe, it, expect } from "vitest";
 import { DEBT_TYPES, parseDebtType, type Debt } from "../financial/types";
 import {
@@ -167,6 +168,16 @@ describe("Multi-debt balance semantics", () => {
   });
 });
 
+
+describe("Monthly interest representation", () => {
+  it("converts database decimal interest to domain percentage", () => {
+    expect(jurosMensalFromDb(0.1)).toBe(10);
+  });
+
+  it("converts domain percentage interest to calculation decimal", () => {
+    expect(jurosMensalToDecimal(10)).toBe(0.1);
+  });
+});
 
 describe("Individual debt simulation balance semantics", () => {
   it("uses current balance for the baseline instead of original total", () => {
