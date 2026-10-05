@@ -245,7 +245,7 @@ function calcularJurosBase(debts: Debt[]): number {
   let totalJuros = 0;
 
   for (const debt of debts) {
-    let saldo = debt.valorTotal;
+    let saldo = debt.saldoAtual ?? debt.valorTotal;
     const jurosMensal = debt.jurosMensal / 100;
     const pagamento = debt.valorParcela;
 
@@ -354,7 +354,7 @@ export function simularAtacarDividaIndividual(
   const estados = debts.map((d, i) => ({
     id: d.id,
     nome: d.nome,
-    saldo: d.valorTotal,
+    saldo: d.saldoAtual ?? d.valorTotal,
     jurosMensal: d.jurosMensal / 100,
     valorParcela: d.valorParcela,
     isAlvo: i === indexAlvo,
