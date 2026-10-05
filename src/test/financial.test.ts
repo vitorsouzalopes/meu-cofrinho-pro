@@ -10,7 +10,7 @@ import {
 } from "../financial/debtEngine";
 import { forecastMonth } from "../financial/forecastEngine";
 import { analyzeFinancialRisk } from "../financial/notificationEngine";
-import { simularMultiplasDividas } from "../financial/multiDebtEngine";
+import { simularAtacarDividaIndividual, simularMultiplasDividas } from "../financial/multiDebtEngine";
 
 const sampleDebts: Debt[] = [
   {
@@ -164,5 +164,24 @@ describe("Multi-debt balance semantics", () => {
     expect(result.mesesTotais).toBe(2);
     expect(result.totalPago).toBe(1150);
     expect(result.totalJuros).toBe(150);
+  });
+});
+
+
+describe("Individual debt simulation balance semantics", () => {
+  it("uses current balance for the baseline instead of original total", () => {
+    const debtWithBalance: Debt = {
+      ...sampleDebts[0],
+      valorTotal: 5000,
+      saldoAtual: 1000,
+      valorParcela: 600,
+      jurosMensal: 10,
+    };
+
+    const result = simularAtacarDividaIndividual([debtWithBalance], 0, 600);
+
+    expect(result.mesesTotais).toBe(1);
+    expect(result.totalJuros).toBe(100);
+    expect(result.economiJuros).toBe(50);
   });
 });
