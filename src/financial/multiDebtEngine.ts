@@ -1,4 +1,4 @@
-import { Debt } from './types';
+import { Debt, jurosMensalToDecimal } from './types';
 
 /**
  * Tipos para suportar simulação de múltiplas dívidas com estratégias diferentes
@@ -74,7 +74,7 @@ export function simularMultiplasDividas(
     nome: d.nome,
     saldoRestante: d.saldoAtual ?? d.valorTotal,
     parcelasRestantes: d.parcelasRestantes,
-    jurosMensal: d.jurosMensal / 100,
+    jurosMensal: jurosMensalToDecimal(d.jurosMensal),
     valorParcela: d.valorParcela,
     dataQuitacao: undefined as Date | undefined,
   }));
@@ -246,7 +246,7 @@ function calcularJurosBase(debts: Debt[]): number {
 
   for (const debt of debts) {
     let saldo = debt.saldoAtual ?? debt.valorTotal;
-    const jurosMensal = debt.jurosMensal / 100;
+    const jurosMensal = jurosMensalToDecimal(debt.jurosMensal);
     const pagamento = debt.valorParcela;
 
     for (let mes = 0; mes < 360; mes++) {
