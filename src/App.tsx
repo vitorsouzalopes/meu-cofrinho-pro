@@ -9,6 +9,7 @@ import { App as CapacitorApp } from "@capacitor/app";
 import { SplashScreen } from "@capacitor/splash-screen";
 import { Capacitor } from "@capacitor/core";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 
 // Lazy loading EVERYTHING to isolate dependencies
 const Sonner = lazy(() => import("@/components/ui/sonner").then(m => ({ default: m.Toaster })));
@@ -79,6 +80,7 @@ const AppContent = () => {
 
   return (
     <Suspense fallback={<PageLoader />}>
+      <PwaInstallPrompt />
       <Routes>
         <Route path="/auth" element={
           <Suspense fallback={<PageLoader />}>
