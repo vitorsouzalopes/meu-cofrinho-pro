@@ -12,7 +12,7 @@ import {
 import { forecastMonth } from "../financial/forecastEngine";
 import { analyzeFinancialRisk } from "../financial/notificationEngine";
 import { simularAtacarDividaIndividual, simularMultiplasDividas } from "../financial/multiDebtEngine";
-import { mapDebtRowToDomainDebt, type DebtRow } from "../hooks/use-finance-data";
+import { mapDebtRowToDomainDebt, type DebtRow } from "../financial/debtMapper";
 
 const sampleDebts: Debt[] = [
   {
