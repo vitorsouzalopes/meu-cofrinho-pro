@@ -1,6 +1,14 @@
 // Funções core de cálculo de dívidas
 
-export interface Debt {
+/**
+ * Representação de dívida na camada de persistência/legado.
+ *
+ * IMPORTANTE: juros_mensal vem do banco em formato decimal:
+ * 0.10 = 10% a.m.
+ * A conversão para o domínio (10 = 10% a.m.) acontece no mapper
+ * antes de chegar aos engines financeiros.
+ */
+export interface DebtDb {
   id: string;
   nome: string;
   tipo: string;
@@ -9,16 +17,20 @@ export interface Debt {
   parcela_mensal: number;
   total_parcelas?: number | null;
   parcelas_restantes?: number | null;
-  juros_mensal: number; // ex: 0.10 = 10%
+  /** Taxa mensal persistida como decimal. Ex.: 0.10 = 10% a.m. */
+  juros_mensal: number;
   dia_vencimento: number;
   permite_antecipacao: boolean;
   permite_amortizacao: boolean;
 }
 
+/** Compatibilidade com os consumidores existentes de debt-utils. */
+export type Debt = DebtDb;
+
 const MAX_MESES = 240;
 
 /** Calcula meses para quitar com a parcela atual */
-export function calcularMesesQuitar(debt: Debt, valorMensal?: number): number {
+export function calcularMesesQuitar(debt: DebtDb, valorMensal?: number): number {
   let saldo = debt.valor_restante;
   const pagamento = valorMensal ?? debt.parcela_mensal;
   let meses = 0;
@@ -34,7 +46,7 @@ export function calcularMesesQuitar(debt: Debt, valorMensal?: number): number {
 }
 
 /** Simula um cenário de pagamento */
-export function simular(debt: Debt, valorMensal: number) {
+export function simular(debt: DebtDb, valorMensal: number) {
   let saldo = debt.valor_restante;
   let meses = 0;
   let totalPago = 0;
@@ -78,7 +90,7 @@ export function pagamentoPlanejado(parcela: number, extra: number) {
 }
 
 /** Gera dados para o gráfico de evolução do saldo */
-export function gerarGraficoDivida(debt: Debt, valorMensal: number, mesesMax = 24) {
+export function gerarGraficoDivida(debt: DebtDb, valorMensal: number, mesesMax = 24) {
   let saldo = debt.valor_restante;
   const dados: { mes: number; saldo: number }[] = [];
   dados.push({ mes: 0, saldo });
@@ -96,12 +108,12 @@ export function gerarGraficoDivida(debt: Debt, valorMensal: number, mesesMax = 2
 }
 
 /** Ordena dívidas pela maior taxa de juros (Avalanche) */
-export function ordenarDividasPorJuros(dividas: Debt[]) {
+export function ordenarDividasPorJuros(dividas: DebtDb[]) {
   return [...dividas].sort((a, b) => (b.juros_mensal || 0) - (a.juros_mensal || 0));
 }
 
 /** Retorna sugestão automática para a dívida */
-export function sugestaoAutomatica(debt: Debt): string | null {
+export function sugestaoAutomatica(debt: DebtDb): string | null {
   if ((debt.juros_mensal || 0) > 0.1) {
     return "Alta taxa de juros — priorize quitar essa dívida.";
   }
