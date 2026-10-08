@@ -3,10 +3,10 @@ import {
   calcularMesesQuitar,
   gerarGraficoDivida,
   simular,
-  type Debt,
+  type DebtDb,
 } from "@/lib/debt-utils";
 
-const debt: Debt = {
+const debt: DebtDb = {
   id: "debt-1",
   nome: "Cartão",
   tipo: "credito",
