@@ -83,16 +83,22 @@ const Auth = () => {
         ? 'meucofrinho://'
         : window.location.origin;
 
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo,
-          skipBrowserRedirect: false,
+          skipBrowserRedirect: Capacitor.isNativePlatform(),
         }
       });
       if (error) throw error;
+
+      if (data?.url && Capacitor.isNativePlatform()) {
+        const { Browser } = await import('@capacitor/browser');
+        await Browser.open({ url: data.url });
+      }
     } catch (error: any) {
       toast({ title: "Erro no Login com Google", description: error.message, variant: "destructive" });
+    } finally {
       setLoading(false);
     }
   };
