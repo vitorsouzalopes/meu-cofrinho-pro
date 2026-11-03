@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/integrations/supabase/client";
 
 const PrivacySettings = () => {
   const navigate = useNavigate();
@@ -13,47 +14,73 @@ const PrivacySettings = () => {
   const { user } = useAuth();
 
   const [activeModal, setActiveModal] = useState<string | null>(null);
-  const [requestSubmitted, setRequestSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const privacyEmail = "vitorsouzalopes@souunisuam.com.br";
 
-  const handleDataRequest = (type: string) => {
-    const subject = encodeURIComponent(`Solicitação LGPD: ${type} - Cofrinho Pro`);
-    const body = encodeURIComponent(
-      `Olá,\n\nGostaria de solicitar o exercício do seguinte direito LGPD: ${type}.\n\nIdentificação do usuário (E-mail): ${user?.email || "Não autenticado"}\nUser ID: ${user?.id || "N/A"}\n\nAguardom retorno conforme a legislação aplicável.\n\nAtenciosamente,`
-    );
-    window.location.href = `mailto:${privacyEmail}?subject=${subject}&body=${body}`;
+  const handleDataRequest = async (type: string, typeCode: string) => {
+    if (!user) {
+      toast({ title: "Necessário login", description: "Faça login para registrar sua solicitação LGPD.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { error } = await supabase.from('privacy_requests' as any).insert({
+        user_id: user.id,
+        request_type: typeCode,
+        details: `Solicitação de ${type} via app Cofrinho Pro`,
+        status: 'pending'
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Solicitação Registrada com Sucesso ✅",
+        description: `Sua solicitação de "${type}" foi protocolada no sistema. Entraremos em contato via ${user.email}.`
+      });
+
+      const subject = encodeURIComponent(`Solicitação LGPD: ${type} - Cofrinho Pro`);
+      const body = encodeURIComponent(
+        `Olá,\n\nGostaria de confirmar a solicitação de ${type}.\n\nE-mail: ${user.email}\nUser ID: ${user.id}\n\nAtenciosamente,`
+      );
+      window.location.href = `mailto:${privacyEmail}?subject=${subject}&body=${body}`;
+    } catch (e: any) {
+      console.error("Privacy request error:", e);
+      toast({
+        title: "Erro ao registrar solicitação",
+        description: e.message || "Tente novamente mais tarde.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const legalDocs = [
     {
       title: "Política de Privacidade",
       description: "Como tratamos seus dados pessoais e garantimos sua segurança.",
-      file: "PRIVACY_POLICY.md",
       content: `O Cofrinho Pro é um aplicativo de organização financeira pessoal, sob responsabilidade de Vitor de Souza Corrêa Lopes (vitorsouzalopes@souunisuam.com.br).\n\nTratamos dados de cadastro, registros financeiros, preferências e tokens de notificação com base na LGPD (Lei nº 13.709/2018). Você pode solicitar acesso, correção ou exclusão a qualquer momento.`
     },
     {
       title: "Termos de Serviço",
       description: "Condições de uso, responsabilidades e regras do aplicativo.",
-      file: "TERMS_OF_SERVICE.md",
       content: `O Cofrinho Pro disponibiliza ferramentas de organização financeira pessoal. Os cálculos e projeções possuem finalidade informativa. O usuário é responsável por suas credenciais e uso lícito.`
     },
     {
       title: "Aviso de Cookies e Tecnologias",
       description: "Uso de armazenamento local, cookies e identificadores técnicos.",
-      file: "COOKIE_NOTICE.md",
       content: `Utilizamos tecnologias necessárias para autenticação e segurança. Tecnologias opcionais de análise e publicidade respeitarão seu consentimento prévio.`
     },
     {
       title: "Política de Cancelamento e Reembolso",
       description: "Diretrizes sobre assinaturas, cancelamento e direito de arrependimento.",
-      file: "REFUND_POLICY.md",
       content: `Respeitamos o direito de arrependimento de 7 dias previsto no Código de Defesa do Consumidor. Planos Premium e condições de reembolso estarão ativos na comercialização oficial.`
     },
     {
       title: "Exercício de Direitos (LGPD)",
       description: "Seus direitos como titular de dados e como exercê-los.",
-      file: "DATA_RIGHTS.md",
       content: `Você tem direito a confirmação de tratamento, acesso, correção, portabilidade, anonimização e exclusão. Contato direto: vitorsouzalopes@souunisuam.com.br.`
     }
   ];
@@ -128,45 +155,49 @@ const PrivacySettings = () => {
             <div className="grid grid-cols-1 gap-2 pt-2">
               <Button
                 variant="outline"
-                onClick={() => handleDataRequest("Acesso aos Dados Pessoais")}
+                disabled={loading}
+                onClick={() => handleDataRequest("Acesso aos Dados Pessoais", "access")}
                 className="justify-start h-12 rounded-xl text-xs font-medium border-border/50 hover:bg-primary/5 hover:text-primary"
               >
                 <Lock className="w-4 h-4 mr-3 text-muted-foreground" />
-                Solicitar Acesso aos Dados
+                {loading ? "Processando..." : "Solicitar Acesso aos Dados"}
               </Button>
 
               <Button
                 variant="outline"
-                onClick={() => handleDataRequest("Correção de Dados Incorretos")}
+                disabled={loading}
+                onClick={() => handleDataRequest("Correção de Dados Incorretos", "correction")}
                 className="justify-start h-12 rounded-xl text-xs font-medium border-border/50 hover:bg-primary/5 hover:text-primary"
               >
                 <Shield className="w-4 h-4 mr-3 text-muted-foreground" />
-                Solicitar Correção de Informações
+                {loading ? "Processando..." : "Solicitar Correção de Informações"}
               </Button>
 
               <Button
                 variant="outline"
-                onClick={() => handleDataRequest("Portabilidade de Dados")}
+                disabled={loading}
+                onClick={() => handleDataRequest("Portabilidade de Dados", "portability")}
                 className="justify-start h-12 rounded-xl text-xs font-medium border-border/50 hover:bg-primary/5 hover:text-primary"
               >
                 <FileText className="w-4 h-4 mr-3 text-muted-foreground" />
-                Solicitar Portabilidade
+                {loading ? "Processando..." : "Solicitar Portabilidade"}
               </Button>
 
               <Button
                 variant="outline"
-                onClick={() => handleDataRequest("Exclusão de Conta e Dados Pessoais")}
+                disabled={loading}
+                onClick={() => handleDataRequest("Exclusão de Conta e Dados Pessoais", "deletion")}
                 className="justify-start h-12 rounded-xl text-xs font-medium border-destructive/30 hover:bg-destructive/10 text-destructive"
               >
                 <Trash2 className="w-4 h-4 mr-3 text-destructive" />
-                Solicitar Exclusão de Conta e Dados
+                {loading ? "Processando..." : "Solicitar Exclusão de Conta e Dados"}
               </Button>
             </div>
 
             <div className="p-3 rounded-2xl bg-muted/30 border border-border/50 flex items-start gap-3">
               <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
               <p className="text-[10px] text-muted-foreground leading-relaxed">
-                As solicitações são processadas diretamente via e-mail seguro (<span className="text-foreground font-medium">{privacyEmail}</span>) em conformidade com os prazos legais da LGPD.
+                As solicitações são protocoladas com segurança na sua conta e enviadas diretamente via e-mail (<span className="text-foreground font-medium">{privacyEmail}</span>) conforme a LGPD.
               </p>
             </div>
           </Card>
