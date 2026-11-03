@@ -12,7 +12,12 @@
           "package_name": "com.meucofrinho.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "69071518647-e2vouvqju0ar53isntmbcaom0t3mbnhp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAhU9OdhWZ4bn0FNCegbJDxXxQJT8bNnWc"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "69071518647-e2vouvqju0ar53isntmbcaom0t3mbnhp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
