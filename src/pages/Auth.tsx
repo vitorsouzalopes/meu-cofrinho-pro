@@ -256,6 +256,22 @@ const Auth = () => {
             <ArrowRight className="w-4 h-4" />
           </Button>
 
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-12 border-border/50 bg-background hover:bg-muted/50 font-bold flex items-center justify-center gap-2"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-8.87z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.95H1.14v3.14C3.16 21.37 7.23 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.25c-.25-.72-.38-1.49-.38-2.25s.13-1.53.38-2.25V6.61H1.14C.41 8.09 0 9.75 0 12s.41 3.91 1.14 5.39l4.14-3.14z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.23 0 3.16 2.63 1.14 6.61l4.14 3.14c.95-2.84 3.6-4.95 6.72-4.95z"/>
+            </svg>
+            Entrar com Google
+          </Button>
+
           {isLogin && hasBiometric && (
             <Button
               type="button"
