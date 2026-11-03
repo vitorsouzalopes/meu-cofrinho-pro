@@ -110,6 +110,7 @@ const AppContent = () => {
           <Route path="/profile" element={<Profile />} />
           <Route path="/ai-consultant" element={<AIConsultant />} />
           <Route path="/support" element={<Support />} />
+          <Route path="/privacy" element={<PrivacySettings />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />
