@@ -38,6 +38,7 @@ const Planner = lazy(() => import("./pages/Planner.tsx"));
 const AIConsultant = lazy(() => import("./pages/AIConsultant.tsx"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword.tsx"));
 const Support = lazy(() => import("./pages/Support.tsx"));
+const PrivacySettings = lazy(() => import("./pages/PrivacySettings.tsx"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
