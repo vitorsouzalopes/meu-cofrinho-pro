@@ -90,6 +90,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     initSession();
 
+    if (Capacitor.isNativePlatform()) {
+      CapacitorApp.addListener('appUrlOpen', async (event) => {
+        const url = event.url;
+        if (url && (url.includes('access_token') || url.includes('code='))) {
+          const hashIdx = url.indexOf('#');
+          if (hashIdx !== -1) {
+            const hash = url.substring(hashIdx + 1);
+            const params = new URLSearchParams(hash);
+            const accessToken = params.get('access_token');
+            const refreshToken = params.get('refresh_token');
+            if (accessToken && refreshToken) {
+              await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken
+              });
+            }
+          }
+        }
+      });
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) return;
 

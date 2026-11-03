@@ -79,10 +79,15 @@ const Auth = () => {
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
+      const redirectTo = Capacitor.isNativePlatform()
+        ? 'meucofrinho://'
+        : window.location.origin;
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo,
+          skipBrowserRedirect: false,
         }
       });
       if (error) throw error;
