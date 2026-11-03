@@ -95,6 +95,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       CapacitorApp.addListener('appUrlOpen', async (event) => {
         const url = event.url;
         if (url && (url.includes('access_token') || url.includes('code='))) {
+          try {
+            const { Browser } = await import("@capacitor/browser");
+            await Browser.close();
+          } catch (e) {
+            // Ignore if browser not open
+          }
+
           const hashIdx = url.indexOf('#');
           if (hashIdx !== -1) {
             const hash = url.substring(hashIdx + 1);
