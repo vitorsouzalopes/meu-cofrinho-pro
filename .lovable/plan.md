@@ -1,32 +1,25 @@
-## Diagnóstico
+# Push nativo, PremiumGate e painel admin de Premium
 
-A aba **Previsão** (`ForecastReport.tsx`) já está correta: simula todas as dívidas individualmente (Normal / Hard / Mista), lista cada uma em card próprio e possui dois botões "Gerar Relatório PDF" (topo do card de controles e no final da lista). O exportador nativo `src/lib/forecast-pdf.ts` usa `jspdf` + `jspdf-autotable` (ambos instalados).
+## 1. Teste do push nativo no APK
+- Adicionar na tela "Notificações" um botão **"Testar lembrete diário"** e **"Testar aviso de streak"** que disparam, na hora, a mesma mensagem que o agendamento envia.
+- Mostrar na tela o status do registro do aparelho (token salvo / sem permissão / erro).
+- Você instala o APK, toca nos botões e confirma se chegou. Depois validamos o envio agendado no horário escolhido.
+- Observação: o envio só funciona com a chave completa da conta de serviço do Firebase salva; se ainda estiver incompleta, o botão mostrará esse erro claramente.
 
-O conceito de "Dívida prioritária" que ainda aparece na tela vem da aba **IA** (`SmartDebtDashboard.tsx`) — que mostra um card grande "Dívida prioritária" no topo. É essa a fonte da percepção "só simula uma dívida".
+## 2. Recursos Premium (bloqueados com CTA para /premium)
+- Planejador: abas **Inteligência** e **Previsão**.
+- **Exportar Relatório PDF** e exportação CSV.
+- **Consultor IA**.
+- Sugestões de investimento.
+- Continua grátis: Hoje, desafios, despesas, contas, metas, histórico, ranking, perfil e notificações.
+- Bloqueio em modo borrado com botão "Seja Premium" levando a /premium.
 
-## Mudanças
+## 3. Tela admin /admin/premium
+- Visível apenas para administradores (link no Perfil).
+- Lista de usuários (nome, e-mail, data de cadastro, status Premium) com busca e filtro "só Premium".
+- Chave liga/desliga para alternar Premium, com contador no topo.
 
-### 1. `src/components/planner/SmartDebtDashboard.tsx` — remover conceito de prioridade
-- Remover o card **"Dívida prioritária"** (linhas 88-116).
-- Substituir por uma lista/grade com **todas as dívidas ranqueadas** pelo `smartPriority` (posição, nome, banco, juros, parcela, restante, score) — sem destacar uma como "a" prioritária.
-- Trocar o título para "Ranking de dívidas" (mantém utilidade de ordenação sem eleger uma).
-- Manter Sugestões IA, Previsão do mês e Comparativo de estratégias intactos.
-
-### 2. `src/components/planner/ForecastReport.tsx` — garantir botão PDF sempre visível e funcional
-- Manter o botão do topo (dentro do card de controles) e também o botão permanente após a lista de dívidas.
-- Adicionar `type="button"` nos dois botões (evita submit acidental dentro de forms wrappers).
-- Envolver `handleExportPDF` com try/catch já existe; adicionar `console.log` do payload antes do `exportForecastPDF` para diagnosticar caso o toast de erro apareça.
-- Verificar que a lista `debtSimulations.map(...)` já renderiza 100% das dívidas (já está correto, apenas confirmação).
-
-### 3. `src/lib/forecast-pdf.ts` — robustez
-- Fallback para o import dinâmico do `jspdf-autotable`: além de `default` / `autoTable`, tentar chamar via `autoTable(doc, ...)` e, se indisponível, cair para `(doc as any).autoTable(...)` (a v5 registra no protótipo).
-- Sanitizar valores `Infinity`/`NaN` em `duration()` e `fmt()` para evitar exceção que aborte a geração.
-
-### 4. Verificação
-- Rodar tsgo/build automático da plataforma.
-- Abrir aba Previsão com dívidas cadastradas: confirmar lista completa e clique no botão gera o arquivo `Relatorio-Dividas-YYYY-MM-DD.pdf`.
-- Abrir aba IA: confirmar que o card "Dívida prioritária" sumiu e todas aparecem no ranking.
-
-## Fora de escopo
-- Reescrita das estratégias `avalanche` / `snowball` / `smart` (mantidas apenas como ordenação).
-- Alterações em `MultiDebtPayoff` (aba Quitar) — já lista todas as dívidas.
+## Detalhes técnicos
+- Função de banco `admin_set_premium(user_id, value)` security definer checando `has_role(auth.uid(),'admin')`; política SELECT em profiles para admins. Usuários comuns não podem alterar `is_premium` (trigger que bloqueia mudança do campo por não-admin).
+- Edge function `send-fcm` recebe `kind: 'daily'|'streak'` para o teste manual.
+- `<PremiumGate blur>` envolvendo os componentes listados; rota `/admin/premium` em App.tsx.
