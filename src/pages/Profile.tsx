@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { User, LogOut, Settings, HelpCircle, RefreshCcw, Target, ChevronRight, FileDown, Plus, MessageCircle, X, Bell, Clock, Sparkles, AlertCircle } from "lucide-react";
+import { Crown as CrownIcon } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -355,6 +356,7 @@ const ProfilePage = () => {
           { icon: <Shield className="w-5 h-5" />, label: "Privacidade e Meus Dados", onClick: () => navigate("/privacy") },
           { icon: <HelpCircle className="w-5 h-5" />, label: "Ajuda e Suporte", onClick: () => navigate("/support") },
           ...(isAdmin ? [
+            { icon: <CrownIcon className="w-5 h-5" />, label: "Gerenciar Premium", onClick: () => navigate("/admin/premium"), color: "text-gold" },
             { icon: <RefreshCcw className="w-5 h-5" />, label: "Sincronizar Mês", onClick: loadData },
             { icon: <AlertCircle className="w-5 h-5" />, label: "Diagnóstico do Sistema", onClick: runDiagnostic, color: "text-blue-500" },
             { icon: <Bell className="w-5 h-5" />, label: "Testar Notificação (Local)", onClick: testNotification, color: "text-amber-500" },

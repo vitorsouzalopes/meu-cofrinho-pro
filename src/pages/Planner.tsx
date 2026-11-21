@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import PremiumGate from "@/components/PremiumGate";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Target, BrainCircuit, Brain, TrendingUp } from "lucide-react";
 import FinancialGoals from "@/components/planner/FinancialGoals";
@@ -139,11 +140,11 @@ const Planner = () => {
         </TabsList>
 
         <TabsContent value="smart" className="space-y-4 animate-in fade-in-50">
-          <SmartDebtDashboard />
+          <PremiumGate title="Inteligência de Dívidas" description="Estratégias e IA de priorização são Premium." blur><SmartDebtDashboard /></PremiumGate>
         </TabsContent>
 
         <TabsContent value="forecast" className="space-y-4 animate-in fade-in-50">
-          <ForecastReport debts={initialDebts} />
+          <PremiumGate title="Previsão Financeira" description="Previsões e relatório PDF são Premium." blur><ForecastReport debts={initialDebts} /></PremiumGate>
         </TabsContent>
 
         <TabsContent value="goals" className="space-y-4 animate-in fade-in-50">

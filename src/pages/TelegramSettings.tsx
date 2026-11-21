@@ -159,6 +159,10 @@ const NotificationsSettings = () => {
         >
           Enviar Push de Teste
         </Button>
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          <Button size="sm" variant="outline" onClick={() => triggerTest("⏰ Lembrete diário", "Não esqueça de registrar seu progresso de hoje no Cofrinho!")}>Testar lembrete diário</Button>
+          <Button size="sm" variant="outline" onClick={() => triggerTest("🔥 Sua sequência está em risco!", "Faça o desafio de hoje para manter seu streak.")}>Testar aviso de streak</Button>
+        </div>
       </div>
 
       {isNative && (

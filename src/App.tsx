@@ -35,6 +35,8 @@ const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const MonthlyAccounts = lazy(() => import("./pages/MonthlyAccounts.tsx"));
 const Goals = lazy(() => import("./pages/Goals.tsx"));
 const Planner = lazy(() => import("./pages/Planner.tsx"));
+const AdminPremium = lazy(() => import("./pages/AdminPremium.tsx"));
+const PremiumGate = lazy(() => import("./components/PremiumGate.tsx"));
 const AIConsultant = lazy(() => import("./pages/AIConsultant.tsx"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword.tsx"));
 const Support = lazy(() => import("./pages/Support.tsx"));
@@ -109,7 +111,8 @@ const AppContent = () => {
           <Route path="/expenses" element={<Expenses />} />
           <Route path="/telegram" element={<TelegramSettings />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/ai-consultant" element={<AIConsultant />} />
+          <Route path="/ai-consultant" element={<PremiumGate title="Consultor IA" description="Converse com a IA sobre suas finanças no Premium."><AIConsultant /></PremiumGate>} />
+          <Route path="/admin/premium" element={<AdminPremium />} />
           <Route path="/support" element={<Support />} />
           <Route path="/privacy" element={<PrivacySettings />} />
         </Route>

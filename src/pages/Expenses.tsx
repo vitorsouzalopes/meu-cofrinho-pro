@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { usePremium } from "@/lib/premium";
+import { useNavigate as useNavPremium } from "react-router-dom";
 import { exportToCSV, exportToPDF, shareReport } from "@/lib/export";
 import { useExpenseNotifications } from "@/hooks/use-expense-notifications";
 import { Plus, Trash2, Home, User, ShoppingCart, Zap, Car, Heart, UtensilsCrossed, MoreHorizontal, Loader2, Settings, Share2 } from "lucide-react";
@@ -44,12 +46,22 @@ const Expenses = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Exportação
+  // Exportação (Premium)
+  const { isPremium } = usePremium();
+  const navPremium = useNavPremium();
+  const requirePremium = () => {
+    if (isPremium) return true;
+    toast({ title: "Recurso Premium", description: "Exportar relatórios é exclusivo do Premium." });
+    navPremium("/premium");
+    return false;
+  };
   const handleExportCSV = () => {
+    if (!requirePremium()) return;
     exportToCSV(`gastos-${selectedYear}-${selectedMonth + 1}.csv`, monthExpenses);
     toast({ title: "Exportado CSV", description: "Arquivo CSV gerado!" });
   };
   const handleExportPDF = () => {
+    if (!requirePremium()) return;
     const html = `<h2>Gastos ${months[selectedMonth]}/${selectedYear}</h2><table border='1' cellpadding='4'><tr><th>Descrição</th><th>Valor</th><th>Categoria</th><th>Data</th></tr>${monthExpenses.map(e => `<tr><td>${e.description}</td><td>R$${e.amount.toFixed(2)}</td><td>${getCategoryInfo(e.category).label}</td><td>${e.date}</td></tr>`).join('')}</table>`;
     exportToPDF(`gastos-${selectedYear}-${selectedMonth + 1}.pdf`, html);
     toast({ title: "Exportado PDF", description: "Arquivo PDF gerado!" });
