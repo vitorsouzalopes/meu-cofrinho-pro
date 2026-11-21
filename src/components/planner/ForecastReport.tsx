@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef } from "react";
+import type { PayoffProjection } from "@/financial/types";
 import { exportForecastPDF } from "@/lib/forecast-pdf";
 import { Download } from "lucide-react";
 import { toast } from "@/hooks/use-toast";

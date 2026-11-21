@@ -11,10 +11,10 @@ export async function initializeAds() {
   try {
     // Request Tracking Authorization and UMP Consent
     // This is required for GDPR compliance and personalized ads
-    const consentInfo = await AdMob.requestConsentInfo();
+    const consentInfo = await (AdMob as any).requestConsentInfo();
 
     if (consentInfo.isConsentFormAvailable && consentInfo.status === 'required') {
-      await AdMob.showConsentForm();
+      await (AdMob as any).showConsentForm();
     }
 
     await AdMob.initialize({

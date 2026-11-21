@@ -54,7 +54,7 @@ const AIConsultant = () => {
       salario: (resSal.data as any)?.amount || 0,
       extra: (resExtra.data || []).reduce((s, e) => s + Number(e.amount), 0),
       contas: resolved,
-      dividas: (resDebts.data || []).map(d => ({ parcelaMensal: d.parcela_mensal })),
+      dividas: ((resDebts.data as any[]) || []).map((d: any) => ({ parcelaMensal: d.parcela_mensal })),
       metas: resGoals.data || []
     });
 

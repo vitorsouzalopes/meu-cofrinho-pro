@@ -30,7 +30,7 @@ const NotificationWall = ({ onRetry }: { onRetry: () => void }) => {
       } else if (status === 'denied') {
         // If denied, they must go to settings
         await NativeSettings.open({
-          option: AndroidSettings.AppDetails,
+          optionAndroid: (AndroidSettings as any).ApplicationDetails, optionIOS: "App" as any,
         });
       } else {
         // Already granted or other state, just retry to sync state

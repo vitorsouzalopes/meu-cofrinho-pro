@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { User, LogOut, Settings, HelpCircle, RefreshCcw, Target, ChevronRight, FileDown, Plus, MessageCircle, X, Bell, Clock, Sparkles, AlertCircle } from "lucide-react";
-import { Crown as CrownIcon } from "lucide-react";
+import { Crown as CrownIcon, Shield } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";

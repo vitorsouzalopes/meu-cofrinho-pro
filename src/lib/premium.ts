@@ -1,28 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import type { Tables } from "@/integrations/supabase/types";
 
-export type PremiumSubscription = Tables<"premium_subscriptions">;
-
-/**
- * Busca a assinatura persistida do usuário.
- *
- * A tabela registra o estado vindo do futuro provedor de pagamentos,
- * mas não concede Premium por si só enquanto o webhook confiável não existir.
- */
-export async function fetchPremiumSubscription(
-  userId: string,
-): Promise<PremiumSubscription | null> {
-  const { data, error } = await supabase
-    .from("premium_subscriptions")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data;
-}
+export type PremiumSubscription = null;
 
 /**
  * Hook para checar acesso Premium e disponibilizar os dados da assinatura.
@@ -49,10 +29,9 @@ export function usePremium() {
 
     (async () => {
       try {
-        const [profRes, roleRes, subscriptionData] = await Promise.all([
+        const [profRes, roleRes] = await Promise.all([
           supabase.from("profiles").select("is_premium").eq("id", user.id).maybeSingle(),
-          supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle(),
-          fetchPremiumSubscription(user.id),
+          supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle(),
         ]);
 
         if (cancelled) return;
@@ -61,7 +40,7 @@ export function usePremium() {
         const isAdmin = roleRes.data?.role === "admin";
 
         setIsPremium(premiumFlag || isAdmin);
-        setSubscription(subscriptionData);
+        setSubscription(null);
       } catch {
         if (!cancelled) {
           setIsPremium(false);

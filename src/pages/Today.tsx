@@ -464,7 +464,7 @@ const Today = () => {
       </div>
 
       {/* Advanced Mode extra details */}
-      {uiMode === "advanced" && (
+      {(uiMode as string) === "advanced" && (
         <div className="mt-10 animate-slide-up">
            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Detalhamento Avançado</p>
            {/* Aqui entrariam os gráficos e tabelas detalhadas que estavam antes */}
