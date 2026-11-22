@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import type { Debt } from "@/financial/types";
 import { mapDebtRowToDomainDebt } from "@/financial/debtMapper";
+const lastDayOfMonth = (my: string) => { const [y, m] = my.split("-").map(Number); return `${my}-${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`; };
 
 const todayMY = () => {
   const d = new Date();
@@ -28,7 +29,7 @@ export function useAccounts(monthYear: string = todayMY()) {
         supabase.from("debt_payments").select("*")
           .eq("user_id", userId)
           .gte("data_pagamento", `${monthYear}-01`)
-          .lte("data_pagamento", `${monthYear}-31`),
+          .lte("data_pagamento", lastDayOfMonth(monthYear)),
       ]);
       return {
         instances: inst.data ?? [],

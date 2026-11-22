@@ -253,13 +253,13 @@ export default function ForecastReport({ debts: debtsProp }: ForecastReportProps
       const [sal, extra, accs, inv] = await Promise.all([
         supabase.from("salary" as any).select("amount").eq("user_id", user!.id).eq("month_year", my).maybeSingle(),
         supabase.from("extra_income").select("amount").eq("user_id", user!.id).eq("month_year", my),
-        supabase.from("accounts").select("amount,billing_type,tipo").eq("user_id", user!.id).eq("is_template", false).eq("month_year", my),
+        supabase.from("accounts").select("amount,billing_type").eq("user_id", user!.id).eq("is_template", false).eq("month_year", my),
         supabase.from("investments" as any).select("amount").eq("user_id", user!.id),
       ]);
       const salario = Number((sal.data as any)?.amount ?? 0);
       const rendaExtra = (extra.data ?? []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
       const contas = (accs.data ?? [])
-        .filter((a: any) => a.billing_type !== "debt" && a.tipo !== "divida")
+        .filter((a: any) => a.billing_type !== "debt")
         .reduce((s: number, a: any) => s + Number(a.amount || 0), 0);
       const investimentos = (inv.data ?? []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
       return { salario, rendaExtra, contas, investimentos };

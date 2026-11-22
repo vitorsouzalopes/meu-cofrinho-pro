@@ -21,6 +21,7 @@ import { usePremium } from "@/lib/premium";
 import { scheduleFinancialReminders, requestNotificationPermission } from "@/lib/notification-engine";
 import { Capacitor } from "@capacitor/core";
 import { safeStorage } from "@/lib/safe-storage";
+const lastDayOfMonth = (my: string) => { const [y, m] = my.split("-").map(Number); return `${my}-${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`; };
 
 type Account = Tables<"accounts">;
 type Profile = Tables<"profiles">;
@@ -152,7 +153,7 @@ const Today = () => {
         supabase.from("salary" as any).select("*").eq("user_id", user.id).order("month_year", { ascending: false }),
         supabase.from("extra_income").select("*").eq("user_id", user.id).eq("month_year", currentMonthYear),
         supabase.from("goals" as any).select("*").eq("user_id", user.id),
-        supabase.from("expenses").select("*").eq("user_id", user.id).gte("date", `${currentMonthYear}-01`).lte("date", `${currentMonthYear}-31`),
+        supabase.from("expenses").select("*").eq("user_id", user.id).gte("date", `${currentMonthYear}-01`).lte("date", lastDayOfMonth(currentMonthYear)),
       ]);
 
       if (resProf.data) setProfile(resProf.data as Profile);

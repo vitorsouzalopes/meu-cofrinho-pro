@@ -17,6 +17,7 @@ import {
   Legend,
   Filler,
 } from "chart.js";
+const lastDayOfMonth = (my: string) => { const [y, m] = my.split("-").map(Number); return `${my}-${String(new Date(y, m, 0).getDate()).padStart(2, "0")}`; };
 
 Chart.register(
   LineController, LineElement, PointElement, LinearScale, CategoryScale,
@@ -102,7 +103,7 @@ async function fetchReportData(monthYear: string): Promise<ReportData> {
     supabase.from("accounts").select("name, amount, due_day, paid, account_type, paid_at").eq("user_id", user.id).eq("month_year", monthYear),
     supabase.from("debts").select("nome, valor_total, valor_restante, parcela_mensal, parcelas_restantes").eq("user_id", user.id),
     supabase.from("goals").select("name, target_amount, current_amount, monthly_amount").eq("user_id", user.id),
-    supabase.from("expenses").select("description, amount, category, date").eq("user_id", user.id).gte("date", `${monthYear}-01`).lte("date", `${monthYear}-31`),
+    supabase.from("expenses").select("description, amount, category, date").eq("user_id", user.id).gte("date", `${monthYear}-01`).lte("date", lastDayOfMonth(monthYear)),
   ]);
 
   // Balance history (last 6 months)

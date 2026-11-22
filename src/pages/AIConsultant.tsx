@@ -263,7 +263,7 @@ const AIConsultant = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden max-w-lg mx-auto border-x border-border/50">
+    <div className="flex flex-col h-[100dvh] w-full bg-background overflow-hidden max-w-lg mx-auto border-x border-border/50">
       {/* Header */}
       <div className="p-4 border-b border-border/50 bg-card/50 backdrop-blur-xl flex items-center gap-3 shrink-0 z-20">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-xl bg-card border border-border/50">
@@ -281,7 +281,7 @@ const AIConsultant = () => {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32 scroll-smooth">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4 scroll-smooth">
         {messages.map((m, i) => (
           <div key={i} className={cn("flex w-full", m.role === "user" ? "justify-end" : "justify-start animate-slide-up")}>
             <div className={cn(
@@ -326,14 +326,22 @@ const AIConsultant = () => {
       </div>
 
       {/* Input Area - FIXED STICKY POSITION */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background/90 to-transparent shrink-0 z-30">
-        <div className="max-w-lg mx-auto flex items-center gap-2 bg-muted p-2 rounded-2xl border border-border/50 focus-within:border-primary/50 transition-all shadow-2xl">
-          <Input
+      <div className="shrink-0 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+92px)] border-t border-border/50 bg-background z-30">
+        <div className="flex items-end gap-2 bg-muted p-2 rounded-2xl border border-border/50 focus-within:border-primary/50 transition-all shadow-2xl">
+          <textarea
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            rows={1}
+            onChange={(e) => {
+              setInput(e.target.value);
+              e.target.style.height = "auto";
+              e.target.style.height = Math.min(e.target.scrollHeight, 112) + "px";
+            }}
+            onFocus={() => setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: "smooth" }), 300)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+            }}
             placeholder="Pergunte qualquer coisa..."
-            className="border-none bg-transparent focus-visible:ring-0 h-10 text-sm flex-1 text-white placeholder:text-muted-foreground/50"
+            className="flex-1 resize-none bg-transparent outline-none px-2 py-2 text-base text-foreground placeholder:text-muted-foreground leading-6 max-h-28"
           />
           <Button
             size="icon"
@@ -344,10 +352,9 @@ const AIConsultant = () => {
             <Send className="w-4 h-4" />
           </Button>
         </div>
-        <p className="text-[9px] text-muted-foreground text-center mt-3 uppercase tracking-tighter font-bold opacity-60">
+        <p className="text-[9px] text-muted-foreground text-center mt-2 uppercase tracking-tighter font-bold opacity-60">
           Dica: pergunte "Posso comprar um [item] de R$ [valor]?"
         </p>
-        <div className="h-safe-bottom" />
       </div>
     </div>
   );
